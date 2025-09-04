@@ -21,3 +21,8 @@ reduce exposure to harmful content.
 - Chrome Web Store draft
 
 MIT License
+
+## Quick start
+1) Load unpacked
+2) Toggle Enable
+3) Edit data/blocklist.json
