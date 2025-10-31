@@ -21,7 +21,7 @@ jobs:
              -x "src/content.js.bak" "content.js" "manifest.backup.json" "assets/store/*" "*.zip"
            ls -lh "$ZIP"
        - name: Upload & Publish
-         uses: Klemensas/chrome-extension-upload-action@v1.4
+         uses: Klemensas/chrome-extension-upload-action@v1.3
          with:
            refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
            client-id: ${{ secrets.CHROME_CLIENT_ID }}
