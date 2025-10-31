@@ -4,6 +4,13 @@ const addAllow = document.getElementById('addAllow');
 const clearAllow = document.getElementById('clearAllow');
 const allowList = document.getElementById('allowList');
 const hint = document.getElementById('hint');
+const aggressiveEl = document.getElementById('aggressive');
+const sensitivityEl = document.getElementById('sensitivity');
+const blocklistInput = document.getElementById('blocklistInput');
+const importBlocklist = document.getElementById('importBlocklist');
+const clearBlocklist = document.getElementById('clearBlocklist');
+const blockCount = document.getElementById('blockCount');
+// PIN removed — simplified UI
 
 function render(list){
   allowList.innerHTML = '';
@@ -12,7 +19,7 @@ function render(list){
     li.textContent = h + ' ';
     const rm = document.createElement('button');
     rm.textContent = '×';
-    rm.onclick = ()=>{
+    rm.onclick = async ()=>{
       const next = list.slice(0, idx).concat(list.slice(idx+1));
       chrome.storage.sync.set({allowlist: next}, ()=>render(next));
     };
@@ -33,16 +40,30 @@ function validHostname(s){
   return /^[a-z0-9-]+(\.[a-z0-9-]+)*$/.test(s);
 }
 
-chrome.storage.sync.get({enabled:true, allowlist:[]}, (cfg)=>{
+chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60}, (cfg)=>{
   enabledEl.checked = cfg.enabled;
   render(cfg.allowlist||[]);
+  aggressiveEl.checked = Boolean(cfg.aggressive);
+  if (typeof cfg.sensitivity === 'number') sensitivityEl.value = String(cfg.sensitivity);
+});
+chrome.storage.local.get({userBlocklist:[]}, (cfg)=>{
+  updateBlockCount(Array.isArray(cfg.userBlocklist)? cfg.userBlocklist.length : 0);
 });
 
-enabledEl.addEventListener('change', ()=>{
+enabledEl.addEventListener('change', async ()=>{
   chrome.storage.sync.set({enabled: enabledEl.checked});
 });
 
-addAllow.addEventListener('click', ()=>{
+aggressiveEl.addEventListener('change', ()=>{
+  chrome.storage.sync.set({ aggressive: aggressiveEl.checked });
+});
+
+sensitivityEl.addEventListener('input', ()=>{
+  const v = Math.max(10, Math.min(100, Number(sensitivityEl.value)||60));
+  chrome.storage.sync.set({ sensitivity: v });
+});
+
+addAllow.addEventListener('click', async ()=>{
   const host = normalizeHost(allowHost.value);
   if(!validHostname(host)){
     hint.style.color = '#a00';
@@ -60,6 +81,38 @@ addAllow.addEventListener('click', ()=>{
   });
 });
 
-clearAllow.addEventListener('click', ()=>{
+clearAllow.addEventListener('click', async ()=>{
   chrome.storage.sync.set({allowlist: []}, ()=>render([]));
+});
+
+// ----- Blocklist import (local storage) -----
+function parseBlocklist(text){
+  const out = [];
+  const seen = new Set();
+  (text||'').split(/\r?\n/).forEach(line=>{
+    const t = normalizeHost(line.replace(/^#.*$/,'').trim());
+    if(!t) return;
+    if(!validHostname(t)) return;
+    if(!seen.has(t)) { seen.add(t); out.push(t); }
+  });
+  return out;
+}
+function updateBlockCount(n){
+  if (blockCount) blockCount.textContent = `${n} domain${n===1?'':'s'}`;
+}
+
+importBlocklist.addEventListener('click', ()=>{
+  const list = parseBlocklist(blocklistInput.value);
+  chrome.storage.local.set({ userBlocklist: list }, ()=>{
+    updateBlockCount(list.length);
+    hint.style.color = '#166534';
+    hint.textContent = `Imported ${list.length} domains`;
+    setTimeout(()=>{ hint.style.color='#666'; hint.textContent='enter a hostname only (no http/https)'; }, 2500);
+  });
+});
+
+clearBlocklist.addEventListener('click', ()=>{
+  chrome.storage.local.set({ userBlocklist: [] }, ()=>{
+    updateBlockCount(0);
+  });
 });

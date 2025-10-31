@@ -11,5 +11,19 @@
   </div>
   <small id="hint" style="color:#666">enter a hostname only (no http/https)</small>
   <ul id="allowList" style="padding-left:18px"></ul>
+  <hr>
+  <h4 style="margin:8px 0 4px">Aggressive mode</h4>
+  <label><input id="aggressive" type="checkbox"> Detect and blur images/videos on the page</label>
+  <div style="margin:6px 0 10px">
+    <label>Sensitivity: <input id="sensitivity" type="range" min="10" max="100" step="1" value="60"></label>
+  </div>
+  <hr>
+  <h4 style="margin:8px 0 4px">Blocklist (domains)</h4>
+  <textarea id="blocklistInput" placeholder="one domain per line (example.com)" style="width:100%;height:100px;padding:6px"></textarea>
+  <div style="margin-top:6px;display:flex;gap:6px">
+    <button id="importBlocklist" title="Replace existing blocklist">Import/Replace</button>
+    <button id="clearBlocklist" title="Remove all domains from blocklist">Clear blocklist</button>
+    <small id="blockCount" style="color:#666;margin-left:auto"></small>
+  </div>
   <script src="popup.js"></script>
 </body></html>

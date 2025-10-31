@@ -1,0 +1,44 @@
+[
+  {
+    "id": 1001,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": { "urlFilter": "||doubleclick.net^", "resourceTypes": ["script","image","xmlhttprequest","sub_frame","main_frame"] }
+  },
+  {
+    "id": 1002,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": { "urlFilter": "||googlesyndication.com^", "resourceTypes": ["script","image","xmlhttprequest","sub_frame","main_frame"] }
+  },
+  {
+    "id": 1003,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": { "urlFilter": "||adservice.google.com^", "resourceTypes": ["script","image","xmlhttprequest","sub_frame","main_frame"] }
+  },
+  { "id": 1004, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||2mdn.net^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1005, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||adsrvr.org^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1006, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||rubiconproject.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1007, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||criteo.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1008, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||adform.net^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1009, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||pubmatic.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1010, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||outbrain.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1011, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||taboola.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1012, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||quantserve.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1013, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||scorecardresearch.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1014, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||contextweb.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  { "id": 1015, "priority": 1, "action": {"type":"block"}, "condition": {"urlFilter":"||doubleverify.com^", "resourceTypes":["script","image","xmlhttprequest","sub_frame","main_frame"] }},
+  {
+    "id": 1101,
+    "priority": 1,
+    "action": { "type": "redirect", "redirect": { "transform": { "queryTransform": { "addOrReplaceParams": [ {"key":"safe","value":"active"} ] } } } },
+    "condition": { "regexFilter": "^https?://([a-z0-9-]+\\.)?google\\.[a-z.]+/search", "resourceTypes": ["main_frame"] }
+  },
+  {
+    "id": 1102,
+    "priority": 1,
+    "action": { "type": "redirect", "redirect": { "transform": { "queryTransform": { "addOrReplaceParams": [ {"key":"adlt","value":"strict"} ] } } } },
+    "condition": { "regexFilter": "^https?://([a-z0-9-]+\\.)?bing\\.com/search", "resourceTypes": ["main_frame"] }
+  }
+]

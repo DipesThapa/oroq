@@ -1,7 +1,0 @@
-{
-  "env": { "browser": true, "webextensions": true, "es2021": true },
-  "extends": "eslint:recommended",
-  "parserOptions": { "ecmaVersion": 2022, "sourceType": "module" },
-  "globals": { "chrome": "readonly" },
-  "rules": { "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }] }
-}

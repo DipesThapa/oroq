@@ -17,5 +17,5 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Safeguard ${GITHUB_REF_NAME}
+          name: Safeguard ${{ github.ref_name }}
           files: ${{ env.ZIP_FILE }}
