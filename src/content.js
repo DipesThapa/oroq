@@ -110,6 +110,46 @@
     } catch(_e) {}
   }
 
+  function isStreamingHost(host){
+    try{
+      const h = (host||getHost()||'').toLowerCase();
+      return [
+        'amazon.', 'primevideo.', 'netflix.', 'hulu.', 'disney', 'hotstar',
+        'hbo', 'max.com', 'paramount', 'peacocktv', 'tv.apple', 'apple.com'
+      ].some(k => h.includes(k));
+    }catch(_e){ return false; }
+  }
+
+  function showFullscreenOverlay(reason){
+    try{
+      if (document.getElementById('sg-fs-overlay')) return;
+      const host = getHost();
+      if (host && sessionStorage.getItem('sg-ov-video:' + host) === '1') return;
+      const wrap = document.createElement('div');
+      wrap.id = 'sg-fs-overlay';
+      Object.assign(wrap.style, {
+        position: 'fixed', inset: '0', zIndex: 2147483647,
+        background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: 'system-ui, sans-serif', color: '#fff'
+      });
+      const box = document.createElement('div');
+      Object.assign(box.style, { textAlign: 'center', maxWidth: '560px', padding: '16px', background: 'rgba(0,0,0,0.35)', borderRadius: '8px' });
+      const h = document.createElement('h2'); h.textContent = 'Blocked by Safeguard'; h.style.margin='0 0 8px'; box.appendChild(h);
+      const p = document.createElement('div'); p.textContent = reason || 'Video hidden on this site'; p.style.opacity='0.9'; p.style.margin='0 0 12px'; box.appendChild(p);
+      const btn = document.createElement('button');
+      let remaining = 5; btn.disabled = true;
+      const update = ()=> { btn.textContent = remaining>0 ? `Show video (${remaining})` : 'Show video'; };
+      update();
+      const t = setInterval(()=>{ remaining--; update(); if (remaining<=0){ clearInterval(t); btn.disabled=false; } }, 1000);
+      btn.onclick = ()=>{ try{ if(host) sessionStorage.setItem('sg-ov-video:'+host, '1'); }catch(_e){}; wrap.remove(); };
+      Object.assign(btn.style, { padding:'8px 12px', fontSize:'14px' });
+      box.appendChild(btn);
+      wrap.appendChild(box);
+      document.documentElement.appendChild(wrap);
+    }catch(_e){}
+  }
+
 
   const scanned = new WeakSet();
   function evaluateMedia(el){
@@ -171,10 +211,11 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const targetW = 96, targetH = 54;
     let blocked = false;
+    let taintedCount = 0;
     const thr = 0.35 - 0.2 * (Math.max(10, Math.min(100, sensitivity||60)) / 100);
     const tick = ()=>{
       if (!video.isConnected){ return; }
-      if (video.readyState < 2 || video.paused || video.currentTime===0){ setTimeout(tick, 800); return; }
+      if (video.readyState < 2){ setTimeout(tick, 800); return; }
       try{
         canvas.width = targetW; canvas.height = targetH;
         ctx.drawImage(video, 0, 0, targetW, targetH);
@@ -185,10 +226,37 @@
           mask(video);
           try{ video.pause(); video.currentTime = Math.max(0, video.currentTime - 0.1); }catch(_e){}
         }
-      }catch(_e){ /* Likely tainted canvas; skip sampling */ }
+      }catch(_e){
+        // Likely DRM/CORS tainted canvas (Prime/Netflix/etc.)
+        taintedCount++;
+        if (!blocked && taintedCount >= 2 && isStreamingHost()){
+          blocked = true;
+          mask(video);
+          try{ video.pause(); }catch(_e2){}
+        }
+      }
       setTimeout(tick, 1000);
     };
     setTimeout(tick, 600);
+  }
+
+  function collectVideosDeep(root){
+    const out = [];
+    try{
+      // Fast path for direct descendants
+      root.querySelectorAll && root.querySelectorAll('video').forEach(v=>out.push(v));
+      // Walk light DOM and recurse into open shadow roots
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      let n = walker.currentNode;
+      while(n){
+        const el = /** @type {Element} */(n);
+        if (el.shadowRoot && el.shadowRoot.mode === 'open'){
+          try{ el.shadowRoot.querySelectorAll('video').forEach(v=>out.push(v)); }catch(_e){}
+        }
+        n = walker.nextNode();
+      }
+    }catch(_e){}
+    return out;
   }
 
   function showInterstitial(reason){
@@ -261,17 +329,26 @@
     // No page-level block: still protect by masking on-screen images/videos
     initMediaFilter();
     if (cfg.aggressive){
-      // Watch visible videos and sample frames periodically
-      const sel = 'video';
-      document.querySelectorAll(sel).forEach(v=>startVideoWatcher(v, cfg.sensitivity));
-      new MutationObserver((muts)=>{
-        muts.forEach(m=>{
-          m.addedNodes && m.addedNodes.forEach(n=>{
-            if (n instanceof HTMLVideoElement) startVideoWatcher(n, cfg.sensitivity);
-            if (n.querySelectorAll) n.querySelectorAll('video').forEach(v=>startVideoWatcher(v, cfg.sensitivity));
-          });
-        });
-      }).observe(document.documentElement, {subtree:true, childList:true});
+      // Watch visible videos and sample frames periodically (deep: includes open shadow roots)
+      const attachAll = ()=>{
+        try{ collectVideosDeep(document).forEach(v=>startVideoWatcher(v, cfg.sensitivity)); }catch(_e){}
+      };
+      attachAll();
+      new MutationObserver(()=>attachAll()).observe(document.documentElement, {subtree:true, childList:true});
+      // Catch dynamically played videos
+      document.addEventListener('play', (e)=>{
+        const t = e.target; if (t && t instanceof HTMLVideoElement) startVideoWatcher(t, cfg.sensitivity);
+      }, true);
+      // Periodic safety scan (some apps replace DOM trees frequently)
+      setInterval(attachAll, 2000);
+      // Fallback: if no accessible <video> is found or sampling is blocked (DRM/closed shadow), show full-screen overlay on streaming hosts
+      setTimeout(()=>{ try{
+        const vids = collectVideosDeep(document);
+        const anyMasked = vids.some(v=>v && v.__sg_masked);
+        if (!anyMasked && isStreamingHost()){
+          showFullscreenOverlay('Streaming video hidden (aggressive mode)');
+        }
+      }catch(_e){} }, 2500);
     }
   }
 

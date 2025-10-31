@@ -1,0 +1,31 @@
+name: Publish to Chrome Web Store
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+     runs-on: ubuntu-latest
+     permissions:
+       contents: read
+     steps:
+       - uses: actions/checkout@v4
+       - name: Build Web Store zip (curated contents)
+         run: |
+           ZIP="extension.zip"
+           rm -f "$ZIP"
+           zip -r "$ZIP" \
+             assets/icons data src manifest.json LICENSE README.md \
+             -x "src/content.js.bak" "content.js" "manifest.backup.json" "assets/store/*" "*.zip"
+           ls -lh "$ZIP"
+       - name: Upload & Publish
+         uses: Klemensas/chrome-extension-upload-action@v1.4
+         with:
+           refresh-token: ${{ secrets.CHROME_REFRESH_TOKEN }}
+           client-id: ${{ secrets.CHROME_CLIENT_ID }}
+           client-secret: ${{ secrets.CHROME_CLIENT_SECRET }}
+           extension-id: ${{ secrets.CHROME_EXTENSION_ID }}
+           file-name: extension.zip
+           publish: true
