@@ -36,7 +36,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
 // Also set badge when the service worker starts
 initBadge();
 // Rebuild dynamic rules on service worker start to ensure rules are present
-try { rebuildDynamicRules(); } catch(_e) {}
+rebuildDynamicRules().catch((err)=>{
+  console.error('[Safeguard] Initial DNR rebuild failed', err);
+});
 
 // ---- DNR dynamic rules (blocklist + allowlist) ----
 async function loadJsonResource(path){

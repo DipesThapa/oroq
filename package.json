@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "lint": "eslint src content.js --max-warnings=0",
-    "zip:webstore": "mkdir -p dist && cd dist && rm -f extension.zip && zip -r extension.zip ../assets/icons ../data ../src ../manifest.json ../LICENSE ../README.md -x ../src/content.js.bak ../content.js ../manifest.backup.json ../assets/store/*"
+    "zip:webstore": "mkdir -p dist && rm -f dist/extension.zip && zip -r dist/extension.zip assets/icons data src manifest.json LICENSE README.md -x src/content.js.bak content.js manifest.backup.json assets/store/*"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.0",
