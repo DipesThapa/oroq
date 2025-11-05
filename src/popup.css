@@ -158,6 +158,24 @@ main {
   font-weight: 600;
 }
 
+.pin-controls {
+  margin: 8px 0 16px 34px;
+  display: none;
+}
+
+.pin-controls--visible {
+  display: block;
+}
+
+.pin-controls .actions {
+  margin-top: 0;
+}
+
+.pin-controls .button--link {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .metrics {
   display: flex;
   gap: 16px;

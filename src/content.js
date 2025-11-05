@@ -11,6 +11,52 @@
   const HOST_HINTS = ['porn','xxx','sex','hentai','xh','xv','xnxx','onlyfans','cam'];
   const AGE_GATE_RX = /(18\+|adults? only|are you 18|age verification|enter if 18)/i;
   const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report)/i;
+  const PIN_ITERATIONS_FALLBACK = 200000;
+
+  function bufferToBase64(buffer){
+    if (!buffer) return '';
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1){
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  }
+
+  function base64ToUint8Array(base64){
+    if (!base64) return null;
+    try {
+      const binary = atob(base64);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i += 1){
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    } catch(_e){
+      return null;
+    }
+  }
+
+  async function verifyPinOverride(pin, stored){
+    if (!stored || !stored.hash || !stored.salt) return false;
+    try {
+      const iterations = Number(stored.iterations) > 10000 ? Number(stored.iterations) : PIN_ITERATIONS_FALLBACK;
+      const saltBytes = base64ToUint8Array(stored.salt);
+      if (!saltBytes) return false;
+      const encoder = new TextEncoder();
+      const material = await crypto.subtle.importKey('raw', encoder.encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits({
+        name: 'PBKDF2',
+        salt: saltBytes.buffer,
+        iterations,
+        hash: 'SHA-256'
+      }, material, 256);
+      return bufferToBase64(bits) === stored.hash;
+    } catch(_e){
+      return false;
+    }
+  }
 
   function getHost(){
     try { return location.hostname.replace(/^www\./,'').toLowerCase(); } catch{ return ''; }
@@ -259,8 +305,10 @@
     return out;
   }
 
-  function showInterstitial(reason){
+  function showInterstitial(reason, opts = {}){
     const doc = document;
+    const pinConfig = opts && opts.pinConfig ? opts.pinConfig : null;
+    const pinRequired = Boolean(pinConfig && pinConfig.requirePin && pinConfig.hash && pinConfig.salt);
     doc.title = 'Safeguard – Page blocked';
 
     const root = doc.documentElement;
@@ -360,6 +408,47 @@
         gap: 12px;
         position: relative;
         z-index: 1;
+      }
+      .sg-pin {
+        margin-top: 18px;
+        padding: 16px;
+        border-radius: 18px;
+        background: rgba(37, 99, 235, 0.08);
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .sg-pin--visible {
+        display: flex;
+      }
+      .sg-pin__label {
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+      .sg-pin__input {
+        border-radius: 14px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        padding: 12px;
+        font-size: 18px;
+        letter-spacing: 6px;
+        text-align: center;
+        background: #fff;
+        color: var(--text-primary);
+        outline: none;
+      }
+      .sg-pin__actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .sg-pin__message {
+        min-height: 16px;
+        font-size: 12px;
+        color: #b91c1c;
+      }
+      .sg-pin__privacy {
+        font-size: 11px;
+        color: var(--text-muted);
       }
       .sg-button {
         border: none;
@@ -476,15 +565,131 @@
         continueBtn.disabled = false;
       }
     }, 1000);
-    continueBtn.addEventListener('click', ()=>{
+
+    const completeOverride = ()=>{
       try {
         const host = getHost();
         if (host) sessionStorage.setItem('sg-ov:' + host, '1');
       } catch(_e) {}
       location.reload();
+    };
+
+    let pinBlock = null;
+    let pinInput = null;
+    let pinSubmit = null;
+    let pinError = null;
+    let pinCancel = null;
+
+    if (pinRequired){
+      pinBlock = doc.createElement('div');
+      pinBlock.className = 'sg-pin';
+
+      const pinLabel = doc.createElement('div');
+      pinLabel.className = 'sg-pin__label';
+      pinLabel.textContent = 'Parent PIN required to continue.';
+      pinBlock.appendChild(pinLabel);
+
+      pinInput = doc.createElement('input');
+      pinInput.className = 'sg-pin__input';
+      pinInput.type = 'password';
+      pinInput.inputMode = 'numeric';
+      pinInput.pattern = '\\d{4,8}';
+      pinInput.autocomplete = 'off';
+      pinInput.autocapitalize = 'off';
+      pinInput.spellcheck = false;
+      pinInput.maxLength = 8;
+      pinInput.placeholder = '••••';
+      pinInput.setAttribute('aria-label', 'Parent PIN');
+      pinBlock.appendChild(pinInput);
+
+      const pinActions = doc.createElement('div');
+      pinActions.className = 'sg-pin__actions';
+      pinSubmit = doc.createElement('button');
+      pinSubmit.type = 'button';
+      pinSubmit.className = 'sg-button sg-button--primary';
+      pinSubmit.textContent = 'Unlock override';
+      pinSubmit.disabled = true;
+      pinCancel = doc.createElement('button');
+      pinCancel.type = 'button';
+      pinCancel.className = 'sg-button sg-button--secondary';
+      pinCancel.textContent = 'Cancel';
+      pinActions.appendChild(pinSubmit);
+      pinActions.appendChild(pinCancel);
+      pinBlock.appendChild(pinActions);
+
+      pinError = doc.createElement('div');
+      pinError.className = 'sg-pin__message';
+      pinBlock.appendChild(pinError);
+
+      const pinPrivacy = doc.createElement('div');
+      pinPrivacy.className = 'sg-pin__privacy';
+      pinPrivacy.textContent = 'Safeguard keeps this PIN on-device. Nothing is collected or shared.';
+      pinBlock.appendChild(pinPrivacy);
+
+      pinInput.addEventListener('input', ()=>{
+        let digits = pinInput.value.replace(/\D+/g, '');
+        if (digits.length > 8) digits = digits.slice(0, 8);
+        if (pinInput.value !== digits) pinInput.value = digits;
+        if (pinSubmit) pinSubmit.disabled = digits.length < 4;
+        if (pinError) pinError.textContent = '';
+      });
+      pinInput.addEventListener('keydown', (event)=>{
+        if (event.key === 'Enter' && pinSubmit && !pinSubmit.disabled){
+          event.preventDefault();
+          pinSubmit.click();
+        }
+      });
+      pinCancel.addEventListener('click', ()=>{
+        pinBlock.classList.remove('sg-pin--visible');
+        if (pinInput) pinInput.value = '';
+        if (pinSubmit) pinSubmit.disabled = true;
+        if (pinError) pinError.textContent = '';
+        continueBtn.disabled = false;
+        updateContinue();
+      });
+      pinSubmit.addEventListener('click', async ()=>{
+        if (!pinInput) return;
+        const attempt = pinInput.value.trim();
+        if (attempt.length < 4){
+          if (pinError) pinError.textContent = 'PIN must be 4-8 digits.';
+          pinSubmit.disabled = true;
+          return;
+        }
+        pinSubmit.disabled = true;
+        if (pinError) pinError.textContent = '';
+        const ok = await verifyPinOverride(attempt, pinConfig);
+        if (!ok){
+          if (pinError) pinError.textContent = 'Incorrect PIN.';
+          pinSubmit.disabled = false;
+          pinInput.focus();
+          pinInput.select();
+          return;
+        }
+        completeOverride();
+      });
+    }
+
+    continueBtn.addEventListener('click', ()=>{
+      if (!pinRequired){
+        completeOverride();
+        return;
+      }
+      if (!pinBlock) return;
+      if (!pinBlock.classList.contains('sg-pin--visible')){
+        pinBlock.classList.add('sg-pin--visible');
+        continueBtn.disabled = true;
+        setTimeout(()=>{
+          if (pinInput) pinInput.focus();
+        }, 50);
+        return;
+      }
     });
     actions.appendChild(continueBtn);
     panel.appendChild(actions);
+
+    if (pinBlock){
+      panel.appendChild(pinBlock);
+    }
 
     const support = doc.createElement('p');
     support.className = 'sg-support';
@@ -493,16 +698,33 @@
   }
 
   async function scan(){
-    const cfg = await new Promise(r => chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60}, r));
+    const [cfg, localOverrides] = await Promise.all([
+      new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60}, resolve)),
+      new Promise((resolve)=>chrome.storage.local.get({
+        requirePin: false,
+        overridePinHash: null,
+        overridePinSalt: null,
+        overridePinIterations: 0
+      }, resolve))
+    ]);
     if(!cfg.enabled) return;
+    const pinConfig = {
+      requirePin: Boolean(localOverrides.requirePin && localOverrides.overridePinHash && localOverrides.overridePinSalt),
+      hash: localOverrides.overridePinHash,
+      salt: localOverrides.overridePinSalt,
+      iterations: localOverrides.overridePinIterations
+    };
     const host = getHost();
     try {
-      if (host && sessionStorage.getItem('sg-ov:' + host) === '1') return; // temporary override for this host (tab/session)
+      if (host && sessionStorage.getItem('sg-ov:' + host) === '1'){
+        sessionStorage.removeItem('sg-ov:' + host);
+        return; // temporary override for this host (one refresh)
+      }
     } catch(_e) {}
     if((cfg.allowlist||[]).includes(host)) return; // allowlisted
 
     const BL = await loadBlocklist();
-    if(BL.domains && BL.domains.includes(host)) { showInterstitial("domain blocklist"); return; }
+    if(BL.domains && BL.domains.includes(host)) { showInterstitial("domain blocklist", { pinConfig }); return; }
 
     const text = document.body && document.body.innerText ? document.body.innerText.slice(0, 40000) : "";
     const urlScore = scoreFromUrl();
@@ -511,7 +733,7 @@
     const total = urlScore + metaScore + bodyScore;
     const sens = Number(cfg.sensitivity)||60; window.__sg_sensitivity = sens;
     const threshold = 12 - Math.floor(6 * (sens/100)); // 12..6
-    if(total >= threshold) { showInterstitial("advanced heuristic score"); return; }
+    if(total >= threshold) { showInterstitial("advanced heuristic score", { pinConfig }); return; }
 
     // No page-level block: still protect by masking on-screen images/videos
     initMediaFilter();

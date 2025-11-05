@@ -30,6 +30,11 @@ const siteToggle = document.getElementById('siteToggle');
 const siteHostLabel = document.getElementById('siteHost');
 const metricAllowed = document.getElementById('metricAllowed');
 const metricBlocked = document.getElementById('metricBlocked');
+const requirePinEl = document.getElementById('requirePin');
+const pinControls = document.getElementById('pinControls');
+const pinMessage = document.getElementById('pinMessage');
+const pinUpdateBtn = document.getElementById('pinUpdate');
+const pinRemoveBtn = document.getElementById('pinRemove');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -50,11 +55,15 @@ const TOUR_STEPS = [
   }
 ];
 
+const PIN_SALT_BYTES = 16;
+const PIN_ITERATIONS = 200000;
+
 let tourIndex = 0;
 let tourActive = false;
 let currentAllowlist = [];
 let currentBlocklist = [];
 let currentHost = null;
+let storedPin = null;
 
 function setStatus(enabled){
   if (!statusBadge) return;
@@ -80,6 +89,115 @@ function setBlockMessage(text, tone = 'muted'){
   blockMessage.classList.remove('message--success', 'message--error');
   if (tone === 'success') blockMessage.classList.add('message--success');
   else if (tone === 'error') blockMessage.classList.add('message--error');
+}
+
+function setPinMessage(text, tone = 'muted'){
+  if (!pinMessage) return;
+  pinMessage.textContent = text;
+  pinMessage.classList.remove('message--success', 'message--error');
+  if (tone === 'success') pinMessage.classList.add('message--success');
+  else if (tone === 'error') pinMessage.classList.add('message--error');
+}
+
+function bufferToBase64(buffer){
+  if (!buffer) return '';
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  bytes.forEach((b)=>{ binary += String.fromCharCode(b); });
+  return btoa(binary);
+}
+
+function base64ToUint8Array(base64){
+  if (!base64) return null;
+  try {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i += 1){
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch(_e){
+    return null;
+  }
+}
+
+async function derivePinHash(pin, reuse = {}){
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', encoder.encode(pin), { name: 'PBKDF2' }, false, ['deriveBits']);
+  let saltArray = base64ToUint8Array(reuse.salt);
+  if (!saltArray){
+    saltArray = new Uint8Array(PIN_SALT_BYTES);
+    crypto.getRandomValues(saltArray);
+  }
+  const iterations = Number(reuse.iterations) > 10000 ? Number(reuse.iterations) : PIN_ITERATIONS;
+  const bits = await crypto.subtle.deriveBits({
+    name: 'PBKDF2',
+    salt: saltArray.buffer,
+    iterations,
+    hash: 'SHA-256'
+  }, keyMaterial, 256);
+  return {
+    hash: bufferToBase64(bits),
+    salt: bufferToBase64(saltArray.buffer),
+    iterations
+  };
+}
+
+async function verifyPinInput(value, stored){
+  if (!stored || !stored.hash || !stored.salt) return false;
+  const result = await derivePinHash(value, { salt: stored.salt, iterations: stored.iterations });
+  return result.hash === stored.hash;
+}
+
+function syncPinControls(){
+  if (!pinControls) return;
+  pinControls.classList.add('pin-controls--visible');
+  const hasPin = Boolean(storedPin && storedPin.hash && storedPin.salt);
+  if (pinUpdateBtn) pinUpdateBtn.textContent = hasPin ? 'Change PIN' : 'Set PIN';
+  if (pinRemoveBtn){
+    pinRemoveBtn.hidden = !hasPin;
+    pinRemoveBtn.disabled = !hasPin;
+  }
+}
+
+async function promptForNewPin(){
+  const first = window.prompt('Enter a new PIN (4-8 digits)');
+  if (first === null) return null;
+  const primary = first.trim();
+  if (!/^\d{4,8}$/.test(primary)){
+    setPinMessage('PIN must be 4-8 digits.', 'error');
+    return null;
+  }
+  const second = window.prompt('Confirm the new PIN');
+  if (second === null){
+    setPinMessage('PIN setup cancelled.', 'muted');
+    return null;
+  }
+  const confirm = second.trim();
+  if (primary !== confirm){
+    setPinMessage('PIN entries did not match.', 'error');
+    return null;
+  }
+  const hashed = await derivePinHash(primary);
+  return hashed;
+}
+
+async function requestPinConfirmation(message){
+  if (!storedPin) return { ok: false, cancelled: true };
+  const attempt = window.prompt(message || 'Enter your PIN to continue');
+  if (attempt === null) return { ok: false, cancelled: true };
+  const value = attempt.trim();
+  if (!value){
+    setPinMessage('PIN cannot be empty.', 'error');
+    return { ok: false, cancelled: false };
+  }
+  const valid = await verifyPinInput(value, storedPin);
+  if (!valid){
+    setPinMessage('Incorrect PIN.', 'error');
+    return { ok: false, cancelled: false };
+  }
+  return { ok: true, cancelled: false };
 }
 
 function clearHighlights(){
@@ -172,11 +290,38 @@ chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivi
     startTour();
   }
 });
-chrome.storage.local.get({userBlocklist:[]}, (cfg)=>{
+chrome.storage.local.get({
+  userBlocklist: [],
+  requirePin: false,
+  overridePinHash: null,
+  overridePinSalt: null,
+  overridePinIterations: 0
+}, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
   updateBlockCount(list.length);
   updateMetrics();
+
+  storedPin = (cfg.overridePinHash && cfg.overridePinSalt) ? {
+    hash: cfg.overridePinHash,
+    salt: cfg.overridePinSalt,
+    iterations: Number(cfg.overridePinIterations) || PIN_ITERATIONS
+  } : null;
+
+  if (requirePinEl){
+    const shouldEnable = Boolean(cfg.requirePin && storedPin);
+    requirePinEl.checked = shouldEnable;
+    if (cfg.requirePin && !storedPin){
+      chrome.storage.local.set({ requirePin: false });
+    }
+  }
+  syncPinControls();
+  if (storedPin){
+    setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN required for overrides.' : 'PIN saved. Toggle on when you need it.');
+  } else {
+    setPinMessage('Set a PIN to guard overrides. Nothing leaves this device.', 'muted');
+  }
+  if (pinControls) pinControls.classList.add('pin-controls--visible');
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -194,6 +339,94 @@ sensitivityEl.addEventListener('input', ()=>{
   chrome.storage.sync.set({ sensitivity: v });
   updateSensitivityDisplay(v);
 });
+
+if (requirePinEl){
+  requirePinEl.addEventListener('change', async ()=>{
+    const wantsEnable = requirePinEl.checked;
+    if (wantsEnable){
+      if (!storedPin){
+        const newPin = await promptForNewPin();
+        if (!newPin){
+          requirePinEl.checked = false;
+          syncPinControls();
+          return;
+        }
+        storedPin = newPin;
+        chrome.storage.local.set({
+          overridePinHash: newPin.hash,
+          overridePinSalt: newPin.salt,
+          overridePinIterations: newPin.iterations,
+          requirePin: true
+        }, ()=>{
+          syncPinControls();
+          setPinMessage('PIN required for overrides.', 'success');
+        });
+      } else {
+        chrome.storage.local.set({ requirePin: true }, ()=>{
+          setPinMessage('PIN required for overrides.', 'success');
+        });
+        syncPinControls();
+      }
+    } else {
+      const { ok } = await requestPinConfirmation('Enter your PIN to disable override protection');
+      if (!ok){
+        requirePinEl.checked = true;
+        syncPinControls();
+        return;
+      }
+      chrome.storage.local.set({ requirePin: false }, ()=>{
+        setPinMessage('PIN saved, but overrides are unlocked until you re-enable.', 'muted');
+        syncPinControls();
+      });
+    }
+  });
+}
+
+if (pinUpdateBtn){
+  pinUpdateBtn.addEventListener('click', async ()=>{
+    if (storedPin){
+      const { ok } = await requestPinConfirmation('Enter your current PIN to change it');
+      if (!ok) return;
+    }
+    const newPin = await promptForNewPin();
+    if (!newPin) return;
+    storedPin = newPin;
+    const payload = {
+      overridePinHash: newPin.hash,
+      overridePinSalt: newPin.salt,
+      overridePinIterations: newPin.iterations
+    };
+    if (requirePinEl && requirePinEl.checked){
+      payload.requirePin = true;
+    }
+    chrome.storage.local.set(payload, ()=>{
+      syncPinControls();
+      setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN updated.' : 'PIN updated. Toggle on override protection when you need it.', 'success');
+    });
+  });
+}
+
+if (pinRemoveBtn){
+  pinRemoveBtn.addEventListener('click', async ()=>{
+    if (!storedPin){
+      setPinMessage('No PIN saved yet.', 'muted');
+      return;
+    }
+    const { ok } = await requestPinConfirmation('Enter your PIN to remove it');
+    if (!ok) return;
+    storedPin = null;
+    if (requirePinEl) requirePinEl.checked = false;
+    chrome.storage.local.set({
+      overridePinHash: null,
+      overridePinSalt: null,
+      overridePinIterations: 0,
+      requirePin: false
+    }, ()=>{
+      syncPinControls();
+      setPinMessage('PIN removed. Manual overrides are unprotected.', 'success');
+    });
+  });
+}
 
 addAllow.addEventListener('click', async ()=>{
   const host = normalizeHost(allowHost.value);

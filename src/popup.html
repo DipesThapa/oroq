@@ -44,6 +44,22 @@
         </span>
       </label>
 
+      <label class="toggle">
+        <input id="requirePin" type="checkbox">
+        <span>
+          <span class="toggle__label">Require PIN for overrides</span>
+          <span class="toggle__hint">Ask for a private PIN before “Continue anyway” works.</span>
+        </span>
+      </label>
+
+      <div id="pinControls" class="pin-controls">
+        <div class="actions actions--wrap">
+          <button id="pinUpdate" class="button button--primary" type="button">Set PIN</button>
+          <button id="pinRemove" class="button button--link actions__end" type="button">Remove PIN</button>
+        </div>
+        <small id="pinMessage" class="message">Protect manual overrides with a PIN that stays on this device.</small>
+      </div>
+
       <div class="slider">
         <div class="slider__label">Sensitivity <span id="sensitivityValue" class="slider__value">60</span></div>
         <input id="sensitivity" type="range" min="10" max="100" step="1" value="60">
