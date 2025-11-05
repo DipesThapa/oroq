@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safeguard Privacy Policy</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <span class="pill">Privacy-first</span>
+      <h1>Safeguard Privacy Policy</h1>
+      <p>Safeguard (SafeBrowse AI) is designed to keep users safe without collecting personal data. All analysis happens on-device, and policy settings stay under your control.</p>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Data collection</h2>
+      <p>Safeguard does not collect, transmit, or sell personal data. The extension never sends browsing history, URLs, or page content to external services. Network access is limited to the active tab and Declarative Net Request (DNR) rules required for SafeSearch and ad blocking.</p>
+
+      <h2>Data stored locally</h2>
+      <ul>
+        <li><strong>chrome.storage.sync</strong>
+          <ul>
+            <li><code>enabled</code> – on/off state of core protection</li>
+            <li><code>allowlist</code> – hostnames trusted by the user/administrator</li>
+            <li><code>aggressive</code> – visual blurring toggle</li>
+            <li><code>sensitivity</code> – heuristic threshold slider value</li>
+            <li><code>onboardingComplete</code> – whether the first-run tour has been viewed</li>
+          </ul>
+        </li>
+        <li><strong>chrome.storage.local</strong>
+          <ul>
+            <li><code>userBlocklist</code> – administrator-imported domains to block</li>
+          </ul>
+        </li>
+      </ul>
+      <p>No user identity, account, or credential data is stored.</p>
+
+      <h2>Content scanning</h2>
+      <p>Heuristic text and DOM analysis runs inside the browser process. Images/videos remain on device; Safeguard does not upload pixels for remote classification. Blocked pages show an interstitial with a temporary override scoped to the current host and tab (session-only).</p>
+
+      <h2>Permissions rationale</h2>
+      <ul>
+        <li><code>storage</code> – save user and administrator preferences.</li>
+        <li><code>declarativeNetRequest</code> – enforce SafeSearch, allowlists, and blocklists without inspecting full request bodies.</li>
+        <li><code>tabs</code> – read the active tab’s hostname to power the “Allow this site” toggle in the popup. The hostname is never persisted after the popup closes.</li>
+      </ul>
+      <p>No background network calls or remote configuration fetches are performed.</p>
+
+      <h2>Opt-out and removal</h2>
+      <p>Users can pause protection from the popup or remove the extension entirely from Chrome at any time. Uninstalling the extension deletes all local data.</p>
+
+      <h2>Contact</h2>
+      <p>Questions or data requests? Open a GitHub Discussion or email the maintainer listed in <a href="support.html">Support</a>. Security vulnerabilities should follow the responsible disclosure path outlined in <a href="https://github.com/DipesThapa/safebrowse-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.</p>
+    </section>
+
+    <p class="footer">Last updated: November 2025</p>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div>© <span id="year"></span> Safeguard (SafeBrowse AI). All rights reserved.</div>
+      <div>
+        <a href="index.html">Overview</a> ·
+        <a href="support.html">Support</a> ·
+        <a href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

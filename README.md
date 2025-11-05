@@ -1,29 +1,42 @@
-# Safeguard (SafeBrowse AI) — Privacy-first Web Safety Extension (MVP)
+# Safeguard (SafeBrowse AI) — Privacy-first Web Safety Extension
 
 [![CI](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml) [![CodeQL](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml) [![Release](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Safeguard is a lightweight, on-device browser extension that helps families and schools
-reduce exposure to harmful content.
+Safeguard is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy.
 
 ## Features
 - **Advanced heuristics**: weighted URL/title/meta/body scoring with sensitivity control
 - **On-page protection**: optional Aggressive mode to blur/pause images/videos on-device
 - **Domain blocklist**: packaged defaults + user-importable list; allowlist overrides
 - **SafeSearch enforcement**: redirects Google/Bing to strict modes (DNR)
+- **Control centre**: refreshed popup with live status badge, quick toggles, and policy management in one place
+- **First-run tour**: onboarding highlights key controls and policy workflows for new admins
 - **Static ad rules**: common ad/marketing domains blocked via DNR
 - **Interstitial**: blocked page with timed “Show anyway” override (per tab/session)
+
+## Business-ready capabilities
+- **Privacy by design**: all analysis and decisioning stays on-device; no browsing data is transmitted.
+- **Policy controls**: organisation-wide allowlists & custom blocklists with import/export workflows.
+- **Deployment friendly**: minimal permissions (`storage`, `declarativeNetRequest`) and no background polling.
+- **Support collateral**: ready-made privacy policy, security briefing (`SECURITY.md`), and support workflows (`SUPPORT.md`).
+- **Managed Chrome guidance**: see [docs/WEBSTORE.md](docs/WEBSTORE.md) for publishing, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for rollout playbooks, and [SUPPORT.md](SUPPORT.md) for help desk scripts.
+
+Hosted resources
+- Bundled static pages (packaged inside the extension): `site/index.html`, `site/privacy.html`, `site/support.html`
+- Optional public hosting: enable GitHub Pages (Settings → Pages → build from `/site`) or deploy the same folder to Netlify/Vercel. Update the Chrome Web Store listing with the published URLs once live.
 
 ## Dev Setup
 1. Chrome → `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → select this folder
-3. Open the popup → toggle **Enable protection** (badge shows ON)
+3. Open the popup → toggle **Enable protection** (badge shows **Active**)
 4. Optional: toggle **Aggressive mode** and adjust **Sensitivity**
 5. Optional: paste domains (one per line) into **Blocklist → Import/Replace**
    - or edit `data/blocklist.json` and reload the extension
+6. For private windows: open extension details → enable **Allow in Incognito**
 
 Notes:
 - Content script is `src/content.js` (manifest aligned). The legacy `content.js` remains in repo but is not loaded.
-- Permissions: `storage`, `declarativeNetRequest`; scripts run on `http/https` pages only.
+- Permissions: `storage`, `declarativeNetRequest`, `tabs`; scripts run on `http/https` pages only (tabs permission is used to show the active site toggle).
 - DNR rules are rebuilt on install/startup and when allowlist/blocklist change.
 - Interstitial uses safe DOM APIs; “Show anyway” temporarily allows the current host for this tab/session.
 
@@ -35,18 +48,18 @@ Notes:
 MIT License
 
 ## Quick start
-1) Load unpacked (Developer mode)
-2) Toggle Enable in the popup (badge ON)
-3) Optional: toggle Aggressive mode + set sensitivity
-4) Blocklist: paste domains → Import/Replace (one per line)
-5) Visit sites to verify interstitial (strong signals) or blurring (contextual)
+1. Load unpacked (Developer mode)
+2. Toggle **Enable protection** in the popup (status badge turns green)
+3. Optional: toggle Aggressive mode + set sensitivity
+4. Blocklist: paste domains → Import/Replace (one per line)
+5. Visit sites to verify interstitial (strong signals) or blurring (contextual)
 
 Phase 1 additions
 - Static DNR rules for common ad domains and SafeSearch (Google/Bing)
 - Dynamic DNR rules compiled from packaged + user-imported blocklist with allowlist overrides
 
 Limitations
-- Chrome’s dynamic DNR rules have capacity limits (~30k). Very large imports are truncated.
+- Chrome’s dynamic DNR rules have capacity limits (~30k). Very large custom imports are truncated.
 - Visual detection is heuristic-based; cross-origin videos may block pixel reads (skipped).
 
 ## Community

@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safeguard Support</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <span class="pill">We’re here to help</span>
+      <h1>Safeguard Support Guide</h1>
+      <p>Use the channels below to get assistance with onboarding, feature requests, incidents, or security reports.</p>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>How to contact us</h2>
+      <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
+        <thead>
+          <tr style="text-align:left; background: var(--surface-alt);">
+            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Need</th>
+            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Channel</th>
+            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Expectations</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">General questions, onboarding help</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);"><a href="https://github.com/DipesThapa/safebrowse-ai/discussions" target="_blank" rel="noopener">GitHub Discussions</a></td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Community response, maintainer follow-up within 5 business days</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Feature suggestion</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Feature Request issue template</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Reviewed during roadmap planning (quarterly)</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug report</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug Report issue template with reproduction steps</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Triage within 3 business days; patch scheduled by severity</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Production incident</td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug report marked <strong>priority</strong> + email <a href="mailto:operations@safebrowse-ai.test">operations@safebrowse-ai.test</a></td>
+            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Acknowledgement within 1 business day, status updates until resolved</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px;">Security vulnerability</td>
+            <td style="padding: 10px;">GitHub Security Advisory or email <a href="mailto:security@safebrowse-ai.test">security@safebrowse-ai.test</a></td>
+            <td style="padding: 10px;">Initial response within 48 hours, coordinated disclosure process</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Operational commitments (best-effort)</h2>
+      <ul>
+        <li>Maintenance releases at least once per quarter.</li>
+        <li>Hotfixes for critical blocking issues within 3 business days of confirmation.</li>
+        <li>Documentation updates alongside significant UI or behaviour changes.</li>
+      </ul>
+
+      <h2>Self-service resources</h2>
+      <ul>
+        <li><a href="index.html">Product overview</a></li>
+        <li><a href="privacy.html">Privacy policy</a></li>
+        <li><a href="https://github.com/DipesThapa/safebrowse-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">Security policy</a></li>
+        <li><a href="https://github.com/DipesThapa/safebrowse-ai/blob/main/docs/DEPLOYMENT.md" target="_blank" rel="noopener">Deployment guide</a></li>
+      </ul>
+
+      <p class="footer">Need a bespoke support agreement? Fork the repository or open a discussion to coordinate sponsorship/commercial support.</p>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div>© <span id="year"></span> Safeguard (SafeBrowse AI). All rights reserved.</div>
+      <div>
+        <a href="index.html">Overview</a> ·
+        <a href="privacy.html">Privacy</a> ·
+        <a href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

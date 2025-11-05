@@ -1,29 +1,122 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Safeguard</title></head>
-<body style="font-family:system-ui;width:300px;padding:12px">
-  <h3 style="margin:0 0 8px">Safeguard</h3>
-  <label><input id="enabled" type="checkbox"> Enable protection</label>
-  <hr>
-  <h4 style="margin:8px 0 4px">Allowlist</h4>
-  <input id="allowHost" placeholder="example.com" style="width:100%;padding:6px">
-  <div style="margin-top:6px;display:flex;gap:6px">
-    <button id="addAllow">Add</button>
-    <button id="clearAllow" title="Remove all domains">Clear all</button>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Safeguard</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header__logo"><img src="../assets/icons/icon48.png" alt="Safeguard logo"></div>
+    <div>
+      <h1 class="header__title">Safeguard</h1>
+      <p class="header__subtitle">On-device protection for safer browsing</p>
+    </div>
+    <span id="statusBadge" class="status-badge">Active</span>
+  </header>
+
+  <main>
+    <section class="card" id="cardProtection">
+      <h2 class="card__title">Protection</h2>
+      <p class="card__subtitle">Control network filtering and visual safeguards for every site.</p>
+
+      <label class="toggle">
+        <input id="enabled" type="checkbox">
+        <span>
+          <span class="toggle__label">Enable protection</span>
+          <span class="toggle__hint">Blocks adult domains and suspicious media automatically.</span>
+        </span>
+      </label>
+
+      <label class="toggle">
+        <input id="siteToggle" type="checkbox" disabled>
+        <span>
+          <span class="toggle__label">Allow this site</span>
+          <span class="toggle__hint">Bypass filtering for <strong id="siteHost">loading…</strong>.</span>
+        </span>
+      </label>
+
+      <label class="toggle">
+        <input id="aggressive" type="checkbox">
+        <span>
+          <span class="toggle__label">Aggressive mode</span>
+          <span class="toggle__hint">Blur and pause explicit images/videos detected on the page.</span>
+        </span>
+      </label>
+
+      <div class="slider">
+        <div class="slider__label">Sensitivity <span id="sensitivityValue" class="slider__value">60</span></div>
+        <input id="sensitivity" type="range" min="10" max="100" step="1" value="60">
+      </div>
+
+      <div class="metrics" aria-label="policy metrics">
+        <div class="metrics__item">
+          <span id="metricAllowed" class="metrics__value">0</span>
+          <span class="metrics__label">Allowlisted</span>
+        </div>
+        <div class="metrics__item">
+          <span id="metricBlocked" class="metrics__value">0</span>
+          <span class="metrics__label">Policy blocks</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="cardAllowlist">
+      <h2 class="card__title">Allowlist</h2>
+      <p class="card__subtitle">Bypass filtering for trusted domains (e.g. intranet portals).</p>
+
+      <div class="field">
+        <input id="allowHost" type="text" placeholder="example.com">
+        <button id="addAllow" class="button button--primary" type="button">Add</button>
+      </div>
+      <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
+      <ul id="allowList" class="pill-list"></ul>
+      <div class="actions actions--wrap">
+        <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
+        <button id="allowExport" class="button button--secondary" type="button">Download</button>
+        <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
+      </div>
+      <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
+    </section>
+
+    <section class="card" id="cardBlocklist">
+      <h2 class="card__title">Custom blocklist</h2>
+      <p class="card__subtitle">Import policy domains that should always be blocked.</p>
+
+      <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
+      <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
+      <div class="actions actions--wrap">
+        <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
+        <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
+        <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
+        <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
+        <span id="blockCount" class="badge">0 domains</span>
+      </div>
+      <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footer__links">
+      <a href="../site/index.html" target="_blank" rel="noopener">Product Guide</a>
+      <a href="../site/privacy.html" target="_blank" rel="noopener">Privacy</a>
+      <a href="../site/support.html" target="_blank" rel="noopener">Support</a>
+    </div>
+    <button type="button" id="tourReplay" class="button button--link">Show tour</button>
+  </footer>
+
+  <div id="tour" class="tour tour--hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+    <div class="tour__panel">
+      <div class="tour__progress" id="tourProgress">Step 1 of 3</div>
+      <h2 id="tourTitle" class="tour__title">Welcome to Safeguard</h2>
+      <p id="tourBody" class="tour__body">Safeguard blocks adult content and risky ads before they appear.</p>
+      <div class="tour__actions">
+        <button type="button" id="tourSkip" class="button button--secondary">Skip tour</button>
+        <button type="button" id="tourNext" class="button button--primary">Next</button>
+      </div>
+    </div>
   </div>
-  <small id="hint" style="color:#666">enter a hostname only (no http/https)</small>
-  <ul id="allowList" style="padding-left:18px"></ul>
-  <hr>
-  <h4 style="margin:8px 0 4px">Aggressive mode</h4>
-  <label><input id="aggressive" type="checkbox"> Detect and blur images/videos on the page</label>
-  <div style="margin:6px 0 10px">
-    <label>Sensitivity: <input id="sensitivity" type="range" min="10" max="100" step="1" value="60"></label>
-  </div>
-  <hr>
-  <h4 style="margin:8px 0 4px">Blocklist (domains)</h4>
-  <textarea id="blocklistInput" placeholder="one domain per line (example.com)" style="width:100%;height:100px;padding:6px"></textarea>
-  <div style="margin-top:6px;display:flex;gap:6px">
-    <button id="importBlocklist" title="Replace existing blocklist">Import/Replace</button>
-    <button id="clearBlocklist" title="Remove all domains from blocklist">Clear blocklist</button>
-    <small id="blockCount" style="color:#666;margin-left:auto"></small>
-  </div>
+
   <script src="popup.js"></script>
-</body></html>
+</body>
+</html>
