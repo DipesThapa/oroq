@@ -260,49 +260,236 @@
   }
 
   function showInterstitial(reason){
-    // Safely replace the document without using innerHTML
     const doc = document;
-    while (doc.documentElement.firstChild) {
-      doc.documentElement.removeChild(doc.documentElement.firstChild);
-    }
+    doc.title = 'Safeguard – Page blocked';
 
-    const wrap = doc.createElement('div');
-    Object.assign(wrap.style, { fontFamily: 'system-ui, sans-serif', margin: '4rem', textAlign: 'center' });
+    const root = doc.documentElement;
+    while (root.firstChild) root.removeChild(root.firstChild);
 
-    const h1 = doc.createElement('h1');
-    h1.textContent = 'Safeguard';
-    wrap.appendChild(h1);
+    const head = doc.createElement('head');
+    const style = doc.createElement('style');
+    style.textContent = `
+      :root {
+        color-scheme: light dark;
+        --bg-gradient: linear-gradient(140deg, #0b1f33 0%, #2563eb 50%, #16a34a 100%);
+        --panel-bg: rgba(255,255,255,0.97);
+        --panel-shadow: 0 24px 60px rgba(15,23,42,0.35);
+        --text-primary: #0f172a;
+        --text-secondary: #475569;
+        --pill-bg: rgba(37,99,235,0.12);
+        --pill-text: #2563eb;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg-gradient);
+        color: var(--text-primary);
+      }
+      .sg-panel {
+        width: min(92%, 520px);
+        background: var(--panel-bg);
+        border-radius: 28px;
+        padding: 36px;
+        box-shadow: var(--panel-shadow);
+        text-align: left;
+        position: relative;
+        overflow: hidden;
+      }
+      .sg-panel::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at -10% -10%, rgba(37,99,235,0.18), transparent 45%),
+                    radial-gradient(circle at 110% 20%, rgba(22,163,74,0.18), transparent 55%);
+        pointer-events: none;
+      }
+      .sg-header {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .sg-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #2563eb, #16a34a);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 700;
+        font-size: 22px;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+      }
+      .sg-title {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 650;
+      }
+      .sg-subtitle {
+        margin: 4px 0 0;
+        color: var(--text-secondary);
+      }
+      .sg-pill {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--pill-bg);
+        color: var(--pill-text);
+        font-weight: 600;
+        font-size: 12px;
+        margin-bottom: 18px;
+      }
+      .sg-reason {
+        margin: 0 0 24px;
+        color: var(--text-secondary);
+      }
+      .sg-reason strong {
+        color: var(--text-primary);
+      }
+      .sg-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        position: relative;
+        z-index: 1;
+      }
+      .sg-button {
+        border: none;
+        border-radius: 999px;
+        padding: 12px 20px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+      .sg-button--primary {
+        background: linear-gradient(135deg, #16a34a, #0f766e);
+        color: #fff;
+        box-shadow: 0 12px 30px rgba(15,118,110,0.35);
+      }
+      .sg-button--primary:disabled {
+        opacity: 0.6;
+        cursor: default;
+        box-shadow: none;
+      }
+      .sg-button--secondary {
+        background: rgba(15, 23, 42, 0.06);
+        color: var(--text-primary);
+      }
+      .sg-button:not(:disabled):hover {
+        transform: translateY(-1px);
+      }
+      .sg-support {
+        margin-top: 24px;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+      .sg-support a {
+        color: #2563eb;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .sg-support a:hover {
+        text-decoration: underline;
+      }
+    `;
+    head.appendChild(style);
+    root.appendChild(head);
 
-    const p1 = doc.createElement('p');
-    p1.textContent = 'This page was blocked by local rules (MVP).';
-    wrap.appendChild(p1);
+    const body = doc.createElement('body');
+    root.appendChild(body);
 
-    const p2 = doc.createElement('p');
-    const b = doc.createElement('b');
-    b.textContent = 'Reason: ';
-    const reasonText = doc.createElement('span');
-    reasonText.textContent = String(reason || '');
-    p2.appendChild(b);
-    p2.appendChild(reasonText);
-    wrap.appendChild(p2);
+    const panel = doc.createElement('div');
+    panel.className = 'sg-panel';
+    body.appendChild(panel);
 
-    const button = doc.createElement('button');
-    button.id = 'sg-override';
+    const header = doc.createElement('div');
+    header.className = 'sg-header';
+
+    const icon = doc.createElement('div');
+    icon.className = 'sg-icon';
+    icon.textContent = 'S';
+    header.appendChild(icon);
+
+    const headerText = doc.createElement('div');
+    const title = doc.createElement('h1');
+    title.className = 'sg-title';
+    title.textContent = 'Safeguard blocked this page';
+    const subtitle = doc.createElement('p');
+    subtitle.className = 'sg-subtitle';
+    subtitle.textContent = 'Our local rules flagged this content before it loaded.';
+    headerText.appendChild(title);
+    headerText.appendChild(subtitle);
+    header.appendChild(headerText);
+    panel.appendChild(header);
+
+    const pill = doc.createElement('span');
+    pill.className = 'sg-pill';
+    pill.textContent = 'On-device protection';
+    panel.appendChild(pill);
+
+    const reasonPara = doc.createElement('p');
+    reasonPara.className = 'sg-reason';
+    const reasonLabel = doc.createElement('strong');
+    reasonLabel.textContent = 'Reason: ';
+    reasonPara.appendChild(reasonLabel);
+    reasonPara.append(String(reason || 'Policy enforcement'));
+    panel.appendChild(reasonPara);
+
+    const actions = doc.createElement('div');
+    actions.className = 'sg-actions';
+
+    const backBtn = doc.createElement('button');
+    backBtn.className = 'sg-button sg-button--secondary';
+    backBtn.type = 'button';
+    backBtn.textContent = 'Back to safety';
+    backBtn.addEventListener('click', ()=>{
+      if (history.length > 1){
+        history.back();
+      } else {
+        location.href = 'about:blank';
+      }
+    });
+    actions.appendChild(backBtn);
+
+    const continueBtn = doc.createElement('button');
+    continueBtn.className = 'sg-button sg-button--primary';
+    continueBtn.type = 'button';
     let remaining = 5;
-    button.disabled = true;
-    const updateBtn = () => { button.textContent = remaining > 0 ? `Show anyway (${remaining})` : 'Show anyway'; };
-    updateBtn();
-    const timer = setInterval(() => { remaining -= 1; updateBtn(); if (remaining <= 0) { clearInterval(timer); button.disabled = false; } }, 1000);
-    button.addEventListener('click', () => {
+    continueBtn.disabled = true;
+    const updateContinue = ()=>{
+      continueBtn.textContent = remaining > 0 ? `Continue anyway (${remaining})` : 'Continue anyway';
+    };
+    updateContinue();
+    const timer = setInterval(()=>{
+      remaining -= 1;
+      updateContinue();
+      if (remaining <= 0){
+        clearInterval(timer);
+        continueBtn.disabled = false;
+      }
+    }, 1000);
+    continueBtn.addEventListener('click', ()=>{
       try {
         const host = getHost();
         if (host) sessionStorage.setItem('sg-ov:' + host, '1');
       } catch(_e) {}
       location.reload();
     });
-    wrap.appendChild(button);
+    actions.appendChild(continueBtn);
+    panel.appendChild(actions);
 
-    doc.documentElement.appendChild(wrap);
+    const support = doc.createElement('p');
+    support.className = 'sg-support';
+    support.innerHTML = 'Need to allow this permanently? Add it to your allowlist in the Safeguard popup or <a href="https://dipesthapa.github.io/safebrowse-ai/support.html" target="_blank" rel="noopener">contact support</a>.';
+    panel.appendChild(support);
   }
 
   async function scan(){
