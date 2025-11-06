@@ -7,18 +7,23 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 ## Features
 - **Advanced heuristics**: weighted URL/title/meta/body scoring with sensitivity control
 - **On-page protection**: optional Aggressive mode to blur/pause images/videos on-device
+- **Visual detection**: image heuristics sample pixels to escalate or block graphic imagery even without text
 - **Domain blocklist**: packaged defaults + user-importable list; allowlist overrides
+- **Age-based profiles**: one-click presets for EYFS through post-16, tuned for UK safeguarding
 - **SafeSearch enforcement**: redirects Google/Bing to strict modes (DNR)
 - **Control centre**: refreshed popup with live status badge, quick toggles, and policy management in one place
 - **First-run tour**: onboarding highlights key controls and policy workflows for new admins
 - **Static ad rules**: common ad/marketing domains blocked via DNR
+- **PIN protection**: require a PIN before overrides or allowlist edits, capturing on-device reason & approver logs
+- **Safeguarding digest**: export a weekly CSV summary of settings and override activity for DSL reviews
+- **Override alerts**: optional PIN-protected webhooks (Slack/Teams/email) with approver names for instant oversight
 - **Interstitial**: blocked page with timed “Show anyway” override (per tab/session)
 
 ## Business-ready capabilities
 - **Privacy by design**: all analysis and decisioning stays on-device; no browsing data is transmitted.
 - **Policy controls**: organisation-wide allowlists & custom blocklists with import/export workflows.
 - **Deployment friendly**: minimal permissions (`storage`, `declarativeNetRequest`) and no background polling.
-- **Support collateral**: ready-made privacy policy, security briefing (`SECURITY.md`), and support workflows (`SUPPORT.md`).
+- **Support collateral**: ready-made privacy policy, security briefing (`SECURITY.md`), support workflows (`SUPPORT.md`), UK safeguarding packs (`docs/KCSIE_COMPLIANCE_MATRIX.md`, `docs/PREVENT_DUTY_BRIEFING.md`, `docs/DPIA_TEMPLATE_UK.md`), and age-based profile presets.
 - **Managed Chrome guidance**: see [docs/WEBSTORE.md](docs/WEBSTORE.md) for publishing, [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for rollout playbooks, and [SUPPORT.md](SUPPORT.md) for help desk scripts.
 
 Hosted resources
@@ -43,6 +48,7 @@ Notes:
 ## Roadmap
 - On-device visual model (optional) for stronger image/video detection
 - Options page polish + export/import lists (popup import exists)
+- Scheduled safeguarding digests and trust-level preset sharing
 - Chrome Web Store listing (screenshots, description, privacy link)
 
 MIT License

@@ -107,3 +107,62 @@ async function rebuildDynamicRules(){
     console.error('[Safeguard] Failed to rebuild DNR rules', e);
   }
 }
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
+  if (message && message.type === 'sg-override-alert' && message.entry){
+    handleOverrideAlert(message.entry);
+    sendResponse({ ok: true });
+    return true;
+  }
+  if (message && message.type === 'sg-get-override-approver'){
+    chrome.storage.local.get({ approverPromptEnabled: false }, (cfg)=>{
+      if (!cfg.approverPromptEnabled){
+        sendResponse({ approver: '' });
+        return;
+      }
+      const tabId = sender && sender.tab ? sender.tab.id : null;
+      if (tabId == null){
+        sendResponse({ approver: '' });
+        return;
+      }
+      chrome.tabs.sendMessage(tabId, { type: 'sg-open-approver-prompt', prompt: 'Who approved this override? (initials/name)' }, (resp)=>{
+        const approver = resp && typeof resp.approver === 'string' ? resp.approver.trim() : '';
+        sendResponse({ approver });
+      });
+    });
+    return true;
+  }
+  return false;
+});
+
+async function handleOverrideAlert(entry){
+  try {
+    const cfg = await chrome.storage.local.get({ overrideAlertEnabled: false, overrideAlertWebhook: '' });
+    if (!cfg.overrideAlertEnabled) return;
+    const webhook = typeof cfg.overrideAlertWebhook === 'string' ? cfg.overrideAlertWebhook.trim() : '';
+    if (!webhook) return;
+    const ts = entry.timestamp ? new Date(entry.timestamp).toISOString() : new Date().toISOString();
+    const lines = [];
+    lines.push(`Safeguard override approved${entry.approver ? ` by ${entry.approver}` : ''}`);
+    if (entry.host) lines.push(`Host: ${entry.host}`);
+    if (entry.reason) lines.push(`Reason: ${entry.reason}`);
+    if (entry.url) lines.push(`URL: ${entry.url}`);
+    lines.push(`Timestamp: ${ts}`);
+    const payload = {
+      text: lines.join('\n'),
+      host: entry.host || null,
+      url: entry.url || null,
+      reason: entry.reason || 'No reason provided',
+      approver: entry.approver || null,
+      timestamp: ts,
+      pinRequired: Boolean(entry.pinRequired)
+    };
+    await fetch(webhook, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch(err){
+    console.error('[Safeguard] Override alert failed', err);
+  }
+}

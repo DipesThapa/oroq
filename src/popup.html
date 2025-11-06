@@ -15,6 +15,18 @@
     <span id="statusBadge" class="status-badge">Active</span>
   </header>
 
+  <div class="section-switcher">
+    <label class="section-switcher__label" for="sectionSelect">View</label>
+    <select id="sectionSelect" class="section-switcher__select">
+      <option value="cardProtection">Protection</option>
+      <option value="cardProfiles">Profiles</option>
+      <option value="cardAllowlist">Allowlist</option>
+      <option value="cardBlocklist">Custom blocklist</option>
+      <option value="cardOverrides">Override log</option>
+      <option value="cardReports">Safeguarding digest</option>
+    </select>
+  </div>
+
   <main>
     <section class="card" id="cardProtection">
       <h2 class="card__title">Protection</h2>
@@ -77,6 +89,24 @@
       </div>
     </section>
 
+    <section class="card" id="cardProfiles">
+      <h2 class="card__title">Profiles</h2>
+      <p class="card__subtitle">Apply age-based presets. This overwrites current allowlists and blocklists.</p>
+
+      <div id="profileList" class="profile-list"></div>
+      <small id="profileMessage" class="message">Select a profile to preview recommended settings.</small>
+
+      <div id="profileDetails" class="profile-details" hidden>
+        <p id="profileDescription" class="profile-details__desc"></p>
+        <div id="profileSummary" class="profile-summary"></div>
+      </div>
+
+      <div class="actions actions--wrap">
+        <button id="profileApply" class="button button--primary" type="button" disabled>Apply profile</button>
+        <button id="profileReset" class="button button--link actions__end" type="button">Clear selection</button>
+      </div>
+    </section>
+
     <section class="card" id="cardAllowlist">
       <h2 class="card__title">Allowlist</h2>
       <p class="card__subtitle">Bypass filtering for trusted domains (e.g. intranet portals).</p>
@@ -109,6 +139,53 @@
         <span id="blockCount" class="badge">0 domains</span>
       </div>
       <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+    </section>
+
+    <section class="card" id="cardOverrides">
+      <h2 class="card__title">Override log</h2>
+      <p class="card__subtitle">Reasons for manual overrides stay on this device for safeguarding reviews.</p>
+      <ul id="overrideList" class="log-list"></ul>
+      <small id="overrideMessage" class="message">No overrides recorded yet.</small>
+      <div class="actions actions--wrap">
+        <button id="overrideExport" class="button button--secondary" type="button">Download log</button>
+        <button id="overrideClear" class="button button--link actions__end" type="button">Clear log</button>
+      </div>
+      <div class="alert-config">
+        <label class="toggle">
+          <input id="alertEnabled" type="checkbox">
+          <span>
+            <span class="toggle__label">Send override alerts</span>
+            <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
+          </span>
+        </label>
+        <div id="alertForm" class="alert-form">
+          <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
+          <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
+        </div>
+        <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
+      </div>
+    </section>
+
+    <section class="card" id="cardReports">
+      <h2 class="card__title">Safeguarding digest</h2>
+      <p class="card__subtitle">Generate a CSV summary for safeguarding meetings or audit trails.</p>
+      <div class="actions actions--wrap">
+        <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
+      </div>
+      <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
+    </section>
+
+    <section class="card" id="cardApprover">
+      <h2 class="card__title">Override approvers</h2>
+      <p class="card__subtitle">Collect initials/names when PIN overrides happen for audit trails.</p>
+      <label class="toggle">
+        <input id="approverPromptEnabled" type="checkbox">
+        <span>
+          <span class="toggle__label">Require approver name</span>
+          <span class="toggle__hint">Prompt for staff initials/name whenever a PIN override is approved.</span>
+        </span>
+      </label>
+      <small id="approverMessage" class="message">Enable to capture who approves each override. Names stay on this device.</small>
     </section>
   </main>
 

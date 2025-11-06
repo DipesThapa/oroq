@@ -3,15 +3,32 @@
   const KW_STRONG = [
     'porn','xxx','hentai','onlyfans','pornhub','xvideos','xnxx','xhamster','redtube','youporn','brazzers','spankbang',
     'pornographie','pornografía','porno','sex tape','live sex','webcam sex','camgirl','cam boy',
-    'nude','nudity','hardcore','softcore','fetish','bdsm','orgasm','blowjob','handjob','anal','threesome','milf','teen'
+    'nude','nudity','hardcore','softcore','fetish','bdsm','orgasm','blowjob','handjob','anal','threesome','milf','teen',
+    'whore','slut','slutty','cum','cumshot','creampie','cunt','fuck','fucked','bondage','dominatrix','submissive','kink','demoness',
+    'gagged','spank','buttplug','deepthroat','gangbang','facial','pegging'
   ];
   const KW_MEDIUM = [
-    'adult','nsfw','explicit','erotic','escort','models','amateur','nsfw', '18+', 'age verification'
+    'adult','nsfw','explicit','erotic','escort','models','amateur','nsfw','18+','age verification','lust','filthy'
   ];
-  const HOST_HINTS = ['porn','xxx','sex','hentai','xh','xv','xnxx','onlyfans','cam'];
+  const HOST_HINTS = ['porn','xxx','sex','hentai','xh','xv','xnxx','onlyfans','cam','lust','fuck','whore','slut','kink','bdsm'];
   const AGE_GATE_RX = /(18\+|adults? only|are you 18|age verification|enter if 18)/i;
   const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report)/i;
   const PIN_ITERATIONS_FALLBACK = 200000;
+  const VISUAL_SAMPLE_LIMIT = 8;
+
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
+    if (message && message.type === 'sg-open-approver-prompt'){
+      let value = '';
+      try {
+        value = window.prompt(message.prompt || 'Who approved this override? (initials/name)') || '';
+      } catch(_e){
+        value = '';
+      }
+      sendResponse({ approver: value.trim() });
+      return true;
+    }
+    return false;
+  });
 
   function bufferToBase64(buffer){
     if (!buffer) return '';
@@ -58,6 +75,38 @@
     }
   }
 
+  async function recordOverrideEvent(reasonText, options = {}){
+    try {
+      let approver = '';
+      try {
+        const resp = await chrome.runtime.sendMessage({ type: 'sg-get-override-approver' });
+        if (resp && resp.approver) approver = String(resp.approver || '').trim();
+      } catch(_e){}
+      const entry = {
+        timestamp: Date.now(),
+        host: getHost(),
+        url: (()=>{ try { return location.href; } catch(_e){ return null; } })(),
+        reason: (reasonText || '').trim(),
+        pinRequired: Boolean(options.pinRequired),
+        source: options.source || 'interstitial',
+        approver
+      };
+      const payload = await new Promise((resolve)=>chrome.storage.local.get({ overrideLog: [] }, resolve));
+      const existing = Array.isArray(payload.overrideLog) ? payload.overrideLog.filter((item)=>item && typeof item === 'object') : [];
+      const maxEntries = 100;
+      const next = existing.slice(Math.max(0, existing.length - (maxEntries - 1)));
+      next.push(entry);
+      await new Promise((resolve)=>chrome.storage.local.set({ overrideLog: next }, resolve));
+      try {
+        chrome.runtime.sendMessage({ type: 'sg-override-alert', entry });
+      } catch(_err){
+        // ignore message failures
+      }
+    } catch(_e){
+      // swallow logging errors to avoid blocking override
+    }
+  }
+
   function getHost(){
     try { return location.hostname.replace(/^www\./,'').toLowerCase(); } catch{ return ''; }
   }
@@ -101,9 +150,72 @@
       const hostL = hostname.toLowerCase();
       if (HOST_HINTS.some(h=>hostL.includes(h))) s += 6;
       const pathL = (pathname||'').toLowerCase();
-      if (/(\/porn|\/xxx|\/hentai|\/adult|\/sex)/.test(pathL)) s += 2;
+      if (/(\/porn|\/xxx|\/hentai|\/adult|\/sex|\/cum|\/fuck|\/slut|\/whore|\/kink|\/fetish)/.test(pathL)) s += 3;
+      const hrefL = location.href.toLowerCase();
+      if (/(fuck|whore|slut|cum|bdsm|fetish|nsfw)/.test(hrefL)) s += 2;
     }catch(_e){}
     return s;
+  }
+
+  function isLikelySkin(r, g, b){
+    // Transform to YCbCr and apply common skin detection ranges
+    const cb = 128 - 0.168736 * r - 0.331264 * g + 0.5 * b;
+    const cr = 128 + 0.5 * r - 0.418688 * g - 0.081312 * b;
+    if (r > 250 && g > 250 && b > 250) return false; // exclude white
+    return cr > 135 && cr < 180 && cb > 85 && cb < 135 && r > 35 && g > 40 && b > 20;
+  }
+
+  function sampleImageSkinRatio(img){
+    try {
+      if (!img || !img.naturalWidth || !img.naturalHeight) return 0;
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (w < 80 || h < 80) return 0;
+      const maxSample = 140;
+      const scale = Math.min(1, maxSample / Math.max(w, h));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return 0;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let skin = 0;
+      let total = 0;
+      for (let i = 0; i < data.length; i += 4){
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        if (isLikelySkin(r, g, b)) skin += 1;
+        total += 1;
+      }
+      if (!total) return 0;
+      return skin / total;
+    } catch(_e){
+      return 0;
+    }
+  }
+
+  function computeVisualScore(){
+    try {
+      const imgs = Array.from(document.images || []).filter((img)=>img && img.complete && img.naturalWidth && img.naturalHeight);
+      if (!imgs.length) return 0;
+      let maxRatio = 0;
+      let processed = 0;
+      for (const img of imgs){
+        if (processed >= VISUAL_SAMPLE_LIMIT) break;
+        const ratio = sampleImageSkinRatio(img);
+        if (ratio > maxRatio) maxRatio = ratio;
+        processed += 1;
+        if (maxRatio >= 0.6) break;
+      }
+      if (maxRatio >= 0.55) return 9;
+      if (maxRatio >= 0.4) return 6;
+      if (maxRatio >= 0.25) return 3;
+      return 0;
+    } catch(_e){
+      return 0;
+    }
   }
 
   // --- On-screen media masking (images/videos) ---
@@ -441,6 +553,32 @@
         gap: 12px;
         flex-wrap: wrap;
       }
+      .sg-pin__reason {
+        margin-top: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .sg-pin__reason-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-secondary);
+      }
+      .sg-pin__reason-input {
+        border-radius: 12px;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        padding: 10px 12px;
+        font-size: 14px;
+        resize: vertical;
+        min-height: 64px;
+        background: #fff;
+        color: var(--text-primary);
+        outline: none;
+      }
+      .sg-pin__reason-input:focus {
+        border-color: rgba(37, 99, 235, 0.45);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+      }
       .sg-pin__message {
         min-height: 16px;
         font-size: 12px;
@@ -566,11 +704,14 @@
       }
     }, 1000);
 
-    const completeOverride = ()=>{
+    const completeOverride = async (overrideReason)=>{
       try {
         const host = getHost();
         if (host) sessionStorage.setItem('sg-ov:' + host, '1');
       } catch(_e) {}
+      if (pinRequired){
+        await recordOverrideEvent(overrideReason, { pinRequired: true });
+      }
       location.reload();
     };
 
@@ -579,6 +720,7 @@
     let pinSubmit = null;
     let pinError = null;
     let pinCancel = null;
+    let pinReasonInput = null;
 
     if (pinRequired){
       pinBlock = doc.createElement('div');
@@ -621,6 +763,23 @@
       pinError.className = 'sg-pin__message';
       pinBlock.appendChild(pinError);
 
+      const pinReasonWrapper = doc.createElement('div');
+      pinReasonWrapper.className = 'sg-pin__reason';
+      const pinReasonLabel = doc.createElement('label');
+      pinReasonLabel.className = 'sg-pin__reason-label';
+      pinReasonLabel.textContent = 'Reason for override';
+      pinReasonLabel.setAttribute('for', 'sg-pin-reason');
+      pinReasonWrapper.appendChild(pinReasonLabel);
+      pinReasonInput = doc.createElement('textarea');
+      pinReasonInput.id = 'sg-pin-reason';
+      pinReasonInput.className = 'sg-pin__reason-input';
+      pinReasonInput.rows = 3;
+      pinReasonInput.placeholder = 'e.g. GCSE art research, safeguarding review';
+      pinReasonInput.maxLength = 240;
+      pinReasonInput.setAttribute('aria-label', 'Reason for override');
+      pinReasonWrapper.appendChild(pinReasonInput);
+      pinBlock.appendChild(pinReasonWrapper);
+
       const pinPrivacy = doc.createElement('div');
       pinPrivacy.className = 'sg-pin__privacy';
       pinPrivacy.textContent = 'Safeguard keeps this PIN on-device. Nothing is collected or shared.';
@@ -644,6 +803,7 @@
         if (pinInput) pinInput.value = '';
         if (pinSubmit) pinSubmit.disabled = true;
         if (pinError) pinError.textContent = '';
+        if (pinReasonInput) pinReasonInput.value = '';
         continueBtn.disabled = false;
         updateContinue();
       });
@@ -665,7 +825,15 @@
           pinInput.select();
           return;
         }
-        completeOverride();
+        const reasonValue = pinReasonInput ? pinReasonInput.value.trim() : '';
+        if (!reasonValue || reasonValue.length < 3){
+          if (pinError) pinError.textContent = 'Provide a short reason (3+ characters) for auditing.';
+          pinSubmit.disabled = false;
+          if (pinReasonInput) pinReasonInput.focus();
+          return;
+        }
+        if (pinError) pinError.textContent = '';
+        await completeOverride(reasonValue);
       });
     }
 
@@ -730,7 +898,9 @@
     const urlScore = scoreFromUrl();
     const metaScore = scoreFromTitleAndMeta();
     const bodyScore = Math.min(12, scoreFromText(text));
-    const total = urlScore + metaScore + bodyScore;
+    const visualScore = computeVisualScore();
+    window.__sg_visualScore = visualScore;
+    const total = urlScore + metaScore + bodyScore + visualScore;
     const sens = Number(cfg.sensitivity)||60; window.__sg_sensitivity = sens;
     const threshold = 12 - Math.floor(6 * (sens/100)); // 12..6
     if(total >= threshold) { showInterstitial("advanced heuristic score", { pinConfig }); return; }

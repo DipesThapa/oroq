@@ -35,6 +35,11 @@ Safeguard ships with static HTML pages in `/site` for privacy, support, and prod
 - Enable “Allow in Incognito” if coverage is needed for private windows.
 - Document the support escalation path (`SUPPORT.md`) for help-desk agents.
 - Review privacy notice (`PRIVACY.md`) and add it to internal compliance portals as required.
+- For UK schools, complete the safeguarding pack: KCSIE matrix, Prevent briefing, and DPIA template in `docs/`.
+- Apply the relevant age-based profile (EYFS, KS1–KS4, post-16) and note any manual tweaks.
+- Run through an override test (with PIN) and verify the reason appears in the override log card.
+- Configure override alerts (optional): supply a webhook (Slack/Teams) and test that notifications fire when the PIN override is used.
+- Enable the approver prompt if you want DSL initials captured for every override; verify the name appears in the log/digest.
 
 ## 5. Change management
 

@@ -6,18 +6,28 @@ Use this content for the Chrome Web Store listing. Replace screenshots with real
 Safeguard (SafeBrowse AI)
 
 ## Short Description
-Privacy‑first web safety. Block adult sites, enforce SafeSearch, blur risky images/videos — all on‑device.
+Privacy-first web safety. Block adult sites, blur risky media, and lock overrides or allowlist edits behind a private PIN — all on-device.
 
 ## Full Description
 Safeguard helps families and schools reduce exposure to harmful content. It blocks adult sites, enforces SafeSearch on Google/Bing, and can blur images/videos on the page using on‑device heuristics. No data leaves your device.
 
 Features:
-- Advanced heuristics: weighted URL/title/meta/body scoring with sensitivity control
-- On‑page protection: optional Aggressive mode to blur/pause images/videos
-- Domain blocklist: packaged defaults + user‑importable list; allowlist overrides
+- Advanced heuristics: weighted URL/title/meta/body scoring with adjustable sensitivity
+- On-page protection: optional Aggressive mode to blur/pause images and videos in the tab
+- Visual detection: on-device image heuristics boost scores when explicit imagery appears even without text
+- Safeguarding digest: download weekly CSV summaries for DSLs, governors, and audit trails
+- Override alerts: send webhook notifications (Slack/Teams/etc.) whenever a PIN override is approved, including approver name
+- Domain blocklist: packaged defaults plus user-importable lists; allowlist trusted domains in seconds
 - SafeSearch enforcement (Google/Bing) via Declarative Net Request (DNR)
-- Static ad/marketing rules for cleaner pages
-- Interstitial with timed “Show anyway” override (per tab/session)
+- Static ad/marketing rules that trim common trackers and adult portals
+- Manual overrides and allowlist edits locked behind a private PIN with an on-device reason log
+- Age-based profiles for EYFS through post-16 so schools can apply presets with one click
+
+What’s new in 0.3.1:
+- Capture an override reason for each unblock and store it in a local safeguarding log
+- Add age-based profiles (EYFS–post-16) that configure sensitivity, blocklists, and PIN defaults automatically
+- Change, remove, or reset the PIN entirely on-device (no cloud storage)
+- Updated popup layout with clearer override messaging and status hints
 
 Privacy:
 - No telemetry or external requests for detection
@@ -31,7 +41,7 @@ How to use:
 
 Notes:
 - Very large blocklists may exceed Chrome’s dynamic DNR capacity; core heuristics still protect
-- Cross‑origin videos may block pixel reads; visual sampling is skipped in those cases
+- Cross-origin videos may block pixel reads; visual sampling is skipped in those cases
 
 ## Categories
 Productivity or Family
