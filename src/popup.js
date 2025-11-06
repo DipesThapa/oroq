@@ -55,12 +55,26 @@ const alertSaveBtn = document.getElementById('alertSave');
 const alertMessageEl = document.getElementById('alertMessage');
 const approverPromptEnabledEl = document.getElementById('approverPromptEnabled');
 const approverMessageEl = document.getElementById('approverMessage');
-const languageSelectEl = document.getElementById('languageSelect');
-const languageMessageEl = document.getElementById('languageMessage');
-const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover', 'cardLanguage'];
+const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover'];
 
 const TOUR_KEY = 'onboardingComplete';
-let TOUR_STEPS = [];
+const TOUR_STEPS = [
+  {
+    target: document.getElementById('cardProtection'),
+    title: 'Enable core protection',
+    body: 'Use the master toggle and aggressive mode to decide how Safeguard protects each site.'
+  },
+  {
+    target: document.getElementById('cardAllowlist'),
+    title: 'Allow trusted domains',
+    body: 'Add internal portals or education sites to the allowlist so they bypass filtering.'
+  },
+  {
+    target: document.getElementById('cardBlocklist'),
+    title: 'Import policy blocklists',
+    body: 'Paste domains or import exports from your policy team to block them across every user.'
+  }
+];
 
 const PIN_SALT_BYTES = 16;
 const PIN_ITERATIONS = 200000;
@@ -80,84 +94,14 @@ let currentAggressive = false;
 let overrideAlertsEnabled = false;
 let overrideAlertWebhook = '';
 let approverPromptEnabled = false;
-let currentLanguage = 'en';
-const fallbackStrings = {
-  'card.profiles.message.default': 'Select a profile to preview recommended settings.',
-  'status.active': 'Active',
-  'status.paused': 'Paused',
-  'button.changePin': 'Change PIN',
-  'button.setPin': 'Set PIN',
-  'prompt.newPin': 'Enter a new PIN (4-8 digits)',
-  'prompt.confirmPin': 'Confirm the new PIN',
-  'prompt.pinConfirm': 'Enter your PIN to continue',
-  'message.pin.invalid': 'PIN must be 4-8 digits.',
-  'message.pin.cancelled': 'PIN setup cancelled.',
-  'message.pin.mismatch': 'PIN entries did not match.',
-  'message.pin.empty': 'PIN cannot be empty.',
-  'message.pin.incorrect': 'Incorrect PIN.',
-  'message.language.default': 'Translations coming soon. Selecting a language now stores your preference.',
-  'message.language.saved': 'Language preference saved. Translations will appear in a future update.',
-  'message.alerts.enabled': 'Alerts enabled. Overrides will notify your webhook.',
-  'message.alerts.disabled': 'Alerts stay on-device until you enable them.',
-  'message.alerts.saved': 'Webhook saved.',
-  'message.alerts.invalid': 'Webhook must start with http:// or https://',
-  'message.approver.enabled': 'Approver prompt enabled. Staff must enter their name when overriding.',
-  'message.approver.disabled': 'Enable to record who approves each override.',
-  'message.overrideLog.none': 'No overrides recorded yet.',
-  'message.overrideLog.downloaded': 'Override log downloaded.',
-  'message.overrideLog.cleared': 'Override log cleared.',
-  'message.overrideLog.empty': 'Override log is already empty.',
-  'message.overrideLog.noEntries': 'No overrides recorded yet.',
-  'message.digest.ready': 'Digest downloaded.',
-  'message.digest.failed': 'Failed to build digest.'
-};
-const translations = { en: fallbackStrings };
-
-function formatString(str, vars = {}){
-  return str.replace(/\{(\w+)\}/g, (_match, key)=>{
-    return Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : _match;
-  });
-}
-
-function t(key, vars = {}){
-  const langDict = translations[currentLanguage] || translations.en || {};
-  const str = (langDict && langDict[key]) || fallbackStrings[key] || key;
-  return formatString(str, vars);
-}
-
-async function loadLanguage(lang){
-  if (!lang || lang === 'en' || translations[lang]) return;
-  try {
-    const url = chrome.runtime.getURL(`data/i18n/${lang}.json`);
-    const res = await fetch(url);
-    if (!res.ok) return;
-    const data = await res.json();
-    translations[lang] = data;
-  } catch(_e){
-    // ignore fetch errors; fallback strings stay in place
-  }
-}
-
-function applyLanguageToUI(){
-  setStatus(Boolean(enabledEl && enabledEl.checked));
-  if (profileMessageEl){
-    const currentText = profileMessageEl.textContent || '';
-    const defaultEn = fallbackStrings['card.profiles.message.default'];
-    const langStrings = translations[currentLanguage] || {};
-    const defaultLocalized = langStrings['card.profiles.message.default'] || defaultEn;
-    if (!selectedProfileId && (currentText === defaultEn || currentText === defaultLocalized)){
-      setProfileMessage(defaultLocalized, 'muted');
-    }
-  }
-}
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
-setProfileMessage(t('card.profiles.message.default'), 'muted');
+setProfileMessage('Select a profile to preview recommended settings.', 'muted');
 
 function setStatus(enabled){
   if (!statusBadge) return;
-  statusBadge.textContent = enabled ? t('status.active') : t('status.paused');
+  statusBadge.textContent = enabled ? 'Active' : 'Paused';
   statusBadge.classList.toggle('status--off', !enabled);
 }
 
@@ -165,23 +109,69 @@ function updateSensitivityDisplay(value){
   if (sensitivityValue) sensitivityValue.textContent = String(value);
 }
 
-function setMessage(el, text, tone = 'muted'){
-  if (!el) return;
-  el.textContent = text;
-  el.classList.remove('message--success', 'message--error');
-  if (tone === 'success') el.classList.add('message--success');
-  else if (tone === 'error') el.classList.add('message--error');
+function setAllowMessage(text, tone = 'muted'){
+  if (!allowMessage) return;
+  allowMessage.textContent = text;
+  allowMessage.classList.remove('message--success', 'message--error');
+  if (tone === 'success') allowMessage.classList.add('message--success');
+  else if (tone === 'error') allowMessage.classList.add('message--error');
 }
 
-const setAllowMessage = (text, tone) => setMessage(allowMessage, text, tone);
-const setBlockMessage = (text, tone) => setMessage(blockMessage, text, tone);
-const setPinMessage = (text, tone) => setMessage(pinMessage, text, tone);
-const setOverrideMessage = (text, tone) => setMessage(overrideMessageEl, text, tone);
-const setProfileMessage = (text, tone) => setMessage(profileMessageEl, text, tone);
-const setDigestMessage = (text, tone) => setMessage(digestMessageEl, text, tone);
-const setAlertMessage = (text, tone) => setMessage(alertMessageEl, text, tone);
-const setApproverMessage = (text, tone) => setMessage(approverMessageEl, text, tone);
-const setLanguageMessage = (text, tone) => setMessage(languageMessageEl, text, tone);
+function setBlockMessage(text, tone = 'muted'){
+  if (!blockMessage) return;
+  blockMessage.textContent = text;
+  blockMessage.classList.remove('message--success', 'message--error');
+  if (tone === 'success') blockMessage.classList.add('message--success');
+  else if (tone === 'error') blockMessage.classList.add('message--error');
+}
+
+function setPinMessage(text, tone = 'muted'){
+  if (!pinMessage) return;
+  pinMessage.textContent = text;
+  pinMessage.classList.remove('message--success', 'message--error');
+  if (tone === 'success') pinMessage.classList.add('message--success');
+  else if (tone === 'error') pinMessage.classList.add('message--error');
+}
+
+function setOverrideMessage(text, tone = 'muted'){
+  if (!overrideMessageEl) return;
+  overrideMessageEl.textContent = text;
+  overrideMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') overrideMessageEl.classList.add('message--success');
+  else if (tone === 'error') overrideMessageEl.classList.add('message--error');
+}
+
+function setProfileMessage(text, tone = 'muted'){
+  if (!profileMessageEl) return;
+  profileMessageEl.textContent = text;
+  profileMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') profileMessageEl.classList.add('message--success');
+  else if (tone === 'error') profileMessageEl.classList.add('message--error');
+}
+
+function setDigestMessage(text, tone = 'muted'){
+  if (!digestMessageEl) return;
+  digestMessageEl.textContent = text;
+  digestMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') digestMessageEl.classList.add('message--success');
+  else if (tone === 'error') digestMessageEl.classList.add('message--error');
+}
+
+function setAlertMessage(text, tone = 'muted'){
+  if (!alertMessageEl) return;
+  alertMessageEl.textContent = text;
+  alertMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') alertMessageEl.classList.add('message--success');
+  else if (tone === 'error') alertMessageEl.classList.add('message--error');
+}
+
+function setApproverMessage(text, tone = 'muted'){
+  if (!approverMessageEl) return;
+  approverMessageEl.textContent = text;
+  approverMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') approverMessageEl.classList.add('message--success');
+  else if (tone === 'error') approverMessageEl.classList.add('message--error');
+}
 
 function showSection(sectionId){
   SECTION_IDS.forEach((id)=>{
@@ -262,7 +252,7 @@ function syncPinControls(){
   if (!pinControls) return;
   pinControls.classList.add('pin-controls--visible');
   const hasPin = Boolean(storedPin && storedPin.hash && storedPin.salt);
-  if (pinUpdateBtn) pinUpdateBtn.textContent = hasPin ? t('button.changePin') : t('button.setPin');
+  if (pinUpdateBtn) pinUpdateBtn.textContent = hasPin ? 'Change PIN' : 'Set PIN';
   if (pinRemoveBtn){
     pinRemoveBtn.hidden = !hasPin;
     pinRemoveBtn.disabled = !hasPin;
@@ -270,21 +260,21 @@ function syncPinControls(){
 }
 
 async function promptForNewPin(){
-  const first = window.prompt(t('prompt.newPin'));
+  const first = window.prompt('Enter a new PIN (4-8 digits)');
   if (first === null) return null;
   const primary = first.trim();
   if (!/^\d{4,8}$/.test(primary)){
-    setPinMessage(t('message.pin.invalid'), 'error');
+    setPinMessage('PIN must be 4-8 digits.', 'error');
     return null;
   }
-  const second = window.prompt(t('prompt.confirmPin'));
+  const second = window.prompt('Confirm the new PIN');
   if (second === null){
-    setPinMessage(t('message.pin.cancelled'), 'muted');
+    setPinMessage('PIN setup cancelled.', 'muted');
     return null;
   }
   const confirm = second.trim();
   if (primary !== confirm){
-    setPinMessage(t('message.pin.mismatch'), 'error');
+    setPinMessage('PIN entries did not match.', 'error');
     return null;
   }
   const hashed = await derivePinHash(primary);
@@ -293,16 +283,16 @@ async function promptForNewPin(){
 
 async function requestPinConfirmation(message){
   if (!storedPin) return { ok: false, cancelled: true };
-  const attempt = window.prompt(message || t('prompt.pinConfirm'));
+  const attempt = window.prompt(message || 'Enter your PIN to continue');
   if (attempt === null) return { ok: false, cancelled: true };
   const value = attempt.trim();
   if (!value){
-    setPinMessage(t('message.pin.empty'), 'error');
+    setPinMessage('PIN cannot be empty.', 'error');
     return { ok: false, cancelled: false };
   }
   const valid = await verifyPinInput(value, storedPin);
   if (!valid){
-    setPinMessage(t('message.pin.incorrect'), 'error');
+    setPinMessage('Incorrect PIN.', 'error');
     return { ok: false, cancelled: false };
   }
   return { ok: true, cancelled: false };
@@ -740,8 +730,7 @@ chrome.storage.local.get({
   overrideLog: [],
   overrideAlertEnabled: false,
   overrideAlertWebhook: '',
-  approverPromptEnabled: false,
-  language: 'en'
+  approverPromptEnabled: false
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -774,22 +763,13 @@ chrome.storage.local.get({
   if (alertEnabledEl) alertEnabledEl.checked = overrideAlertsEnabled;
   if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
   if (overrideAlertsEnabled){
-    setAlertMessage(t('message.alerts.enabled'), 'success');
+    setAlertMessage('Alerts enabled. Overrides will notify your webhook.', 'success');
   } else {
-    setAlertMessage(t('message.alerts.disabled'), 'muted');
+    setAlertMessage('Alerts stay on-device until you enable them.', 'muted');
   }
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
-  setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
-  currentLanguage = typeof cfg.language === 'string' ? cfg.language : 'en';
-  if (languageSelectEl) languageSelectEl.value = currentLanguage;
-  loadLanguage(currentLanguage).then(()=>{
-    const defaultLangMsgEn = fallbackStrings['message.language.default'];
-    if (languageMessageEl && (languageMessageEl.textContent === defaultLangMsgEn || !languageMessageEl.textContent)){
-      setLanguageMessage(t('message.language.default'), 'muted');
-    }
-    applyLanguageToUI();
-  });
+  setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -1201,7 +1181,7 @@ if (alertEnabledEl){
     }
     overrideAlertsEnabled = wantsEnable;
     chrome.storage.local.set({ overrideAlertEnabled: overrideAlertsEnabled }, ()=>{
-      setAlertMessage(overrideAlertsEnabled ? t('message.alerts.enabled') : t('message.alerts.disabled'), overrideAlertsEnabled ? 'success' : 'muted');
+      setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
     });
   });
 }
@@ -1211,12 +1191,12 @@ if (alertSaveBtn){
     if (!(await ensureAlertPinAuthorization('update the alert webhook'))) return;
     const url = (alertWebhookInput && alertWebhookInput.value ? alertWebhookInput.value.trim() : '');
     if (!/^https?:\/\//i.test(url)){
-      setAlertMessage(t('message.alerts.invalid'), 'error');
+      setAlertMessage('Webhook must start with http:// or https://', 'error');
       return;
     }
     overrideAlertWebhook = url;
     chrome.storage.local.set({ overrideAlertWebhook: overrideAlertWebhook }, ()=>{
-      setAlertMessage(t('message.alerts.saved'), 'success');
+      setAlertMessage('Webhook saved.', 'success');
     });
   });
 }
@@ -1230,20 +1210,7 @@ if (approverPromptEnabledEl){
     }
     approverPromptEnabled = wantsEnable;
     chrome.storage.local.set({ approverPromptEnabled }, ()=>{
-      setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
-    });
-  });
-}
-
-if (languageSelectEl){
-  languageSelectEl.addEventListener('change', ()=>{
-    const value = languageSelectEl.value || 'en';
-    currentLanguage = value;
-    loadLanguage(currentLanguage).then(()=>{
-      chrome.storage.local.set({ language: currentLanguage }, ()=>{
-        applyLanguageToUI();
-        setLanguageMessage(t('message.language.saved'), 'success');
-      });
+      setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Override approver prompt disabled.', approverPromptEnabled ? 'success' : 'muted');
     });
   });
 }
@@ -1263,7 +1230,7 @@ if (tourNext){
 if (overrideExportBtn){
   overrideExportBtn.addEventListener('click', async ()=>{
     if (!currentOverrideLog.length){
-      setOverrideMessage(t('message.overrideLog.none'), 'muted');
+      setOverrideMessage('No overrides recorded yet.', 'muted');
       return;
     }
     if (!(await ensureLogPin('download the override log'))) return;
@@ -1272,20 +1239,20 @@ if (overrideExportBtn){
       count: currentOverrideLog.length,
       entries: currentOverrideLog
     });
-    setOverrideMessage(t('message.overrideLog.downloaded'), 'success');
+    setOverrideMessage('Override log downloaded.', 'success');
   });
 }
 
 if (overrideClearBtn){
   overrideClearBtn.addEventListener('click', async ()=>{
     if (!currentOverrideLog.length){
-      setOverrideMessage(t('message.overrideLog.empty'), 'muted');
+      setOverrideMessage('Override log is already empty.', 'muted');
       return;
     }
     if (!(await ensureLogPin('clear the override log'))) return;
     chrome.storage.local.set({ overrideLog: [] }, ()=>{
       renderOverrideLog([]);
-      setOverrideMessage(t('message.overrideLog.cleared'), 'success');
+      setOverrideMessage('Override log cleared.', 'success');
     });
   });
 }
@@ -1328,15 +1295,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.approverPromptEnabled){
     approverPromptEnabled = Boolean(changes.approverPromptEnabled.newValue);
     if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
-    setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
-  }
-  if (area === 'local' && changes.language){
-    currentLanguage = typeof changes.language.newValue === 'string' ? changes.language.newValue : 'en';
-    if (languageSelectEl) languageSelectEl.value = currentLanguage;
-    loadLanguage(currentLanguage).then(()=>{
-      applyLanguageToUI();
-      setLanguageMessage(t('message.language.saved'), 'success');
-    });
+    setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
   }
 });
 
@@ -1427,9 +1386,9 @@ if (digestDownloadBtn){
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setDigestMessage(t('message.digest.ready'), 'success');
+      setDigestMessage('Digest downloaded.', 'success');
     } catch(_e){
-      setDigestMessage(t('message.digest.failed'), 'error');
+      setDigestMessage('Failed to build digest.', 'error');
     }
   });
 }

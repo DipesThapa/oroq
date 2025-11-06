@@ -17,7 +17,6 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 - **PIN protection**: require a PIN before overrides or allowlist edits, capturing on-device reason & approver logs
 - **Safeguarding digest**: export a weekly CSV summary of settings and override activity for DSL reviews
 - **Override alerts**: optional PIN-protected webhooks (Slack/Teams/email) with approver names for instant oversight
-- **Localization-ready**: interface language selector anticipates Welsh and Scottish Gaelic translations
 - **Interstitial**: blocked page with timed “Show anyway” override (per tab/session)
 
 ## Business-ready capabilities

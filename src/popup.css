@@ -568,28 +568,6 @@ input[type="range"] {
   color: var(--text-secondary);
 }
 
-.language-select {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.language-select__label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.language-select__select {
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 8px 10px;
-  font-size: 12px;
-  background: #fff;
-  color: var(--text-primary);
-}
-
 textarea {
   width: 100%;
   min-height: 90px;
