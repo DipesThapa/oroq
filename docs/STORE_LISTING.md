@@ -17,6 +17,7 @@ Features:
 - Visual detection: on-device image heuristics boost scores when explicit imagery appears even without text
 - Safeguarding digest: download weekly CSV summaries for DSLs, governors, and audit trails
 - Override alerts: send webhook notifications (Slack/Teams/etc.) whenever a PIN override is approved, including approver name
+- Localization-ready: language selector prepares Welsh and Scottish Gaelic UI translations (coming soon)
 - Domain blocklist: packaged defaults plus user-importable lists; allowlist trusted domains in seconds
 - SafeSearch enforcement (Google/Bing) via Declarative Net Request (DNR)
 - Static ad/marketing rules that trim common trackers and adult portals

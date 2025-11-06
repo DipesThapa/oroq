@@ -55,26 +55,12 @@ const alertSaveBtn = document.getElementById('alertSave');
 const alertMessageEl = document.getElementById('alertMessage');
 const approverPromptEnabledEl = document.getElementById('approverPromptEnabled');
 const approverMessageEl = document.getElementById('approverMessage');
-const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover'];
+const languageSelectEl = document.getElementById('languageSelect');
+const languageMessageEl = document.getElementById('languageMessage');
+const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover', 'cardLanguage'];
 
 const TOUR_KEY = 'onboardingComplete';
-const TOUR_STEPS = [
-  {
-    target: document.getElementById('cardProtection'),
-    title: 'Enable core protection',
-    body: 'Use the master toggle and aggressive mode to decide how Safeguard protects each site.'
-  },
-  {
-    target: document.getElementById('cardAllowlist'),
-    title: 'Allow trusted domains',
-    body: 'Add internal portals or education sites to the allowlist so they bypass filtering.'
-  },
-  {
-    target: document.getElementById('cardBlocklist'),
-    title: 'Import policy blocklists',
-    body: 'Paste domains or import exports from your policy team to block them across every user.'
-  }
-];
+let TOUR_STEPS = [];
 
 const PIN_SALT_BYTES = 16;
 const PIN_ITERATIONS = 200000;
@@ -94,14 +80,16 @@ let currentAggressive = false;
 let overrideAlertsEnabled = false;
 let overrideAlertWebhook = '';
 let approverPromptEnabled = false;
+let currentLanguage = 'en';
+let i18nCache = null;
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
-setProfileMessage('Select a profile to preview recommended settings.', 'muted');
+setProfileMessage(t('card.profiles.message.default'), 'muted');
 
 function setStatus(enabled){
   if (!statusBadge) return;
-  statusBadge.textContent = enabled ? 'Active' : 'Paused';
+  statusBadge.textContent = enabled ? t('status.active') : t('status.paused');
   statusBadge.classList.toggle('status--off', !enabled);
 }
 
@@ -109,69 +97,23 @@ function updateSensitivityDisplay(value){
   if (sensitivityValue) sensitivityValue.textContent = String(value);
 }
 
-function setAllowMessage(text, tone = 'muted'){
-  if (!allowMessage) return;
-  allowMessage.textContent = text;
-  allowMessage.classList.remove('message--success', 'message--error');
-  if (tone === 'success') allowMessage.classList.add('message--success');
-  else if (tone === 'error') allowMessage.classList.add('message--error');
+function setMessage(el, text, tone = 'muted'){
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('message--success', 'message--error');
+  if (tone === 'success') el.classList.add('message--success');
+  else if (tone === 'error') el.classList.add('message--error');
 }
 
-function setBlockMessage(text, tone = 'muted'){
-  if (!blockMessage) return;
-  blockMessage.textContent = text;
-  blockMessage.classList.remove('message--success', 'message--error');
-  if (tone === 'success') blockMessage.classList.add('message--success');
-  else if (tone === 'error') blockMessage.classList.add('message--error');
-}
-
-function setPinMessage(text, tone = 'muted'){
-  if (!pinMessage) return;
-  pinMessage.textContent = text;
-  pinMessage.classList.remove('message--success', 'message--error');
-  if (tone === 'success') pinMessage.classList.add('message--success');
-  else if (tone === 'error') pinMessage.classList.add('message--error');
-}
-
-function setOverrideMessage(text, tone = 'muted'){
-  if (!overrideMessageEl) return;
-  overrideMessageEl.textContent = text;
-  overrideMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') overrideMessageEl.classList.add('message--success');
-  else if (tone === 'error') overrideMessageEl.classList.add('message--error');
-}
-
-function setProfileMessage(text, tone = 'muted'){
-  if (!profileMessageEl) return;
-  profileMessageEl.textContent = text;
-  profileMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') profileMessageEl.classList.add('message--success');
-  else if (tone === 'error') profileMessageEl.classList.add('message--error');
-}
-
-function setDigestMessage(text, tone = 'muted'){
-  if (!digestMessageEl) return;
-  digestMessageEl.textContent = text;
-  digestMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') digestMessageEl.classList.add('message--success');
-  else if (tone === 'error') digestMessageEl.classList.add('message--error');
-}
-
-function setAlertMessage(text, tone = 'muted'){
-  if (!alertMessageEl) return;
-  alertMessageEl.textContent = text;
-  alertMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') alertMessageEl.classList.add('message--success');
-  else if (tone === 'error') alertMessageEl.classList.add('message--error');
-}
-
-function setApproverMessage(text, tone = 'muted'){
-  if (!approverMessageEl) return;
-  approverMessageEl.textContent = text;
-  approverMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') approverMessageEl.classList.add('message--success');
-  else if (tone === 'error') approverMessageEl.classList.add('message--error');
-}
+const setAllowMessage = (text, tone) => setMessage(allowMessage, text, tone);
+const setBlockMessage = (text, tone) => setMessage(blockMessage, text, tone);
+const setPinMessage = (text, tone) => setMessage(pinMessage, text, tone);
+const setOverrideMessage = (text, tone) => setMessage(overrideMessageEl, text, tone);
+const setProfileMessage = (text, tone) => setMessage(profileMessageEl, text, tone);
+const setDigestMessage = (text, tone) => setMessage(digestMessageEl, text, tone);
+const setAlertMessage = (text, tone) => setMessage(alertMessageEl, text, tone);
+const setApproverMessage = (text, tone) => setMessage(approverMessageEl, text, tone);
+const setLanguageMessage = (text, tone) => setMessage(languageMessageEl, text, tone);
 
 function showSection(sectionId){
   SECTION_IDS.forEach((id)=>{
@@ -252,7 +194,7 @@ function syncPinControls(){
   if (!pinControls) return;
   pinControls.classList.add('pin-controls--visible');
   const hasPin = Boolean(storedPin && storedPin.hash && storedPin.salt);
-  if (pinUpdateBtn) pinUpdateBtn.textContent = hasPin ? 'Change PIN' : 'Set PIN';
+  if (pinUpdateBtn) pinUpdateBtn.textContent = hasPin ? t('button.changePin') : t('button.setPin');
   if (pinRemoveBtn){
     pinRemoveBtn.hidden = !hasPin;
     pinRemoveBtn.disabled = !hasPin;
@@ -260,21 +202,21 @@ function syncPinControls(){
 }
 
 async function promptForNewPin(){
-  const first = window.prompt('Enter a new PIN (4-8 digits)');
+  const first = window.prompt(t('prompt.newPin'));
   if (first === null) return null;
   const primary = first.trim();
   if (!/^\d{4,8}$/.test(primary)){
-    setPinMessage('PIN must be 4-8 digits.', 'error');
+    setPinMessage(t('message.pin.invalid'), 'error');
     return null;
   }
-  const second = window.prompt('Confirm the new PIN');
+  const second = window.prompt(t('prompt.confirmPin'));
   if (second === null){
-    setPinMessage('PIN setup cancelled.', 'muted');
+    setPinMessage(t('message.pin.cancelled'), 'muted');
     return null;
   }
   const confirm = second.trim();
   if (primary !== confirm){
-    setPinMessage('PIN entries did not match.', 'error');
+    setPinMessage(t('message.pin.mismatch'), 'error');
     return null;
   }
   const hashed = await derivePinHash(primary);
@@ -283,16 +225,16 @@ async function promptForNewPin(){
 
 async function requestPinConfirmation(message){
   if (!storedPin) return { ok: false, cancelled: true };
-  const attempt = window.prompt(message || 'Enter your PIN to continue');
+  const attempt = window.prompt(message || t('prompt.pinConfirm'));
   if (attempt === null) return { ok: false, cancelled: true };
   const value = attempt.trim();
   if (!value){
-    setPinMessage('PIN cannot be empty.', 'error');
+    setPinMessage(t('message.pin.empty'), 'error');
     return { ok: false, cancelled: false };
   }
   const valid = await verifyPinInput(value, storedPin);
   if (!valid){
-    setPinMessage('Incorrect PIN.', 'error');
+    setPinMessage(t('message.pin.incorrect'), 'error');
     return { ok: false, cancelled: false };
   }
   return { ok: true, cancelled: false };
@@ -730,7 +672,8 @@ chrome.storage.local.get({
   overrideLog: [],
   overrideAlertEnabled: false,
   overrideAlertWebhook: '',
-  approverPromptEnabled: false
+  approverPromptEnabled: false,
+  language: 'en'
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -770,6 +713,9 @@ chrome.storage.local.get({
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
+  currentLanguage = typeof cfg.language === 'string' ? cfg.language : 'en';
+  if (languageSelectEl) languageSelectEl.value = currentLanguage;
+  setLanguageMessage('Translations coming soon. Selecting a language now stores your preference.', 'muted');
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -1211,6 +1157,16 @@ if (approverPromptEnabledEl){
     approverPromptEnabled = wantsEnable;
     chrome.storage.local.set({ approverPromptEnabled }, ()=>{
       setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Override approver prompt disabled.', approverPromptEnabled ? 'success' : 'muted');
+    });
+  });
+}
+
+if (languageSelectEl){
+  languageSelectEl.addEventListener('change', ()=>{
+    const value = languageSelectEl.value || 'en';
+    currentLanguage = value;
+    chrome.storage.local.set({ language: currentLanguage }, ()=>{
+      setLanguageMessage('Language preference saved. Translations will appear in a future update.', 'success');
     });
   });
 }
