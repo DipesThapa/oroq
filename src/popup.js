@@ -81,7 +81,75 @@ let overrideAlertsEnabled = false;
 let overrideAlertWebhook = '';
 let approverPromptEnabled = false;
 let currentLanguage = 'en';
-let i18nCache = null;
+const fallbackStrings = {
+  'card.profiles.message.default': 'Select a profile to preview recommended settings.',
+  'status.active': 'Active',
+  'status.paused': 'Paused',
+  'button.changePin': 'Change PIN',
+  'button.setPin': 'Set PIN',
+  'prompt.newPin': 'Enter a new PIN (4-8 digits)',
+  'prompt.confirmPin': 'Confirm the new PIN',
+  'prompt.pinConfirm': 'Enter your PIN to continue',
+  'message.pin.invalid': 'PIN must be 4-8 digits.',
+  'message.pin.cancelled': 'PIN setup cancelled.',
+  'message.pin.mismatch': 'PIN entries did not match.',
+  'message.pin.empty': 'PIN cannot be empty.',
+  'message.pin.incorrect': 'Incorrect PIN.',
+  'message.language.default': 'Translations coming soon. Selecting a language now stores your preference.',
+  'message.language.saved': 'Language preference saved. Translations will appear in a future update.',
+  'message.alerts.enabled': 'Alerts enabled. Overrides will notify your webhook.',
+  'message.alerts.disabled': 'Alerts stay on-device until you enable them.',
+  'message.alerts.saved': 'Webhook saved.',
+  'message.alerts.invalid': 'Webhook must start with http:// or https://',
+  'message.approver.enabled': 'Approver prompt enabled. Staff must enter their name when overriding.',
+  'message.approver.disabled': 'Enable to record who approves each override.',
+  'message.overrideLog.none': 'No overrides recorded yet.',
+  'message.overrideLog.downloaded': 'Override log downloaded.',
+  'message.overrideLog.cleared': 'Override log cleared.',
+  'message.overrideLog.empty': 'Override log is already empty.',
+  'message.overrideLog.noEntries': 'No overrides recorded yet.',
+  'message.digest.ready': 'Digest downloaded.',
+  'message.digest.failed': 'Failed to build digest.'
+};
+const translations = { en: fallbackStrings };
+
+function formatString(str, vars = {}){
+  return str.replace(/\{(\w+)\}/g, (_match, key)=>{
+    return Object.prototype.hasOwnProperty.call(vars, key) ? vars[key] : _match;
+  });
+}
+
+function t(key, vars = {}){
+  const langDict = translations[currentLanguage] || translations.en || {};
+  const str = (langDict && langDict[key]) || fallbackStrings[key] || key;
+  return formatString(str, vars);
+}
+
+async function loadLanguage(lang){
+  if (!lang || lang === 'en' || translations[lang]) return;
+  try {
+    const url = chrome.runtime.getURL(`data/i18n/${lang}.json`);
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const data = await res.json();
+    translations[lang] = data;
+  } catch(_e){
+    // ignore fetch errors; fallback strings stay in place
+  }
+}
+
+function applyLanguageToUI(){
+  setStatus(Boolean(enabledEl && enabledEl.checked));
+  if (profileMessageEl){
+    const currentText = profileMessageEl.textContent || '';
+    const defaultEn = fallbackStrings['card.profiles.message.default'];
+    const langStrings = translations[currentLanguage] || {};
+    const defaultLocalized = langStrings['card.profiles.message.default'] || defaultEn;
+    if (!selectedProfileId && (currentText === defaultEn || currentText === defaultLocalized)){
+      setProfileMessage(defaultLocalized, 'muted');
+    }
+  }
+}
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
@@ -706,16 +774,22 @@ chrome.storage.local.get({
   if (alertEnabledEl) alertEnabledEl.checked = overrideAlertsEnabled;
   if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
   if (overrideAlertsEnabled){
-    setAlertMessage('Alerts enabled. Overrides will notify your webhook.', 'success');
+    setAlertMessage(t('message.alerts.enabled'), 'success');
   } else {
-    setAlertMessage('Alerts stay on-device until you enable them.', 'muted');
+    setAlertMessage(t('message.alerts.disabled'), 'muted');
   }
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
-  setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
+  setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
   currentLanguage = typeof cfg.language === 'string' ? cfg.language : 'en';
   if (languageSelectEl) languageSelectEl.value = currentLanguage;
-  setLanguageMessage('Translations coming soon. Selecting a language now stores your preference.', 'muted');
+  loadLanguage(currentLanguage).then(()=>{
+    const defaultLangMsgEn = fallbackStrings['message.language.default'];
+    if (languageMessageEl && (languageMessageEl.textContent === defaultLangMsgEn || !languageMessageEl.textContent)){
+      setLanguageMessage(t('message.language.default'), 'muted');
+    }
+    applyLanguageToUI();
+  });
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -1127,7 +1201,7 @@ if (alertEnabledEl){
     }
     overrideAlertsEnabled = wantsEnable;
     chrome.storage.local.set({ overrideAlertEnabled: overrideAlertsEnabled }, ()=>{
-      setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
+      setAlertMessage(overrideAlertsEnabled ? t('message.alerts.enabled') : t('message.alerts.disabled'), overrideAlertsEnabled ? 'success' : 'muted');
     });
   });
 }
@@ -1137,12 +1211,12 @@ if (alertSaveBtn){
     if (!(await ensureAlertPinAuthorization('update the alert webhook'))) return;
     const url = (alertWebhookInput && alertWebhookInput.value ? alertWebhookInput.value.trim() : '');
     if (!/^https?:\/\//i.test(url)){
-      setAlertMessage('Webhook must start with http:// or https://', 'error');
+      setAlertMessage(t('message.alerts.invalid'), 'error');
       return;
     }
     overrideAlertWebhook = url;
     chrome.storage.local.set({ overrideAlertWebhook: overrideAlertWebhook }, ()=>{
-      setAlertMessage('Webhook saved.', 'success');
+      setAlertMessage(t('message.alerts.saved'), 'success');
     });
   });
 }
@@ -1156,7 +1230,7 @@ if (approverPromptEnabledEl){
     }
     approverPromptEnabled = wantsEnable;
     chrome.storage.local.set({ approverPromptEnabled }, ()=>{
-      setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Override approver prompt disabled.', approverPromptEnabled ? 'success' : 'muted');
+      setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
     });
   });
 }
@@ -1165,8 +1239,11 @@ if (languageSelectEl){
   languageSelectEl.addEventListener('change', ()=>{
     const value = languageSelectEl.value || 'en';
     currentLanguage = value;
-    chrome.storage.local.set({ language: currentLanguage }, ()=>{
-      setLanguageMessage('Language preference saved. Translations will appear in a future update.', 'success');
+    loadLanguage(currentLanguage).then(()=>{
+      chrome.storage.local.set({ language: currentLanguage }, ()=>{
+        applyLanguageToUI();
+        setLanguageMessage(t('message.language.saved'), 'success');
+      });
     });
   });
 }
@@ -1186,7 +1263,7 @@ if (tourNext){
 if (overrideExportBtn){
   overrideExportBtn.addEventListener('click', async ()=>{
     if (!currentOverrideLog.length){
-      setOverrideMessage('No overrides recorded yet.', 'muted');
+      setOverrideMessage(t('message.overrideLog.none'), 'muted');
       return;
     }
     if (!(await ensureLogPin('download the override log'))) return;
@@ -1195,20 +1272,20 @@ if (overrideExportBtn){
       count: currentOverrideLog.length,
       entries: currentOverrideLog
     });
-    setOverrideMessage('Override log downloaded.', 'success');
+    setOverrideMessage(t('message.overrideLog.downloaded'), 'success');
   });
 }
 
 if (overrideClearBtn){
   overrideClearBtn.addEventListener('click', async ()=>{
     if (!currentOverrideLog.length){
-      setOverrideMessage('Override log is already empty.', 'muted');
+      setOverrideMessage(t('message.overrideLog.empty'), 'muted');
       return;
     }
     if (!(await ensureLogPin('clear the override log'))) return;
     chrome.storage.local.set({ overrideLog: [] }, ()=>{
       renderOverrideLog([]);
-      setOverrideMessage('Override log cleared.', 'success');
+      setOverrideMessage(t('message.overrideLog.cleared'), 'success');
     });
   });
 }
@@ -1251,7 +1328,15 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.approverPromptEnabled){
     approverPromptEnabled = Boolean(changes.approverPromptEnabled.newValue);
     if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
-    setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
+    setApproverMessage(approverPromptEnabled ? t('message.approver.enabled') : t('message.approver.disabled'), approverPromptEnabled ? 'success' : 'muted');
+  }
+  if (area === 'local' && changes.language){
+    currentLanguage = typeof changes.language.newValue === 'string' ? changes.language.newValue : 'en';
+    if (languageSelectEl) languageSelectEl.value = currentLanguage;
+    loadLanguage(currentLanguage).then(()=>{
+      applyLanguageToUI();
+      setLanguageMessage(t('message.language.saved'), 'success');
+    });
   }
 });
 
@@ -1342,9 +1427,9 @@ if (digestDownloadBtn){
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setDigestMessage('Digest downloaded.', 'success');
+      setDigestMessage(t('message.digest.ready'), 'success');
     } catch(_e){
-      setDigestMessage('Failed to build digest.', 'error');
+      setDigestMessage(t('message.digest.failed'), 'error');
     }
   });
 }
