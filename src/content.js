@@ -11,10 +11,44 @@
     'adult','nsfw','explicit','erotic','escort','models','amateur','nsfw','18+','age verification','lust','filthy'
   ];
   const HOST_HINTS = ['porn','xxx','sex','hentai','xh','xv','xnxx','onlyfans','cam','lust','fuck','whore','slut','kink','bdsm'];
+  const PATH_HINT_RX = /(\/porn|\/xxx|\/hentai|\/adult|\/sex|\/cum|\/fuck|\/slut|\/whore|\/kink|\/fetish)/;
+  const URL_KEYWORD_RX = /(fuck|whore|slut|cum|bdsm|fetish|nsfw)/;
   const AGE_GATE_RX = /(18\+|adults? only|are you 18|age verification|enter if 18)/i;
   const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report)/i;
   const PIN_ITERATIONS_FALLBACK = 200000;
   const VISUAL_SAMPLE_LIMIT = 8;
+  const PHISHING_BRANDS = [
+    { name: 'PayPal', keywords: ['paypal','pay pal'], domains: ['paypal.com', 'paypalobjects.com'] },
+    { name: 'Microsoft', keywords: ['microsoft','office 365','outlook','onedrive'], domains: ['microsoft.com', 'live.com', 'office.com', 'sharepoint.com'] },
+    { name: 'Google', keywords: ['google','gmail','google drive','g suite'], domains: ['google.com', 'gmail.com', 'drive.google.com'] },
+    { name: 'Apple', keywords: ['apple id','icloud','itunes','apple'], domains: ['apple.com', 'icloud.com'] },
+    { name: 'Amazon', keywords: ['amazon','aws'], domains: ['amazon.com', 'amazon.co.uk', 'aws.amazon.com'] },
+    { name: 'Meta', keywords: ['facebook','instagram','meta','whatsapp'], domains: ['facebook.com', 'instagram.com', 'meta.com', 'whatsapp.com'] },
+    { name: 'Bank', keywords: ['bank of america','wells fargo','hsbc','barclays','payment verification','santander','chase bank'], domains: [] },
+    { name: 'Crypto', keywords: ['coinbase','binance','crypto.com','metamask'], domains: ['coinbase.com','binance.com','crypto.com','metamask.io'] },
+    { name: 'Roblox', keywords: ['roblox'], domains: ['roblox.com'] },
+    { name: 'Netflix', keywords: ['netflix'], domains: ['netflix.com'] },
+    { name: 'Discord', keywords: ['discord'], domains: ['discord.com'] },
+    { name: 'Steam', keywords: ['steam','valve'], domains: ['steampowered.com', 'steamcommunity.com'] },
+    { name: 'Yahoo', keywords: ['yahoo'], domains: ['yahoo.com'] }
+  ];
+  const SUSPICIOUS_PHRASES = [
+    'verify your account','verify account','reset your password','unusual activity','security alert',
+    'update your payment','confirm your identity','unlock your account','immediate action required','account locked','suspend your account'
+  ];
+  const SUSPICIOUS_SCRIPT_RX = /(atob\s*\(|btoa\s*\(|fromcharcode|crypto-js|aes\.decrypt|document\.write\(.+base64)/i;
+  const EXFIL_KEYWORDS = ['email','user','login','account','password','passcode','pin','otp','credential','token'];
+  const ENCRYPTED_PAYLOAD_HINTS = [
+    /[A-Za-z0-9+/=]{40,}/,
+    /{"iv":".+","salt":".+","ct":".+"}/i
+  ];
+  const ENABLE_CYBER = false;
+  const SUSPICIOUS_HOST_HINTS = ['trycloudflare.com','cloudflarepages.dev','cloudflarepage','repl.co','github.io','vercel.app','netlify.app','firebaseapp.com','appspot.com','glitch.me','pages.dev'];
+  const LOGIN_HINTS = ['login','log in','sign in','signin','account','secure login','enter password'];
+  const IMMEDIATE_BLOCK_HOSTS = ['trycloudflare.com','cloudflarepage','cloudflarepages.dev','repl.co','github.io','netlify.app','vercel.app','appspot.com','firebaseapp.com','glitch.me','render.com'];
+  let interactionGuard = null;
+  let phishObserver = null;
+  let phishObserverTimer = null;
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     if (message && message.type === 'sg-open-approver-prompt'){
@@ -75,6 +109,41 @@
     }
   }
 
+  function sanitizePolicyReview(review){
+    if (!review || typeof review !== 'object') return null;
+    const safe = {
+      score: Number.isFinite(review.score) ? Math.round(review.score) : null,
+      verdict: typeof review.verdict === 'string' ? review.verdict : null,
+      factors: Array.isArray(review.factors) ? review.factors.map((factor)=>({
+        code: factor && factor.code ? String(factor.code).slice(0, 32) : null,
+        label: factor && factor.label ? String(factor.label).slice(0, 140) : null,
+        weight: typeof factor?.weight === 'number' ? Math.round(factor.weight) : null
+      })) : [],
+      reasonSummary: typeof review.reasonSummary === 'string' ? review.reasonSummary.slice(0, 240) : null
+    };
+    return safe;
+  }
+
+  function sanitizeHeuristicsSnapshot(snapshot){
+    if (!snapshot || typeof snapshot !== 'object') return null;
+    return {
+      riskScore: Number.isFinite(snapshot.riskScore) ? snapshot.riskScore : null,
+      riskThreshold: Number.isFinite(snapshot.riskThreshold) ? snapshot.riskThreshold : null,
+      riskLevel: snapshot.riskLevel || null,
+      riskSummary: snapshot.riskSummary || null,
+      riskPercent: Number.isFinite(snapshot.riskPercent) ? snapshot.riskPercent : null,
+      riskMax: Number.isFinite(snapshot.riskMax) ? snapshot.riskMax : null,
+      signals: Array.isArray(snapshot.signals) ? snapshot.signals.map((signal)=>({
+        id: signal && signal.id ? String(signal.id).slice(0, 40) : null,
+        icon: signal && signal.icon ? String(signal.icon).slice(0, 10) : null,
+        label: signal && signal.label ? String(signal.label).slice(0, 120) : null,
+        detail: signal && signal.detail ? String(signal.detail).slice(0, 240) : null,
+        weight: typeof signal?.weight === 'number' ? signal.weight : null,
+        meta: Array.isArray(signal?.meta) ? signal.meta.slice(0, 3) : null
+      })) : []
+    };
+  }
+
   async function recordOverrideEvent(reasonText, options = {}){
     try {
       let approver = '';
@@ -89,7 +158,9 @@
         reason: (reasonText || '').trim(),
         pinRequired: Boolean(options.pinRequired),
         source: options.source || 'interstitial',
-        approver
+        approver,
+        policyReview: sanitizePolicyReview(options.policyReview),
+        heuristics: sanitizeHeuristicsSnapshot(options.heuristics)
       };
       const payload = await new Promise((resolve)=>chrome.storage.local.get({ overrideLog: [] }, resolve));
       const existing = Array.isArray(payload.overrideLog) ? payload.overrideLog.filter((item)=>item && typeof item === 'object') : [];
@@ -120,41 +191,156 @@
     } catch(_e){ return {domains:[]}; }
   }
 
-  function scoreFromText(text){
-    const lower = (text||'').toLowerCase();
-    let s = 0;
-    if (AGE_GATE_RX.test(lower)) s += 5;
-    if (NEGATIVE_RX.test(lower)) s -= 4; // de-emphasize educational/safety contexts
-    // strong terms (higher weight)
-    for (const w of KW_STRONG) { if (lower.includes(w)) s += 3; }
-    // medium terms (lower weight)
-    for (const w of KW_MEDIUM) { if (lower.includes(w)) s += 1; }
-    return s;
+  function evaluateKeywordSignals(text){
+    const lower = (text || '').toLowerCase();
+    const result = {
+      score: 0,
+      strong: [],
+      medium: [],
+      ageGate: false,
+      negative: false
+    };
+    if (!lower) return result;
+    result.ageGate = AGE_GATE_RX.test(lower);
+    result.negative = NEGATIVE_RX.test(lower);
+    for (const word of KW_STRONG){
+      if (!lower.includes(word)) continue;
+      if (!result.strong.includes(word)) result.strong.push(word);
+      result.score += 3;
+    }
+    for (const word of KW_MEDIUM){
+      if (!lower.includes(word)) continue;
+      if (!result.medium.includes(word)) result.medium.push(word);
+      result.score += 1;
+    }
+    if (result.ageGate) result.score += 5;
+    if (result.negative) result.score -= 4; // de-emphasize educational/safety contexts
+    return result;
   }
 
-  function scoreFromTitleAndMeta(){
-    let s = 0;
-    try{ s += scoreFromText(document.title||''); }catch(_e){}
+  function evaluateMetaSignals(){
+    const aggregate = {
+      score: 0,
+      strong: new Set(),
+      medium: new Set(),
+      ageGate: false,
+      negative: false
+    };
+    try{
+      const titleEval = evaluateKeywordSignals(document.title || '');
+      if (titleEval.score){
+        aggregate.score += Math.min(6, titleEval.score);
+        titleEval.strong.forEach((kw)=>aggregate.strong.add(kw));
+        titleEval.medium.forEach((kw)=>aggregate.medium.add(kw));
+        if (titleEval.ageGate) aggregate.ageGate = true;
+        if (titleEval.negative) aggregate.negative = true;
+      }
+    }catch(_e){}
     try{
       const metas = document.querySelectorAll('meta[name="description"], meta[name="keywords"], meta[property="og:title"], meta[property="og:description"]');
-      metas.forEach(m=>{ const v=m.content||''; s += Math.min(6, scoreFromText(v)); });
+      metas.forEach((node)=>{
+        const value = node && typeof node.content === 'string' ? node.content : '';
+        if (!value) return;
+        const details = evaluateKeywordSignals(value);
+        if (!details.score) return;
+        const applied = Math.min(6, details.score);
+        aggregate.score += applied;
+        details.strong.forEach((kw)=>aggregate.strong.add(kw));
+        details.medium.forEach((kw)=>aggregate.medium.add(kw));
+        if (details.ageGate) aggregate.ageGate = true;
+        if (details.negative) aggregate.negative = true;
+      });
     }catch(_e){}
-    return s;
+    return {
+      score: aggregate.score,
+      strong: Array.from(aggregate.strong),
+      medium: Array.from(aggregate.medium),
+      ageGate: aggregate.ageGate,
+      negative: aggregate.negative
+    };
   }
 
-  function scoreFromUrl(){
-    let s = 0;
+  function evaluateUrlSignals(){
+    const result = { score: 0, signals: [] };
     try{
-      const { hostname, pathname } = new URL(location.href);
-      if (/\.xxx$/i.test(hostname)) s += 8;
-      const hostL = hostname.toLowerCase();
-      if (HOST_HINTS.some(h=>hostL.includes(h))) s += 6;
-      const pathL = (pathname||'').toLowerCase();
-      if (/(\/porn|\/xxx|\/hentai|\/adult|\/sex|\/cum|\/fuck|\/slut|\/whore|\/kink|\/fetish)/.test(pathL)) s += 3;
-      const hrefL = location.href.toLowerCase();
-      if (/(fuck|whore|slut|cum|bdsm|fetish|nsfw)/.test(hrefL)) s += 2;
+      const current = new URL(location.href);
+      const host = (current.hostname || '').toLowerCase();
+      if (/\.xxx$/i.test(host)){
+        result.score += 8;
+        result.signals.push({
+          id: 'tld',
+          icon: 'URL',
+          label: 'Adult-only top level domain',
+          detail: 'Domain ends with .xxx, commonly reserved for adult sites.',
+          weight: 8
+        });
+      }
+      const hostHint = HOST_HINTS.find((hint)=>host.includes(hint));
+      if (hostHint){
+        result.score += 6;
+        result.signals.push({
+          id: 'host-hint',
+          icon: 'URL',
+          label: 'Domain keyword match',
+          detail: `Hostname contains “${hostHint}”, which is frequently associated with adult content.`,
+          weight: 6
+        });
+      }
+      const path = (current.pathname || '').toLowerCase();
+      const pathMatch = path.match(PATH_HINT_RX);
+      if (pathMatch){
+        result.score += 3;
+        result.signals.push({
+          id: 'path',
+          icon: 'URL',
+          label: 'Sensitive path detected',
+          detail: `URL path includes “${pathMatch[0]}”.`,
+          weight: 3
+        });
+      }
+      const hrefLower = current.href.toLowerCase();
+      const hrefMatch = hrefLower.match(URL_KEYWORD_RX);
+      if (hrefMatch){
+        result.score += 2;
+        result.signals.push({
+          id: 'query',
+          icon: 'URL',
+          label: 'Adult keyword in URL',
+          detail: `Full URL contains “${hrefMatch[0]}”.`,
+          weight: 2
+        });
+      }
     }catch(_e){}
-    return s;
+    return result;
+  }
+
+  function evaluateVisualSignals(){
+    const result = { score: 0, ratio: 0, sampled: 0 };
+    try {
+      const imgs = Array.from(document.images || []).filter((img)=>img && img.complete && img.naturalWidth && img.naturalHeight);
+      if (!imgs.length) return result;
+      let maxRatio = 0;
+      let processed = 0;
+      for (const img of imgs){
+        if (processed >= VISUAL_SAMPLE_LIMIT) break;
+        const ratio = sampleImageSkinRatio(img);
+        if (Number.isFinite(ratio) && ratio > maxRatio) maxRatio = ratio;
+        processed += 1;
+        if (maxRatio >= 0.6) break;
+      }
+      result.ratio = maxRatio;
+      result.sampled = processed;
+      if (maxRatio >= 0.55) result.score = 9;
+      else if (maxRatio >= 0.4) result.score = 6;
+      else if (maxRatio >= 0.25) result.score = 3;
+    } catch(_e){
+      // ignore visual sampling failures; leave score at 0
+    }
+    return result;
+  }
+
+  function scoreFromText(text){
+    return evaluateKeywordSignals(text).score;
   }
 
   function isLikelySkin(r, g, b){
@@ -196,26 +382,903 @@
     }
   }
 
-  function computeVisualScore(){
-    try {
-      const imgs = Array.from(document.images || []).filter((img)=>img && img.complete && img.naturalWidth && img.naturalHeight);
-      if (!imgs.length) return 0;
-      let maxRatio = 0;
-      let processed = 0;
-      for (const img of imgs){
-        if (processed >= VISUAL_SAMPLE_LIMIT) break;
-        const ratio = sampleImageSkinRatio(img);
-        if (ratio > maxRatio) maxRatio = ratio;
-        processed += 1;
-        if (maxRatio >= 0.6) break;
-      }
-      if (maxRatio >= 0.55) return 9;
-      if (maxRatio >= 0.4) return 6;
-      if (maxRatio >= 0.25) return 3;
-      return 0;
-    } catch(_e){
-      return 0;
+  function formatKeywordList(list, limit = 4){
+    if (!Array.isArray(list) || !list.length) return '';
+    const trimmed = list.slice(0, limit);
+    return trimmed.join(', ') + (list.length > limit ? '…' : '');
+  }
+
+  function deriveRiskLevel(score, threshold){
+    const safeThreshold = typeof threshold === 'number' ? threshold : 0;
+    const delta = score - safeThreshold;
+    if (delta >= 12) return 'Critical risk';
+    if (delta >= 6) return 'High risk';
+    if (delta >= 2) return 'Elevated risk';
+    return 'Warning';
+  }
+
+  function signalFriendlySummary(signal){
+    if (!signal || !signal.id) return null;
+    const id = signal.id;
+    if (id === 'host' || id === 'policy'){
+      return 'We blocked this entire site because it is on a banned list.';
     }
+    if (id === 'path' || id === 'host-hint' || id === 'tld' || id === 'query'){
+      return 'The site address itself contains words linked to adult material.';
+    }
+    if (id === 'visual'){
+      return 'Images on the page looked like nudity, so we hid the page before it loaded.';
+    }
+    if (id === 'body-keywords' || id === 'meta-keywords'){
+      return 'The text on the page mentions adult topics that are unsafe for young people.';
+    }
+    if (id === 'body-age-gate' || id === 'meta-age-gate'){
+      return 'This page asks visitors to confirm they are over 18, so we treat it as adult content.';
+    }
+    if (id === 'body-context' || id === 'meta-context'){
+      return 'We spotted educational wording but still kept the block to stay cautious.';
+    }
+    if (id === 'phish-brand'){
+      return 'The page uses a well-known brand name but is not on that brand’s official website.';
+    }
+    if (id === 'phish-host-brand'){
+      return 'The site address itself tries to mimic a trusted brand but is not official.';
+    }
+    if (id === 'phish-form'){
+      return 'Password boxes send information to a different website than the one you opened.';
+    }
+    if (id === 'phish-http'){
+      return 'The login form is unsecured and could expose your password.';
+    }
+    if (id === 'phish-favicon'){
+      return 'Legitimate sites host their own icons; a different icon host can signal a fake page.';
+    }
+    if (id === 'phish-buttons'){
+      return 'Scammers often use urgent buttons like “Verify now” to rush people.';
+    }
+    if (id === 'phish-insecure-context'){
+      return 'Browsers warn that this page is not secure for entering sensitive data.';
+    }
+    if (id === 'phish-contextmenu'){
+      return 'Blocking right-click is a trick phishing sites use to stop people copying links.';
+    }
+    if (id === 'phish-feed'){
+      return 'Independent threat feeds marked this site as phishing.';
+    }
+    if (id === 'phish-phrases'){
+      return 'Scammers often use urgent phrases to rush people into clicking.';
+    }
+    if (id === 'phish-script'){
+      return 'Hidden scripts on the page match patterns from known phishing kits.';
+    }
+    if (id === 'phish-logo'){
+      return 'The page embeds brand logos in an unusual way to impersonate trusted sites.';
+    }
+    return 'Safeguard spotted patterns that usually mean the page is unsafe.';
+  }
+
+  function createHeuristicInsights(context){
+    const host = context.host || '';
+    const totalScore = Number.isFinite(context.total) ? context.total : 0;
+    const threshold = Number.isFinite(context.threshold) ? context.threshold : 0;
+    const urlEval = context.urlEval || { signals: [] };
+    const metaEval = context.metaEval || { strong: [], medium: [], ageGate: false, negative: false, score: 0 };
+    const bodyEval = context.bodyEval || { strong: [], medium: [], ageGate: false, negative: false, score: 0 };
+    const visualEval = context.visualEval || { score: 0, ratio: 0, sampled: 0 };
+
+    const signals = [];
+    if (urlEval && Array.isArray(urlEval.signals)){
+      urlEval.signals.forEach((sig)=>signals.push(sig));
+    }
+    if (visualEval && visualEval.score){
+      const ratioPercent = Math.round((visualEval.ratio || 0) * 100);
+      const detail = ratioPercent
+        ? `Approx ${ratioPercent}% of sampled pixels matched skin-tone patterns.`
+        : 'On-page imagery showed a high skin-tone density.';
+      const meta = [];
+      if (visualEval.sampled) meta.push(`Analysed ${visualEval.sampled} image${visualEval.sampled === 1 ? '' : 's'}`);
+      signals.push({
+        id: 'visual',
+        icon: 'IMG',
+        label: 'Visual scan flagged nudity risk',
+        detail,
+        weight: visualEval.score,
+        meta
+      });
+    }
+    if (bodyEval){
+      const keywordWeight = bodyEval.strong.length * 3 + bodyEval.medium.length;
+      if (keywordWeight > 0){
+        const detailParts = [];
+        if (bodyEval.strong.length) detailParts.push(`High-risk terms: ${formatKeywordList(bodyEval.strong)}`);
+        if (bodyEval.medium.length) detailParts.push(`Additional terms: ${formatKeywordList(bodyEval.medium)}`);
+        signals.push({
+          id: 'body-keywords',
+          icon: 'TXT',
+          label: 'Risky language in page text',
+          detail: detailParts.join('. '),
+          weight: Math.min(12, keywordWeight)
+        });
+      }
+      if (bodyEval.ageGate){
+        signals.push({
+          id: 'body-age-gate',
+          icon: 'TXT',
+          label: '18+ prompt detected',
+          detail: 'Page copy asks the visitor to confirm they are over 18.',
+          weight: 5
+        });
+      }
+      if (bodyEval.negative){
+        signals.push({
+          id: 'body-context',
+          icon: 'NOTE',
+          label: 'Educational context noted',
+          detail: 'Safeguard reduced the score because safeguarding/educational wording is present.',
+          weight: -4
+        });
+      }
+    }
+    if (metaEval && metaEval.score){
+      if (metaEval.strong.length || metaEval.medium.length){
+        const detailParts = [];
+        if (metaEval.strong.length) detailParts.push(`High-risk metadata: ${formatKeywordList(metaEval.strong)}`);
+        if (metaEval.medium.length) detailParts.push(`Other metadata terms: ${formatKeywordList(metaEval.medium)}`);
+        signals.push({
+          id: 'meta-keywords',
+          icon: 'META',
+          label: 'Metadata references adult content',
+          detail: detailParts.join('. '),
+          weight: Math.min(12, metaEval.score)
+        });
+      }
+      if (metaEval.ageGate && !(bodyEval && bodyEval.ageGate)){
+        signals.push({
+          id: 'meta-age-gate',
+          icon: 'META',
+          label: '18+ prompt in metadata',
+          detail: 'Open Graph / SEO metadata references age verification language.',
+          weight: 5
+        });
+      }
+      if (metaEval.negative && !(bodyEval && bodyEval.negative)){
+        signals.push({
+          id: 'meta-context',
+          icon: 'NOTE',
+          label: 'Educational metadata noted',
+          detail: 'Safeguard reduced the score because the metadata references education or safeguarding terms.',
+          weight: -4
+        });
+      }
+    }
+
+    const seen = new Set();
+    const uniqueSignals = [];
+    for (const sig of signals){
+      if (!sig || !sig.id) continue;
+      if (seen.has(sig.id)) continue;
+      seen.add(sig.id);
+      uniqueSignals.push(sig);
+    }
+    if (host && !seen.has('host')){
+      uniqueSignals.unshift({
+        id: 'host',
+        icon: 'URL',
+        label: 'Blocked host',
+        detail: host,
+        weight: 0
+      });
+    }
+
+    const safeThreshold = Math.max(0, threshold);
+    const safeScore = Math.max(0, totalScore);
+    const gaugeMax = Math.max(12, safeThreshold + 12);
+    const riskPercent = Math.max(0, Math.min(100, Math.round((safeScore / gaugeMax) * 100)));
+    const riskLevel = deriveRiskLevel(safeScore, safeThreshold);
+    const pillText = `${riskLevel} • Safeguard heuristics`;
+    return {
+      pillText,
+      riskScore: safeScore,
+      riskThreshold: safeThreshold,
+      riskLevel,
+      riskSummary: `Score ${Math.round(safeScore)} vs threshold ${Math.round(safeThreshold)}.`,
+      riskPercent,
+      riskMax: gaugeMax,
+      signals: uniqueSignals
+    };
+  }
+
+  async function loadPhishingFeed(){
+    if (!ENABLE_CYBER) return [];
+    try {
+      const cache = await chrome.storage.local.get({ phishingFeedCache: null });
+      if (Array.isArray(cache.phishingFeedCache)) return cache.phishingFeedCache;
+    } catch(_e){}
+    try {
+      const url = chrome.runtime.getURL('data/phishing_feed.json');
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('feed fetch failed');
+      const data = await res.json();
+      return Array.isArray(data.entries) ? data.entries : [];
+    } catch(_e){
+      return [];
+    }
+  }
+
+  function createBlocklistInsights({ host }){
+    const signals = [{
+      id: 'policy',
+      icon: 'POL',
+      label: 'Policy blocklist match',
+      detail: 'This domain is on the centrally managed Safeguard blocklist.',
+      weight: 12
+    }];
+    if (host){
+      signals.push({
+        id: 'host',
+        icon: 'URL',
+        label: 'Blocked host',
+        detail: host,
+        weight: 0
+      });
+    }
+    return {
+      pillText: 'Policy block enforced',
+      riskScore: 24,
+      riskThreshold: 12,
+      riskLevel: 'Policy blocked',
+      riskSummary: 'Safeguard blocked this domain due to administrator policy.',
+      riskPercent: 100,
+      riskMax: 24,
+      signals
+    };
+  }
+
+  function normalizeHost(value){
+    return (value || '').trim().replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+  }
+
+  function typosquatScore(host, domain){
+    const a = host || '';
+    const b = domain || '';
+    const len = Math.max(a.length, b.length);
+    if (!len) return Infinity;
+    let diff = 0;
+    for (let i = 0; i < Math.min(a.length, b.length); i += 1){
+      if (a[i] !== b[i]) diff += 1;
+    }
+    diff += Math.abs(a.length - b.length);
+    return diff;
+  }
+
+  function isOfficialBrandHost(host, brand){
+    return (brand.domains || []).some((domain)=>{
+      const clean = normalizeHost(domain);
+      return host === clean || host.endsWith('.' + clean);
+    });
+  }
+
+  function evaluatePhishingSignals(options = {}){
+    if (!ENABLE_CYBER) return null;
+    const host = getHost();
+    if (!host) return null;
+    const strict = Boolean(options.strict);
+    const feedEntries = Array.isArray(options.feedEntries) ? options.feedEntries : [];
+    const signals = [];
+    let score = 0;
+    const textSample = (
+      (document.title || '') + ' ' +
+      ((document.body && document.body.innerText) ? document.body.innerText : '')
+    ).toLowerCase().slice(0, 6000);
+
+    PHISHING_BRANDS.forEach((brand)=>{
+      const hit = brand.keywords.some((kw)=>textSample.includes(kw));
+      if (!hit) return;
+      const isOfficial = isOfficialBrandHost(host, brand);
+      if (!isOfficial){
+        signals.push({
+          id: 'phish-brand',
+          icon: 'SHLD',
+          label: `${brand.name} mentioned`,
+          detail: `Page mentions ${brand.name}, but you are on ${host}.`,
+          weight: 6,
+          meta: brand.domains && brand.domains.length ? [`Official domains: ${brand.domains.join(', ')}`] : null
+        });
+        score += 6;
+      }
+      const hostContainsBrand = brand.keywords.some((kw)=>host.includes(kw.replace(/\s+/g, '')));
+      if (hostContainsBrand && !isOfficial){
+        const closest = (brand.domains || [host]).reduce((best, domain)=>{
+          const val = typosquatScore(host, normalizeHost(domain));
+          return val < best ? val : best;
+        }, Infinity);
+        if (closest <= 3){
+          signals.push({
+            id: 'phish-host-brand',
+            icon: 'DNS',
+            label: `${brand.name} look-alike domain`,
+            detail: `The site address ${host} resembles ${brand.name} but isn’t official.`,
+            weight: 10
+          });
+          score += 10;
+        }
+      }
+    });
+
+    const phraseHits = SUSPICIOUS_PHRASES.filter((phrase)=>textSample.includes(phrase));
+    if (phraseHits.length){
+      signals.push({
+        id: 'phish-phrases',
+        icon: 'TXT',
+        label: 'Urgent security message',
+        detail: `The page contains phrases such as “${phraseHits.slice(0, 2).join('”, “')}”.`,
+        weight: 4
+      });
+      score += 4;
+    }
+
+    const hostHint = SUSPICIOUS_HOST_HINTS.find((hint)=>host.includes(hint.replace(/^\*\./,'').toLowerCase()));
+    if (hostHint && LOGIN_HINTS.some((kw)=>textSample.includes(kw))){
+      signals.push({
+        id: 'phish-host-hint',
+        icon: 'URL',
+        label: 'Untrusted hosting domain',
+        detail: `This login is hosted on ${host}, a domain often used for phishing staging (“${hostHint}”).`,
+        weight: 8
+      });
+      score += 8;
+    }
+
+    const forms = Array.from(document.forms || []);
+    forms.forEach((form)=>{
+      try {
+        const actionAttr = form.getAttribute('action') || '';
+        if (!actionAttr) return;
+        const formUrl = new URL(actionAttr, location.href);
+        const targetHost = (formUrl.hostname || '').toLowerCase();
+        if (!targetHost || !host) return;
+        if (targetHost !== host && !targetHost.endsWith('.' + host)){
+          const credsInputs = Array.from(form.querySelectorAll('input[type="password"], input[name*="pass"], input[name*="otp"], input[name*="pin"]'));
+          if (credsInputs.length){
+            signals.push({
+              id: 'phish-form',
+              icon: 'FORM',
+              label: 'Login posts elsewhere',
+              detail: `This form submits to ${targetHost}, not ${host}.`,
+              weight: 7
+            });
+            score += 7;
+          }
+        }
+      } catch(_e){}
+    });
+
+    const hasPasswordField = forms.some((form)=>form.querySelector('input[type="password"]'));
+    if (hasPasswordField && location.protocol !== 'https:'){
+      signals.push({
+        id: 'phish-http',
+        icon: 'LOCK',
+        label: 'Login over HTTP',
+        detail: 'Passwords would be sent over an insecure connection.',
+        weight: 5
+      });
+      score += 5;
+    }
+
+    const favicon = document.querySelector('link[rel*="icon"]');
+    if (favicon && favicon.href){
+      try {
+        const favHost = new URL(favicon.href, location.href).hostname.replace(/^www\./,'').toLowerCase();
+        if (favHost && favHost !== host && !favHost.endsWith('.' + host)){
+          signals.push({
+            id: 'phish-favicon',
+            icon: 'ICON',
+            label: 'Icon from another site',
+            detail: `The page is loading its icon from ${favHost}, which may indicate impersonation.`,
+            weight: 4
+          });
+          score += 4;
+        }
+      } catch(_e){}
+    }
+
+    const suspiciousButtons = Array.from(document.querySelectorAll('button, input[type="submit"]')).filter((btn)=>{
+      const text = (btn.innerText || btn.value || '').toLowerCase();
+      return /(verify|unlock|update|secure|confirm)/.test(text);
+    });
+    if (suspiciousButtons.length && forms.length){
+      signals.push({
+        id: 'phish-buttons',
+        icon: 'BTN',
+        label: 'Urgent action wording',
+        detail: 'Buttons on this page use urgent wording such as verify, unlock, or secure.',
+        weight: 3
+      });
+      score += 3;
+    }
+
+    if (!window.isSecureContext && options.scriptMonitor !== false){
+      signals.push({
+        id: 'phish-insecure-context',
+        icon: 'LOCK',
+        label: 'Insecure context',
+        detail: 'The browser considers this page insecure. Data entered here could be intercepted.',
+        weight: 5
+      });
+      score += 5;
+    }
+
+    if (typeof document.oncontextmenu === 'function' || document.oncontextmenu === false){
+      signals.push({
+        id: 'phish-contextmenu',
+        icon: 'WARN',
+        label: 'Copy/paste disabled',
+        detail: 'This page blocks right-click actions, which phishing pages often do.',
+        weight: 2
+      });
+      score += 2;
+    }
+
+    if (options.scriptMonitor !== false){
+      const inlineScripts = Array.from(document.scripts || []).filter((script)=>!script.src && script.textContent);
+      const scriptHit = inlineScripts.some((script)=>SUSPICIOUS_SCRIPT_RX.test(script.textContent));
+      if (scriptHit){
+        signals.push({
+          id: 'phish-script',
+          icon: 'JS',
+          label: 'Obfuscated script detected',
+          detail: 'Inline scripts on this page use patterns common in phishing kits.',
+          weight: 5
+        });
+        score += 5;
+      }
+
+      const dataUriLogos = Array.from(document.querySelectorAll('img')).filter((img)=>{
+        const src = img.currentSrc || img.src || '';
+        if (!/^data:image\/(png|jpe?g)/i.test(src)) return false;
+        const alt = (img.alt || img.title || '').toLowerCase();
+        return /(logo|signin|secure|bank)/.test(alt);
+      });
+      if (dataUriLogos.length){
+        signals.push({
+          id: 'phish-logo',
+          icon: 'IMG',
+          label: 'Inline logo detected',
+          detail: 'The page embeds brand logos via data URIs, a trick used in phishing kits.',
+          weight: 3
+        });
+        score += 3;
+      }
+    }
+
+    const feedSignal = (options.feedEnabled === false) ? null : checkPhishingFeed(host, feedEntries);
+    if (feedSignal){
+      signals.push(feedSignal);
+      score += 12;
+    }
+
+    if (!signals.length) return null;
+    const riskScore = Math.min(100, 15 + score);
+    const riskThreshold = strict ? 8 : 12;
+    try { window.__sg_phishSignals = signals; } catch(_e){}
+    return {
+      riskScore,
+      riskThreshold,
+      riskLevel: 'Phishing risk',
+      riskSummary: 'Safeguard spotted suspicious login behavior.',
+      signals
+    };
+  }
+
+  function createHostHintBlock(host, hint){
+    if (!ENABLE_CYBER) return null;
+    return {
+      riskScore: 60,
+      riskThreshold: 4,
+      riskLevel: 'Phishing risk',
+      riskSummary: `Suspicious hosting domain: ${host}`,
+      signals: [{
+        id: 'phish-host-hint',
+        icon: 'URL',
+        label: 'Untrusted hosting domain',
+        detail: `This login is served from ${host}, a domain pattern (“${hint}”) commonly used for phishing staging.`,
+        weight: 20
+      }]
+    };
+  }
+
+  function checkPhishingFeed(host, feedEntries){
+    if (!ENABLE_CYBER) return null;
+    if (!host || !Array.isArray(feedEntries) || !feedEntries.length) return null;
+    const normalized = host.replace(/^www\./,'');
+    const match = feedEntries.find((entry)=>{
+      if (!entry || !entry.host) return false;
+      const pattern = String(entry.host).replace(/\[.\]/g, '.');
+      const clean = pattern.replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,'').toLowerCase();
+      return normalized === clean || normalized.endsWith('.' + clean);
+    });
+    if (!match) return null;
+    return {
+      id: 'phish-feed',
+      icon: 'TI',
+      label: 'Threat intelligence hit',
+      detail: `Known phishing host (${match.brand || 'unknown brand'}) per Safeguard feed.`,
+      weight: match.severity === 'high' ? 18 : 12
+    };
+  }
+
+  function handlePhishingHit(phishingEval, pinConfig){
+    if (!ENABLE_CYBER) return;
+    if (!phishingEval) return;
+    lockInteractionShield();
+    showInterstitial("Phishing protection", {
+      pinConfig,
+      pillText: 'Cybersecurity defense',
+      supportLink: { text: 'Report phishing', href: 'https://dipesthapa.github.io/safebrowse-ai/site/support.html' },
+      ...phishingEval
+    });
+    try {
+      chrome.runtime.sendMessage({
+        type: 'sg-phish-detected',
+        payload: {
+          host: getHost(),
+          url: (()=>{ try { return location.href; } catch(_e){ return null; } })(),
+          reason: phishingEval.riskSummary,
+          signals: phishingEval.signals,
+          detectedAt: Date.now()
+        }
+      });
+    } catch(_e){}
+  }
+
+  let formGuardAttached = false;
+  let bypassFormGuard = false;
+  function attachPhishFormGuard(cfg, pinConfig){
+    if (!ENABLE_CYBER) return;
+    if (!cfg || !cfg.phishingProtectionEnabled || cfg.phishingFormMonitorEnabled === false) return;
+    if (formGuardAttached) return;
+    formGuardAttached = true;
+    document.addEventListener('submit', async (event)=>{
+      try {
+        if (bypassFormGuard) return;
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const feedEntries = cfg.phishingFeedEnabled === false ? [] : await loadPhishingFeed();
+        const phishingEval = evaluatePhishingSignals({
+          strict: Boolean(cfg.phishingStrictMode),
+          feedEntries,
+          feedEnabled: cfg.phishingFeedEnabled !== false,
+          scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+        });
+        if (phishingEval){
+          handlePhishingHit(phishingEval, pinConfig);
+          return;
+        }
+        bypassFormGuard = true;
+        try {
+          form.submit();
+        } finally {
+          bypassFormGuard = false;
+        }
+      } catch(_e){}
+    }, true);
+  }
+
+  let networkGuardsAttached = false;
+  function attachNetworkGuards(cfg, pinConfig){
+    if (!ENABLE_CYBER) return;
+    if (!cfg || !cfg.phishingProtectionEnabled) return;
+    if (networkGuardsAttached) return;
+    networkGuardsAttached = true;
+    interceptFetch(cfg, pinConfig);
+    interceptXHR(cfg, pinConfig);
+    interceptBeacon();
+    interceptWebSocket(cfg, pinConfig);
+    monitorInputsForExfil();
+  }
+
+  function scrubPayload(payload){
+    try {
+      if (!payload) return '';
+      if (typeof payload === 'string') return payload.slice(0, 2000);
+      if (payload instanceof URLSearchParams){
+        return payload.toString().slice(0, 2000);
+      }
+      if (payload instanceof FormData){
+        const params = [];
+        payload.forEach((value, key)=>{
+          params.push(`${key}=${value}`);
+        });
+        return params.join('&').slice(0, 2000);
+      }
+      if (payload instanceof Blob || payload instanceof ArrayBuffer){
+        return '[binary]';
+      }
+      if (typeof payload === 'object'){
+        return JSON.stringify(payload).slice(0, 2000);
+      }
+    } catch(_e){}
+    return '';
+  }
+
+  function payloadLooksSensitive(body){
+    const sample = (body || '').toLowerCase();
+    return EXFIL_KEYWORDS.some((kw)=>sample.includes(kw));
+  }
+
+  function payloadLooksEncrypted(body){
+    if (!body) return false;
+    return ENCRYPTED_PAYLOAD_HINTS.some((rx)=>rx.test(body));
+  }
+
+  function hostIsTrusted(url){
+    try {
+      const parsed = new URL(url, location.href);
+      const host = parsed.hostname.replace(/^www\./,'').toLowerCase();
+      return host === getHost() || host.endsWith('.' + getHost());
+    } catch(_e){
+      return false;
+    }
+  }
+
+  function shouldBlockPayload(bodySample){
+    return payloadLooksSensitive(bodySample) || payloadLooksEncrypted(bodySample);
+  }
+
+  function interceptFetch(cfg, pinConfig){
+    if (!window.fetch) return;
+    const originalFetch = window.fetch;
+    window.fetch = async (...args)=>{
+      try {
+        const [resource, init = {}] = args;
+        const url = typeof resource === 'string' ? resource : resource && resource.url;
+        const method = (init.method || (resource && resource.method) || 'GET').toUpperCase();
+        const body = init.body || (resource && resource.body);
+        const bodySample = scrubPayload(body);
+        if (method !== 'GET' && bodySample && shouldBlockPayload(bodySample) && !hostIsTrusted(url)){
+          const feedEntries = cfg.phishingFeedEnabled === false ? [] : await loadPhishingFeed();
+          const phishingEval = evaluatePhishingSignals({
+            strict: Boolean(cfg.phishingStrictMode),
+            feedEntries,
+            feedEnabled: cfg.phishingFeedEnabled !== false,
+            scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+          });
+          if (phishingEval){
+            handlePhishingHit(phishingEval, pinConfig);
+            return Promise.reject(new Error('Blocked by Safeguard phishing guard'));
+          }
+        }
+      } catch(_e){}
+      return originalFetch.apply(this, args);
+    };
+  }
+
+  function interceptXHR(cfg, pinConfig){
+    if (!window.XMLHttpRequest) return;
+    const OriginalXHR = window.XMLHttpRequest;
+    function WrappedXHR(){
+      const xhr = new OriginalXHR();
+      let targetUrl = '';
+      let method = 'GET';
+      const open = xhr.open;
+      xhr.open = function(_method, _url, ...rest){
+        method = (_method || 'GET').toUpperCase();
+        try { targetUrl = _url || ''; } catch(_e){}
+        return open.call(this, _method, _url, ...rest);
+      };
+      const send = xhr.send;
+      xhr.send = async function(body){
+        try {
+          const bodySample = scrubPayload(body);
+          if (method !== 'GET' && bodySample && shouldBlockPayload(bodySample) && !hostIsTrusted(targetUrl)){
+            const feedEntries = cfg.phishingFeedEnabled === false ? [] : await loadPhishingFeed();
+            const phishingEval = evaluatePhishingSignals({
+              strict: Boolean(cfg.phishingStrictMode),
+              feedEntries,
+              feedEnabled: cfg.phishingFeedEnabled !== false,
+              scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+            });
+            if (phishingEval){
+              handlePhishingHit(phishingEval, pinConfig);
+              throw new Error('Blocked by Safeguard phishing guard');
+            }
+          }
+        } catch(err){
+          if (err && err.message === 'Blocked by Safeguard phishing guard') throw err;
+        }
+        return send.call(this, body);
+      };
+      return xhr;
+    }
+    WrappedXHR.prototype = OriginalXHR.prototype;
+    window.XMLHttpRequest = WrappedXHR;
+  }
+
+  function interceptBeacon(){
+    if (!navigator.sendBeacon) return;
+    const originalBeacon = navigator.sendBeacon.bind(navigator);
+    navigator.sendBeacon = function(url, data){
+      try {
+        const bodySample = scrubPayload(data);
+        if (bodySample && shouldBlockPayload(bodySample) && !hostIsTrusted(url)){
+          return false;
+        }
+      } catch(_e){}
+      return originalBeacon(url, data);
+    };
+  }
+
+  function monitorInputsForExfil(){
+    if (!ENABLE_CYBER) return;
+    document.addEventListener('keyup', (event)=>{
+      try {
+        const target = event.target;
+        if (!target || !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+        const value = (target.value || '').toLowerCase();
+        if (value.length > 6 && payloadLooksSensitive(value)){
+          window.__sg_lastSensitiveInput = {
+            timestamp: Date.now(),
+            name: target.name || null,
+            type: target.type || null
+          };
+        }
+      } catch(_e){}
+    }, true);
+  }
+
+  function interceptWebSocket(cfg, pinConfig){
+    if (!ENABLE_CYBER) return;
+    if (!window.WebSocket) return;
+    const OriginalWS = window.WebSocket;
+    function WrappedWebSocket(...args){
+      const ws = new OriginalWS(...args);
+      const nativeSend = ws.send;
+      ws.send = async function(data){
+        try {
+          const bodySample = scrubPayload(data);
+          if (bodySample && shouldBlockPayload(bodySample)){
+            const phishingEval = await evaluateOnDemand(cfg);
+            if (phishingEval){
+              handlePhishingHit(phishingEval, pinConfig);
+              return;
+            }
+          }
+        } catch(_e){}
+        return nativeSend.call(this, data);
+      };
+      return ws;
+    }
+    WrappedWebSocket.prototype = OriginalWS.prototype;
+    window.WebSocket = WrappedWebSocket;
+  }
+
+  async function evaluateOnDemand(cfg){
+    if (!ENABLE_CYBER) return null;
+    try {
+      const feedEntries = cfg.phishingFeedEnabled === false ? [] : await loadPhishingFeed();
+      return evaluatePhishingSignals({
+        strict: Boolean(cfg.phishingStrictMode),
+        feedEntries,
+        feedEnabled: cfg.phishingFeedEnabled !== false,
+        scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+      });
+    } catch(_e){
+      return null;
+    }
+  }
+
+  function hostLooksSuspicious(host){
+    if (!ENABLE_CYBER) return null;
+    const normalized = (host || '').toLowerCase();
+    return IMMEDIATE_BLOCK_HOSTS.find((hint)=>normalized.includes(hint.toLowerCase()));
+  }
+
+  function setupPhishObserver(cfg, pinConfig){
+    if (!ENABLE_CYBER) return;
+    if (!cfg || !cfg.phishingProtectionEnabled) return;
+    if (phishObserver) return;
+    try {
+      const observerConfig = {
+        strict: Boolean(cfg.phishingStrictMode),
+        feedEnabled: cfg.phishingFeedEnabled !== false,
+        scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+      };
+      phishObserver = new MutationObserver(()=>{
+        if (phishObserverTimer) return;
+        phishObserverTimer = setTimeout(async ()=>{
+          phishObserverTimer = null;
+          try {
+            const feedEntries = observerConfig.feedEnabled ? await loadPhishingFeed() : [];
+            const phishingEval = evaluatePhishingSignals({
+              strict: observerConfig.strict,
+              feedEntries,
+              feedEnabled: observerConfig.feedEnabled,
+              scriptMonitor: observerConfig.scriptMonitor
+            });
+            const hint = hostLooksSuspicious(getHost());
+            if (phishingEval){
+              lockInteractionShield();
+              handlePhishingHit(phishingEval, pinConfig);
+            } else if (hint){
+              lockInteractionShield();
+              handlePhishingHit(createHostHintBlock(getHost(), hint), pinConfig);
+            }
+          } catch(_e){}
+        }, 250);
+      });
+      phishObserver.observe(document.documentElement, {subtree: true, childList: true});
+    } catch(_e){
+      phishObserver = null;
+    }
+  }
+
+  const POSITIVE_REASON_HINTS = ['lesson','class','study','gcse','a level','coursework','curriculum','revision','teacher','assignment','homework','safeguarding review','pastoral review','professional development'];
+  const WEAK_REASON_HINTS = ['just','random','lol','fun','bored','test','testing','because','curious','nsfw','idk'];
+
+  function evaluateOverridePolicy(context){
+    const review = {
+      score: 0,
+      verdict: 'allow',
+      factors: []
+    };
+    if (!context || typeof context !== 'object'){
+      return review;
+    }
+    const factors = [];
+    const addFactor = (code, label, weight)=>{
+      factors.push({ code, label, weight });
+      review.score += weight;
+    };
+    const heuristics = context.heuristics || {};
+    const riskScore = Number.isFinite(heuristics.riskScore) ? heuristics.riskScore : 0;
+    const threshold = Number.isFinite(heuristics.riskThreshold) ? heuristics.riskThreshold : 0;
+    const riskDelta = riskScore - threshold;
+    if (riskScore > 0){
+      const base = riskScore >= threshold ? 20 : 8;
+      addFactor('base-risk', `Risk score ${Math.round(riskScore)} vs threshold ${Math.round(threshold || 0)}`, base);
+      if (riskDelta >= 2){
+        addFactor('delta-risk', `Signal strength exceeded threshold by ${Math.round(riskDelta)}`, Math.min(18, Math.round(riskDelta * 3)));
+      }
+    }
+    const signalList = Array.isArray(heuristics.signals) ? heuristics.signals : [];
+    const severeSignals = signalList.filter((sig)=>sig && typeof sig.weight === 'number' && sig.weight >= 6);
+    const ageGateSignal = signalList.some((sig)=>sig && sig.id && /age-gate/.test(sig.id));
+    if (severeSignals.length){
+      addFactor('severe-signals', `${severeSignals.length} high-weight signal${severeSignals.length === 1 ? '' : 's'} detected`, Math.min(18, severeSignals.length * 6));
+    }
+    if (ageGateSignal){
+      addFactor('age-gate', '18+ gate or age prompt detected', 12);
+    }
+    const reasonRaw = typeof context.reason === 'string' ? context.reason.trim() : '';
+    const reasonLower = reasonRaw.toLowerCase();
+    if (!reasonRaw || reasonRaw.length < 6){
+      addFactor('weak-reason', 'Reason missing or too short', 16);
+    } else {
+      const positiveHit = POSITIVE_REASON_HINTS.find((hint)=>reasonLower.includes(hint));
+      if (positiveHit){
+        addFactor('positive-context', `Educational context mentioned (“${positiveHit}”)`, -12);
+      }
+      const weakHit = WEAK_REASON_HINTS.find((hint)=>reasonLower.includes(hint));
+      if (weakHit){
+        addFactor('weak-language', `Reason includes weak language (“${weakHit}”)`, 10);
+      }
+    }
+    if (context.overrideCountForHost && context.overrideCountForHost > 1){
+      addFactor('repeat-host', `Previous overrides for ${context.host || 'this host'}`, Math.min(12, context.overrideCountForHost * 4));
+    }
+    review.score = Math.max(0, Math.min(100, factors.reduce((sum, item)=>sum + item.weight, 0)));
+    review.factors = factors;
+    if (review.score >= 65){
+      review.verdict = 'escalate';
+    } else if (review.score >= 35){
+      review.verdict = 'review';
+    } else {
+      review.verdict = 'allow';
+    }
+    review.reasonSummary = reasonRaw;
+    return review;
   }
 
   // --- On-screen media masking (images/videos) ---
@@ -417,10 +1480,87 @@
     return out;
   }
 
+  function clearInteractionShield(){
+    if (!ENABLE_CYBER) return;
+    if (!interactionGuard) return;
+    try { interactionGuard.el.remove(); } catch(_e){}
+    interactionGuard = null;
+  }
+
+  function ensureInteractionShield(){
+    if (!ENABLE_CYBER) return null;
+    if (interactionGuard) return interactionGuard;
+    const overlay = document.createElement('div');
+    overlay.className = 'sg-interaction-shield';
+    overlay.style.position = 'fixed';
+    overlay.style.inset = '0';
+    overlay.style.zIndex = '2147483646';
+    overlay.style.background = 'rgba(15,23,42,0.04)';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.cursor = 'wait';
+    overlay.style.transition = 'opacity 120ms ease-out';
+    document.documentElement.appendChild(overlay);
+    interactionGuard = {
+      el: overlay,
+      locked: false,
+      lock(){
+        this.locked = true;
+        overlay.style.cursor = 'not-allowed';
+      },
+      release(){
+        if (this.locked) return;
+        clearInteractionShield();
+      }
+    };
+    return interactionGuard;
+  }
+
+  function lockInteractionShield(){
+    if (!ENABLE_CYBER) return;
+    const guard = ensureInteractionShield();
+    guard.lock();
+  }
+
+  function releaseInteractionShield(){
+    if (!ENABLE_CYBER) return;
+    if (interactionGuard && !interactionGuard.locked){
+      clearInteractionShield();
+    }
+  }
+
+  function detachPhishObserver(){
+    if (!ENABLE_CYBER) return;
+    if (phishObserver){
+      try { phishObserver.disconnect(); } catch(_e){}
+      phishObserver = null;
+    }
+    if (phishObserverTimer){
+      clearTimeout(phishObserverTimer);
+      phishObserverTimer = null;
+    }
+  }
+
   function showInterstitial(reason, opts = {}){
+    clearInteractionShield();
+    detachPhishObserver();
     const doc = document;
     const pinConfig = opts && opts.pinConfig ? opts.pinConfig : null;
     const pinRequired = Boolean(pinConfig && pinConfig.requirePin && pinConfig.hash && pinConfig.salt);
+    const pillText = typeof opts.pillText === 'string' && opts.pillText.trim() ? opts.pillText.trim() : 'On-device protection';
+    const riskScore = typeof opts.riskScore === 'number' ? opts.riskScore : null;
+    const riskThreshold = typeof opts.riskThreshold === 'number' ? opts.riskThreshold : null;
+    const computedRiskMax = typeof opts.riskMax === 'number' && opts.riskMax > 0
+      ? opts.riskMax
+      : (riskThreshold != null ? riskThreshold + 12 : 24);
+    const riskMax = computedRiskMax > 0 ? computedRiskMax : 24;
+    const riskLevel = typeof opts.riskLevel === 'string' && opts.riskLevel.trim() ? opts.riskLevel.trim() : null;
+    const riskSummary = typeof opts.riskSummary === 'string' && opts.riskSummary.trim() ? opts.riskSummary.trim() : null;
+    const seededPercent = typeof opts.riskPercent === 'number' ? opts.riskPercent : null;
+    const riskPercent = riskScore !== null
+      ? (seededPercent !== null ? Math.max(0, Math.min(100, seededPercent)) : Math.max(0, Math.min(100, Math.round((riskScore / riskMax) * 100))))
+      : null;
+    const signals = Array.isArray(opts.signals) ? opts.signals.filter((signal)=>signal && typeof signal === 'object') : [];
+    const supportLink = opts.supportLink && typeof opts.supportLink.href === 'string' ? opts.supportLink : null;
     doc.title = 'Safeguard – Page blocked';
 
     const root = doc.documentElement;
@@ -436,18 +1576,83 @@
         --panel-shadow: 0 24px 60px rgba(15,23,42,0.35);
         --text-primary: #0f172a;
         --text-secondary: #475569;
+        --text-muted: #64748b;
         --pill-bg: rgba(37,99,235,0.12);
         --pill-text: #2563eb;
+        --insight-bg: rgba(15,118,110,0.08);
+        --insight-border: rgba(15,118,110,0.12);
+        --insight-item-bg: rgba(255,255,255,0.55);
+        --insight-item-border: rgba(15,118,110,0.14);
+        --button-secondary-bg: rgba(15, 23, 42, 0.06);
         font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+        --input-bg: #fff;
+      }
+      @keyframes sgFadeIn {
+        from { opacity: 0; transform: scale(0.98); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      @keyframes sgGlow {
+        0% { box-shadow: var(--panel-shadow); }
+        100% { box-shadow: var(--panel-shadow), 0 0 40px rgba(37, 99, 235, 0.25); }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --panel-bg: rgba(15,23,42,0.92);
+          --panel-shadow: 0 24px 60px rgba(0,0,0,0.55);
+          --text-primary: #e2e8f0;
+          --text-secondary: #cbd5f5;
+          --text-muted: #94a3b8;
+          --pill-bg: rgba(148,163,184,0.18);
+          --pill-text: #93c5fd;
+          --insight-bg: rgba(15,118,110,0.18);
+          --insight-border: rgba(45,212,191,0.24);
+          --insight-item-bg: rgba(15,118,110,0.12);
+          --insight-item-border: rgba(45,212,191,0.2);
+          --button-secondary-bg: rgba(148,163,184,0.18);
+          --input-bg: rgba(15,23,42,0.85);
+          --guidance-bg: rgba(15,23,42,0.8);
+        }
+        .sg-panel::after {
+          opacity: 0.7;
+        }
+        .sg-insights h3 {
+          color: #5eead4;
+        }
+        .sg-button--secondary {
+          color: #e2e8f0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sg-overlay,
+        .sg-panel {
+          animation: none !important;
+        }
+        .sg-risk__meter-fill,
+        .sg-button {
+          transition: none !important;
+        }
       }
       body {
         margin: 0;
-        min-height: 100vh;
+        background: transparent;
+      }
+      .sg-overlay {
+        position: fixed;
+        inset: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--bg-gradient);
+        padding: clamp(18px, 4vw, 48px);
+        overflow-y: auto;
+        box-sizing: border-box;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 10% 10%, rgba(59,130,246,0.55), transparent 55%),
+          radial-gradient(circle at 90% 15%, rgba(34,197,94,0.35), transparent 60%),
+          radial-gradient(circle at 50% 85%, rgba(59,130,246,0.25), transparent 60%),
+          var(--bg-gradient);
         color: var(--text-primary);
+        animation: sgFadeIn 240ms ease-out;
       }
       .sg-panel {
         width: min(92%, 520px);
@@ -458,6 +1663,8 @@
         text-align: left;
         position: relative;
         overflow: hidden;
+        animation: sgGlow 520ms ease-out;
+        margin: clamp(24px, 6vh, 48px) auto;
       }
       .sg-panel::after {
         content: "";
@@ -507,6 +1714,144 @@
         font-size: 12px;
         margin-bottom: 18px;
       }
+      .sg-risk {
+        margin: 12px 0 24px;
+        background: rgba(37, 99, 235, 0.08);
+        border-radius: 18px;
+        padding: 18px 20px;
+        border: 1px solid rgba(37,99,235,0.16);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .sg-risk__header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+      .sg-risk__level {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d4ed8;
+        letter-spacing: 0.2px;
+      }
+      .sg-risk__score {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+      .sg-risk__score span {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-secondary);
+        margin-left: 6px;
+      }
+      .sg-risk__meter {
+        position: relative;
+        width: 100%;
+        height: 10px;
+        border-radius: 999px;
+        background: rgba(148, 163, 184, 0.28);
+        overflow: hidden;
+      }
+      .sg-risk__meter-fill {
+        position: absolute;
+        inset: 0;
+        width: 0%;
+        border-radius: inherit;
+        background: linear-gradient(135deg, #2563eb, #16a34a);
+        transition: width 320ms ease-out;
+      }
+      .sg-risk__meta {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .sg-insights {
+        margin: 20px 0 26px;
+        background: var(--insight-bg);
+        border-radius: 18px;
+        padding: 18px 20px;
+        border: 1px solid var(--insight-border);
+      }
+      .sg-insights h3 {
+        margin: 0 0 12px;
+        font-size: 15px;
+        color: #0f766e;
+        letter-spacing: 0.3px;
+      }
+      .sg-insights__list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        color: var(--text-secondary);
+        font-size: 13px;
+      }
+      .sg-insights__item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: var(--insight-item-bg);
+        border: 1px solid var(--insight-item-border);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+      .sg-insights__icon {
+        min-width: 32px;
+        height: 32px;
+        border-radius: 12px;
+        background: rgba(13, 148, 136, 0.18);
+        color: #0f766e;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 650;
+        font-size: 12px;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+      }
+      .sg-insights__body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .sg-insights__body p {
+        margin: 0;
+        color: var(--text-secondary);
+        line-height: 1.45;
+      }
+      .sg-insights__friendly {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+      .sg-insights__title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .sg-insights__score {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(13,148,136,0.14);
+        color: #0f766e;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+      }
       .sg-reason {
         margin: 0 0 24px;
         color: var(--text-secondary);
@@ -544,7 +1889,7 @@
         font-size: 18px;
         letter-spacing: 6px;
         text-align: center;
-        background: #fff;
+        background: var(--input-bg);
         color: var(--text-primary);
         outline: none;
       }
@@ -558,6 +1903,16 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(15, 23, 42, 0.1);
+        background: rgba(255,255,255,0.7);
+      }
+      @media (prefers-color-scheme: dark){
+        .sg-pin__reason {
+          background: rgba(30, 41, 59, 0.7);
+          border-color: rgba(148, 163, 184, 0.24);
+        }
       }
       .sg-pin__reason-label {
         font-size: 13px;
@@ -571,7 +1926,7 @@
         font-size: 14px;
         resize: vertical;
         min-height: 64px;
-        background: #fff;
+        background: var(--input-bg);
         color: var(--text-primary);
         outline: none;
       }
@@ -587,6 +1942,20 @@
       .sg-pin__privacy {
         font-size: 11px;
         color: var(--text-muted);
+      }
+      .sg-actions__support {
+        margin-left: auto;
+        background: none;
+        border: none;
+        color: #2563eb;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        font-size: 13px;
+        text-decoration: underline;
+      }
+      .sg-actions__support:hover {
+        text-decoration: underline;
       }
       .sg-button {
         border: none;
@@ -607,7 +1976,7 @@
         box-shadow: none;
       }
       .sg-button--secondary {
-        background: rgba(15, 23, 42, 0.06);
+        background: var(--button-secondary-bg);
         color: var(--text-primary);
       }
       .sg-button:not(:disabled):hover {
@@ -626,23 +1995,76 @@
       .sg-support a:hover {
         text-decoration: underline;
       }
+      .sg-guidance {
+        margin-top: 24px;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid rgba(15,23,42,0.1);
+        background: var(--guidance-bg, rgba(255,255,255,0.8));
+      }
+      .sg-guidance h3 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        color: var(--text-primary);
+      }
+      .sg-guidance__list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-secondary);
+        font-size: 13px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      @media (max-width: 560px){
+        .sg-panel {
+          padding: 26px;
+          border-radius: 20px;
+        }
+        .sg-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .sg-icon {
+          width: 44px;
+          height: 44px;
+          font-size: 20px;
+        }
+        .sg-title {
+          font-size: 22px;
+        }
+      }
+      @media (max-height: 820px){
+        .sg-overlay {
+          align-items: flex-start;
+          padding-top: 32px;
+          padding-bottom: 40px;
+        }
+      }
     `;
     head.appendChild(style);
     root.appendChild(head);
 
     const body = doc.createElement('body');
     root.appendChild(body);
-
+    const overlay = doc.createElement('div');
+    overlay.className = 'sg-overlay';
+    body.appendChild(overlay);
     const panel = doc.createElement('div');
     panel.className = 'sg-panel';
-    body.appendChild(panel);
+    overlay.appendChild(panel);
 
     const header = doc.createElement('div');
     header.className = 'sg-header';
 
     const icon = doc.createElement('div');
     icon.className = 'sg-icon';
-    icon.textContent = 'S';
+    const iconImg = doc.createElement('img');
+    iconImg.src = chrome.runtime.getURL('assets/icons/icon48.png');
+    iconImg.alt = 'Safeguard';
+    iconImg.style.width = '48px';
+    iconImg.style.height = '48px';
+    icon.appendChild(iconImg);
     header.appendChild(icon);
 
     const headerText = doc.createElement('div');
@@ -659,8 +2081,54 @@
 
     const pill = doc.createElement('span');
     pill.className = 'sg-pill';
-    pill.textContent = 'On-device protection';
+    pill.textContent = pillText;
     panel.appendChild(pill);
+
+    if (riskScore !== null){
+      const risk = doc.createElement('div');
+      risk.className = 'sg-risk';
+      const riskHeader = doc.createElement('div');
+      riskHeader.className = 'sg-risk__header';
+      const riskLevelEl = doc.createElement('div');
+      riskLevelEl.className = 'sg-risk__level';
+      riskLevelEl.textContent = riskLevel || 'Safeguard detection score';
+      riskHeader.appendChild(riskLevelEl);
+      const scoreEl = doc.createElement('p');
+      scoreEl.className = 'sg-risk__score';
+      scoreEl.textContent = String(Math.round(riskScore));
+      if (riskMax){
+        const maxSpan = doc.createElement('span');
+        const roundedMax = Math.round(riskMax);
+        maxSpan.textContent = riskScore > riskMax ? `/ ${roundedMax}+` : `/ ${roundedMax}`;
+        scoreEl.appendChild(maxSpan);
+      }
+      riskHeader.appendChild(scoreEl);
+      risk.appendChild(riskHeader);
+      if (riskPercent !== null){
+        const meter = doc.createElement('div');
+        meter.className = 'sg-risk__meter';
+        const fill = doc.createElement('div');
+        fill.className = 'sg-risk__meter-fill';
+        fill.style.width = `${riskPercent}%`;
+        fill.setAttribute('aria-hidden', 'true');
+        meter.appendChild(fill);
+        risk.appendChild(meter);
+      }
+      if (riskSummary || riskThreshold !== null){
+        const meta = doc.createElement('div');
+        meta.className = 'sg-risk__meta';
+        const summaryText = doc.createElement('span');
+        summaryText.textContent = riskSummary || 'Safeguard combined signals exceeded the active threshold.';
+        meta.appendChild(summaryText);
+        if (riskThreshold !== null){
+          const thresholdEl = doc.createElement('span');
+          thresholdEl.textContent = `Threshold: ${Math.round(riskThreshold)}`;
+          meta.appendChild(thresholdEl);
+        }
+        risk.appendChild(meta);
+      }
+      panel.appendChild(risk);
+    }
 
     const reasonPara = doc.createElement('p');
     reasonPara.className = 'sg-reason';
@@ -669,6 +2137,84 @@
     reasonPara.appendChild(reasonLabel);
     reasonPara.append(String(reason || 'Policy enforcement'));
     panel.appendChild(reasonPara);
+
+    const insights = doc.createElement('div');
+    insights.className = 'sg-insights';
+    const insightsTitle = doc.createElement('h3');
+    insightsTitle.textContent = 'What Safeguard detected';
+    insights.appendChild(insightsTitle);
+    const insightsList = doc.createElement('div');
+    insightsList.className = 'sg-insights__list';
+    insightsList.setAttribute('role', 'list');
+    const hostName = getHost();
+    const fallbackSignals = [
+      { id: 'host', icon: 'URL', label: 'Site', detail: hostName || 'Unknown host', weight: 0 },
+      { id: 'trigger', icon: 'AI', label: 'Trigger', detail: String(reason || 'Policy enforcement'), weight: 0 },
+      { id: 'tip', icon: 'TIP', label: 'Next steps', detail: 'Review allowlist options with a safeguarding lead if this needs access.', weight: 0 }
+    ];
+    const displaySignals = (signals.length ? signals : fallbackSignals).slice(0, 5);
+    const heuristicsSnapshot = {
+      riskScore,
+      riskThreshold,
+      riskLevel,
+      riskSummary,
+      riskPercent,
+      riskMax,
+      signals: displaySignals.map((signal)=>({
+        id: signal.id || null,
+        icon: signal.icon || null,
+        label: signal.label || null,
+        detail: signal.detail || null,
+        weight: typeof signal.weight === 'number' ? signal.weight : null,
+        meta: Array.isArray(signal.meta) ? signal.meta.slice(0, 3) : null
+      }))
+    };
+    displaySignals.forEach((signal)=>{
+      const item = doc.createElement('div');
+      item.className = 'sg-insights__item';
+      item.setAttribute('role', 'listitem');
+      const icon = doc.createElement('div');
+      icon.className = 'sg-insights__icon';
+      const iconText = typeof signal.icon === 'string' && signal.icon.trim() ? signal.icon.trim().slice(0, 4) : 'SIG';
+      icon.textContent = iconText.toUpperCase();
+      item.appendChild(icon);
+      const bodyWrap = doc.createElement('div');
+      bodyWrap.className = 'sg-insights__body';
+      const titleRow = doc.createElement('div');
+      titleRow.className = 'sg-insights__title';
+      const titleText = doc.createElement('span');
+      titleText.textContent = signal.label || 'Signal detected';
+      titleRow.appendChild(titleText);
+      if (typeof signal.weight === 'number' && signal.weight){
+        const weightChip = doc.createElement('span');
+        weightChip.className = 'sg-insights__score';
+        const rounded = Math.round(signal.weight);
+        weightChip.textContent = `${rounded > 0 ? '+' : ''}${rounded}`;
+        titleRow.appendChild(weightChip);
+      }
+      bodyWrap.appendChild(titleRow);
+      if (signal.detail){
+        const detail = doc.createElement('p');
+        detail.textContent = String(signal.detail);
+        bodyWrap.appendChild(detail);
+      }
+      const friendly = signalFriendlySummary(signal);
+      if (friendly){
+        const friendlyEl = doc.createElement('p');
+        friendlyEl.className = 'sg-insights__friendly';
+        friendlyEl.textContent = friendly;
+        bodyWrap.appendChild(friendlyEl);
+      }
+      if (Array.isArray(signal.meta) && signal.meta.length){
+        const metaDetail = doc.createElement('p');
+        metaDetail.textContent = signal.meta.slice(0, 3).join(' • ');
+        bodyWrap.appendChild(metaDetail);
+      }
+      item.appendChild(bodyWrap);
+      insightsList.appendChild(item);
+    });
+    insights.appendChild(insightsList);
+    panel.appendChild(insights);
 
     const actions = doc.createElement('div');
     actions.className = 'sg-actions';
@@ -705,12 +2251,30 @@
     }, 1000);
 
     const completeOverride = async (overrideReason)=>{
+      let host = '';
       try {
-        const host = getHost();
+        host = getHost();
         if (host) sessionStorage.setItem('sg-ov:' + host, '1');
       } catch(_e) {}
       if (pinRequired){
-        await recordOverrideEvent(overrideReason, { pinRequired: true });
+        let overrideCountForHost = 0;
+        try {
+          const snapshot = await new Promise((resolve)=>chrome.storage.local.get({ overrideLog: [] }, resolve));
+          const existingLog = Array.isArray(snapshot.overrideLog) ? snapshot.overrideLog : [];
+          overrideCountForHost = existingLog.filter((entry)=>entry && entry.host === host).length;
+        } catch(_e){}
+        const policyReview = evaluateOverridePolicy({
+          host,
+          url: (()=>{ try { return location.href; } catch(_err){ return null; } })(),
+          reason: overrideReason,
+          heuristics: heuristicsSnapshot,
+          overrideCountForHost
+        });
+        await recordOverrideEvent(overrideReason, {
+          pinRequired: true,
+          policyReview,
+          heuristics: heuristicsSnapshot
+        });
       }
       location.reload();
     };
@@ -853,15 +2417,62 @@
       }
     });
     actions.appendChild(continueBtn);
+    const computedSupportUrl = (() => {
+      if (supportLink && supportLink.href) return supportLink.href;
+      try {
+        const localUrl = chrome.runtime.getURL('site/support.html');
+        if (localUrl) return localUrl;
+      } catch(_e){}
+      return 'https://dipesthapa.github.io/safebrowse-ai/site/support.html';
+    })();
+
+    const supportBtn = doc.createElement('button');
+    supportBtn.type = 'button';
+    supportBtn.className = 'sg-actions__support';
+    supportBtn.textContent = (supportLink && supportLink.text) ? supportLink.text : 'Need an exception?';
+    supportBtn.addEventListener('click', ()=>{
+      const href = computedSupportUrl;
+      const target = supportLink && supportLink.target ? supportLink.target : '_blank';
+      const features = supportLink && supportLink.windowFeatures ? supportLink.windowFeatures : 'noopener';
+      window.open(href, target, features);
+    });
+    actions.appendChild(supportBtn);
     panel.appendChild(actions);
 
     if (pinBlock){
       panel.appendChild(pinBlock);
     }
 
+    const guidance = doc.createElement('div');
+    guidance.className = 'sg-guidance';
+    const guidanceTitle = doc.createElement('h3');
+    guidanceTitle.textContent = 'What should I do?';
+    guidance.appendChild(guidanceTitle);
+    const guidanceList = doc.createElement('ul');
+    guidanceList.className = 'sg-guidance__list';
+    const steps = [
+      'If this page is needed for schoolwork, ask a safeguarding lead or teacher to review it.',
+      'Use trusted education sites (e.g., BBC Bitesize) until an adult approves access.',
+      'Only enter the PIN if a parent or safeguarding lead is supervising you.'
+    ];
+    steps.forEach((step)=>{
+      const li = doc.createElement('li');
+      li.textContent = step;
+      guidanceList.appendChild(li);
+    });
+    guidance.appendChild(guidanceList);
+    panel.appendChild(guidance);
+
     const support = doc.createElement('p');
     support.className = 'sg-support';
-    support.innerHTML = 'Need to allow this permanently? Add it to your allowlist in the Safeguard popup or <a href="https://dipesthapa.github.io/safebrowse-ai/support.html" target="_blank" rel="noopener">contact support</a>.';
+    support.appendChild(doc.createTextNode('Need to allow this permanently? Add it to your allowlist in the Safeguard popup or '));
+    const supportAnchor = doc.createElement('a');
+    supportAnchor.href = computedSupportUrl;
+    supportAnchor.target = '_blank';
+    supportAnchor.rel = 'noopener';
+    supportAnchor.textContent = (supportLink && (supportLink.altText || supportLink.text)) ? (supportLink.altText || supportLink.text) : 'contact support';
+    support.appendChild(supportAnchor);
+    support.appendChild(doc.createTextNode('.'));
     panel.appendChild(support);
   }
 
@@ -892,18 +2503,73 @@
     if((cfg.allowlist||[]).includes(host)) return; // allowlisted
 
     const BL = await loadBlocklist();
-    if(BL.domains && BL.domains.includes(host)) { showInterstitial("domain blocklist", { pinConfig }); return; }
+    if(BL.domains && BL.domains.includes(host)) {
+      lockInteractionShield();
+      const blockPayload = createBlocklistInsights({ host });
+      showInterstitial("domain blocklist", { pinConfig, ...blockPayload });
+      return;
+    }
+
+    if (ENABLE_CYBER){
+      attachPhishFormGuard(cfg, pinConfig);
+      attachNetworkGuards(cfg, pinConfig);
+    }
 
     const text = document.body && document.body.innerText ? document.body.innerText.slice(0, 40000) : "";
-    const urlScore = scoreFromUrl();
-    const metaScore = scoreFromTitleAndMeta();
-    const bodyScore = Math.min(12, scoreFromText(text));
-    const visualScore = computeVisualScore();
+    const urlEval = evaluateUrlSignals();
+    const metaEval = evaluateMetaSignals();
+    const bodyEval = evaluateKeywordSignals(text);
+    const bodyRawScore = Number.isFinite(bodyEval.score) ? bodyEval.score : 0;
+    const bodyScore = Math.min(12, bodyRawScore);
+    const visualEval = evaluateVisualSignals();
+    const urlScore = urlEval.score;
+    const metaScore = metaEval.score;
+    const visualScore = visualEval.score;
     window.__sg_visualScore = visualScore;
     const total = urlScore + metaScore + bodyScore + visualScore;
     const sens = Number(cfg.sensitivity)||60; window.__sg_sensitivity = sens;
     const threshold = 12 - Math.floor(6 * (sens/100)); // 12..6
-    if(total >= threshold) { showInterstitial("advanced heuristic score", { pinConfig }); return; }
+    if(total >= threshold) {
+      lockInteractionShield();
+      const heuristicPayload = createHeuristicInsights({
+        host,
+        urlEval,
+        metaEval,
+        bodyEval,
+        bodyScore,
+        visualEval,
+        total,
+        threshold
+      });
+      showInterstitial("Heuristic risk score", { pinConfig, ...heuristicPayload });
+      return;
+    }
+
+    if (ENABLE_CYBER && cfg.phishingProtectionEnabled){
+      const forcedHint = hostLooksSuspicious(host);
+      if (forcedHint){
+        lockInteractionShield();
+        handlePhishingHit(createHostHintBlock(host, forcedHint), pinConfig);
+        return;
+      }
+      const feedEntries = await loadPhishingFeed();
+      const phishingEval = evaluatePhishingSignals({
+        strict: Boolean(cfg.phishingStrictMode),
+        feedEntries,
+        feedEnabled: cfg.phishingFeedEnabled !== false,
+        scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
+      });
+      if (phishingEval){
+        lockInteractionShield();
+        handlePhishingHit(phishingEval, pinConfig);
+        return;
+      }
+    }
+
+    if (ENABLE_CYBER){
+      releaseInteractionShield();
+      setupPhishObserver(cfg, pinConfig);
+    }
 
     // No page-level block: still protect by masking on-screen images/videos
     initMediaFilter();

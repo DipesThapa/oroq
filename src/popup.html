@@ -163,7 +163,16 @@
           <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
         </div>
         <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
+        <label class="toggle">
+          <input id="tamperAlertEnabled" type="checkbox">
+          <span>
+            <span class="toggle__label">Tamper alerts</span>
+            <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
+          </span>
+        </label>
+        <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
       </div>
+      <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
     </section>
 
     <section class="card" id="cardReports">

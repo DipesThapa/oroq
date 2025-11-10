@@ -1,0 +1,14 @@
+{
+  "updated": "2025-11-08T22:50:00Z",
+  "sources": [
+    "Safeguard sample feed"
+  ],
+  "entries": [
+    { "host": "paypal-login[.]security-check.net", "brand": "PayPal", "severity": "high" },
+    { "host": "account-update.paypol-support.com", "brand": "PayPal", "severity": "medium" },
+    { "host": "secure-login.microsoftsupport-help.com", "brand": "Microsoft", "severity": "high" },
+    { "host": "googledrive-share-files.com", "brand": "Google", "severity": "medium" },
+    { "host": "appleid-locker.net", "brand": "Apple", "severity": "high" },
+    { "host": "amazon-auth-update.net", "brand": "Amazon", "severity": "medium" }
+  ]
+}

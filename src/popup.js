@@ -53,6 +53,10 @@ const alertEnabledEl = document.getElementById('alertEnabled');
 const alertWebhookInput = document.getElementById('alertWebhook');
 const alertSaveBtn = document.getElementById('alertSave');
 const alertMessageEl = document.getElementById('alertMessage');
+const alertConfigEl = document.querySelector('.alert-config');
+const alertPlaceholderEl = document.getElementById('alertPlaceholder');
+const tamperAlertEnabledEl = document.getElementById('tamperAlertEnabled');
+const tamperMessageEl = document.getElementById('tamperMessage');
 const approverPromptEnabledEl = document.getElementById('approverPromptEnabled');
 const approverMessageEl = document.getElementById('approverMessage');
 const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover'];
@@ -94,6 +98,9 @@ let currentAggressive = false;
 let overrideAlertsEnabled = false;
 let overrideAlertWebhook = '';
 let approverPromptEnabled = false;
+let pinSetupPrompted = false;
+let tamperAlertEnabled = false;
+let profileDependentControlsLocked = true;
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
@@ -165,6 +172,40 @@ function setAlertMessage(text, tone = 'muted'){
   else if (tone === 'error') alertMessageEl.classList.add('message--error');
 }
 
+function setTamperMessage(text, tone = 'muted'){
+  if (!tamperMessageEl) return;
+  tamperMessageEl.textContent = text;
+  tamperMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') tamperMessageEl.classList.add('message--success');
+  else if (tone === 'error') tamperMessageEl.classList.add('message--error');
+}
+
+function updateAlertAvailability(){
+  profileDependentControlsLocked = !appliedProfileId;
+  const disable = profileDependentControlsLocked;
+  if (alertConfigEl) alertConfigEl.hidden = disable;
+  if (alertPlaceholderEl) alertPlaceholderEl.hidden = !disable;
+  if (disable){
+    return;
+  }
+  if (alertEnabledEl){
+    alertEnabledEl.disabled = false;
+    alertEnabledEl.checked = overrideAlertsEnabled;
+    const wrap = alertEnabledEl.closest('.toggle');
+    if (wrap) wrap.classList.toggle('toggle--disabled', false);
+  }
+  if (alertWebhookInput) alertWebhookInput.disabled = false;
+  if (alertSaveBtn) alertSaveBtn.disabled = false;
+  if (tamperAlertEnabledEl){
+    tamperAlertEnabledEl.disabled = false;
+    tamperAlertEnabledEl.checked = tamperAlertEnabled;
+    const wrap = tamperAlertEnabledEl.closest('.toggle');
+    if (wrap) wrap.classList.toggle('toggle--disabled', false);
+  }
+  setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts stay on-device until you enable them.', overrideAlertsEnabled ? 'success' : 'muted');
+  setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+}
+
 function setApproverMessage(text, tone = 'muted'){
   if (!approverMessageEl) return;
   approverMessageEl.textContent = text;
@@ -172,6 +213,7 @@ function setApproverMessage(text, tone = 'muted'){
   if (tone === 'success') approverMessageEl.classList.add('message--success');
   else if (tone === 'error') approverMessageEl.classList.add('message--error');
 }
+
 
 function showSection(sectionId){
   SECTION_IDS.forEach((id)=>{
@@ -340,6 +382,33 @@ async function ensureLogPin(actionLabel){
   return true;
 }
 
+function ensurePinAfterOnboarding(){
+  if (pinSetupPrompted || storedPin) return;
+  pinSetupPrompted = true;
+  setTimeout(async ()=>{
+    if (storedPin) return;
+    const newPin = await promptForNewPin();
+    if (!newPin){
+      setPinMessage('Safeguard needs a PIN to secure overrides. You can set one anytime from the Protection card.', 'error');
+      pinSetupPrompted = false;
+      setTimeout(()=>ensurePinAfterOnboarding(), 4000);
+      return;
+    }
+    storedPin = newPin;
+    await new Promise((resolve)=>chrome.storage.local.set({
+      overridePinHash: newPin.hash,
+      overridePinSalt: newPin.salt,
+      overridePinIterations: newPin.iterations,
+      requirePin: true
+    }, resolve));
+    if (requirePinEl){
+      requirePinEl.checked = true;
+    }
+    syncPinControls();
+    setPinMessage('PIN saved. Safeguard will request it for protection controls and overrides.', 'success');
+  }, 250);
+}
+
 function clearHighlights(){
   document.querySelectorAll('.tour-highlight').forEach((el)=>el.classList.remove('tour-highlight'));
 }
@@ -372,7 +441,9 @@ function endTour(completed){
   if (tourOverlay) tourOverlay.classList.add('tour--hidden');
   tourActive = false;
   if (completed){
-    chrome.storage.sync.set({ [TOUR_KEY]: true });
+    chrome.storage.sync.set({ [TOUR_KEY]: true }, ()=>{
+      ensurePinAfterOnboarding();
+    });
   }
 }
 
@@ -416,6 +487,11 @@ function renderOverrideLog(list){
     return;
   }
   const reversed = [...currentOverrideLog].reverse();
+  const verdictLabels = {
+    escalate: 'Escalate ASAP',
+    review: 'Needs review',
+    allow: 'Low risk'
+  };
   reversed.forEach((entry)=>{
     if (!entry || typeof entry !== 'object') return;
     const li = document.createElement('li');
@@ -448,6 +524,62 @@ function renderOverrideLog(list){
       url.className = 'log-item__url';
       url.textContent = entry.url;
       li.appendChild(url);
+    }
+    if (entry.policyReview){
+      const policy = entry.policyReview;
+      const verdictWrap = document.createElement('div');
+      verdictWrap.className = 'log-item__policy';
+      const badge = document.createElement('span');
+      const verdictKey = typeof policy.verdict === 'string' ? policy.verdict : 'allow';
+      badge.className = `review-badge review-badge--${verdictKey}`;
+      badge.textContent = verdictLabels[verdictKey] || verdictKey;
+      verdictWrap.appendChild(badge);
+      if (typeof policy.score === 'number' && !Number.isNaN(policy.score)){
+        const score = document.createElement('span');
+        score.className = 'review-score';
+        score.textContent = `Score: ${Math.round(policy.score)}`;
+        verdictWrap.appendChild(score);
+      }
+      li.appendChild(verdictWrap);
+      if (Array.isArray(policy.factors) && policy.factors.length){
+        const factorList = document.createElement('ul');
+        factorList.className = 'log-item__factors';
+        policy.factors.slice(0, 3).forEach((factor)=>{
+          if (!factor) return;
+          const item = document.createElement('li');
+          const label = factor.label || factor.code || 'Unknown factor';
+          if (typeof factor.weight === 'number' && !Number.isNaN(factor.weight)){
+            const weight = factor.weight >= 0 ? `+${factor.weight}` : `${factor.weight}`;
+            item.textContent = `${label} (${weight})`;
+          } else {
+            item.textContent = label;
+          }
+          factorList.appendChild(item);
+        });
+        li.appendChild(factorList);
+      }
+    }
+    if (entry.heuristics && (entry.heuristics.riskScore !== null || entry.heuristics.riskThreshold !== null)){
+      const heurWrap = document.createElement('div');
+      heurWrap.className = 'log-item__heuristics';
+      const scoreLabel = document.createElement('span');
+      const riskScore = (entry.heuristics.riskScore !== null && entry.heuristics.riskScore !== undefined)
+        ? Math.round(entry.heuristics.riskScore)
+        : null;
+      const threshold = (entry.heuristics.riskThreshold !== null && entry.heuristics.riskThreshold !== undefined)
+        ? Math.round(entry.heuristics.riskThreshold)
+        : null;
+      scoreLabel.textContent = `Heuristic: ${riskScore !== null ? riskScore : '—'} vs threshold ${threshold !== null ? threshold : '—'}`;
+      heurWrap.appendChild(scoreLabel);
+      if (Array.isArray(entry.heuristics.signals) && entry.heuristics.signals.length){
+        const sigLabel = document.createElement('span');
+        const topSignals = entry.heuristics.signals.slice(0, 2).map((signal)=>signal && signal.label ? signal.label : signal.id).filter(Boolean);
+        if (topSignals.length){
+          sigLabel.textContent = `Signals: ${topSignals.join(', ')}`;
+          heurWrap.appendChild(sigLabel);
+        }
+      }
+      li.appendChild(heurWrap);
     }
     overrideListEl.appendChild(li);
   });
@@ -556,6 +688,7 @@ function clearProfileSelection(){
   if (profileApplyBtn) profileApplyBtn.disabled = true;
   renderProfileOptions();
   setProfileMessage('Select a profile to preview recommended settings.', 'muted');
+  updateAlertAvailability();
 }
 
 function markProfileCustomised(){
@@ -567,6 +700,7 @@ function markProfileCustomised(){
   if (profileApplyBtn) profileApplyBtn.disabled = false;
   renderProfileOptions();
   setProfileMessage(`"${profile.label || profile.id}" applied with custom adjustments.`, 'muted');
+  updateAlertAvailability();
 }
 
 async function ensureProfilePinAuthorization(actionLabel){
@@ -695,6 +829,7 @@ async function applySelectedProfile(){
   renderProfileOptions();
   setProfileMessage(`Applied profile "${profile.label || profile.id}".`, 'success');
   updateProfileSummary(profile);
+  updateAlertAvailability();
   setTimeout(()=>{
     const applied = findProfile(appliedProfileId);
     if (applied){
@@ -703,7 +838,14 @@ async function applySelectedProfile(){
   }, 2500);
 }
 
-chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, selectedProfileId: null, [TOUR_KEY]: false}, (cfg)=>{
+chrome.storage.sync.get({
+  enabled:true,
+  allowlist:[],
+  aggressive:false,
+  sensitivity:60,
+  selectedProfileId: null,
+  [TOUR_KEY]: false
+}, (cfg)=>{
   enabledEl.checked = cfg.enabled;
   setStatus(Boolean(cfg.enabled));
   render(cfg.allowlist||[]);
@@ -720,6 +862,7 @@ chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivi
     startTour();
   }
   renderProfileOptions();
+  updateAlertAvailability();
 });
 chrome.storage.local.get({
   userBlocklist: [],
@@ -730,7 +873,8 @@ chrome.storage.local.get({
   overrideLog: [],
   overrideAlertEnabled: false,
   overrideAlertWebhook: '',
-  approverPromptEnabled: false
+  approverPromptEnabled: false,
+  tamperAlertEnabled: false
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -767,15 +911,36 @@ chrome.storage.local.get({
   } else {
     setAlertMessage('Alerts stay on-device until you enable them.', 'muted');
   }
+  tamperAlertEnabled = Boolean(cfg.tamperAlertEnabled);
+  if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
+  setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
+  updateAlertAvailability();
 });
 
 enabledEl.addEventListener('change', async ()=>{
-  const enabled = enabledEl.checked;
-  setStatus(enabled);
-  chrome.storage.sync.set({enabled});
+  const wantsEnabled = enabledEl.checked;
+  if (!wantsEnabled && requirePinEl && requirePinEl.checked){
+    if (!storedPin){
+      setPinMessage('Set a PIN to guard protection toggles.', 'error');
+      enabledEl.checked = true;
+      setStatus(true);
+      return;
+    }
+    const { ok, cancelled } = await requestPinConfirmation('Enter your PIN to pause Safeguard protection');
+    if (!ok){
+      enabledEl.checked = true;
+      setStatus(true);
+      if (cancelled){
+        setPinMessage('Protection remains active.', 'muted');
+      }
+      return;
+    }
+  }
+  setStatus(wantsEnabled);
+  chrome.storage.sync.set({ enabled: wantsEnabled });
 });
 
 aggressiveEl.addEventListener('change', ()=>{
@@ -1182,6 +1347,7 @@ if (alertEnabledEl){
     overrideAlertsEnabled = wantsEnable;
     chrome.storage.local.set({ overrideAlertEnabled: overrideAlertsEnabled }, ()=>{
       setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
+      updateAlertAvailability();
     });
   });
 }
@@ -1197,6 +1363,22 @@ if (alertSaveBtn){
     overrideAlertWebhook = url;
     chrome.storage.local.set({ overrideAlertWebhook: overrideAlertWebhook }, ()=>{
       setAlertMessage('Webhook saved.', 'success');
+    });
+  });
+}
+
+
+if (tamperAlertEnabledEl){
+  tamperAlertEnabledEl.addEventListener('change', async ()=>{
+    const wantsEnable = tamperAlertEnabledEl.checked;
+    if (!(await ensureAlertPinAuthorization(wantsEnable ? 'enable tamper alerts' : 'disable tamper alerts'))){
+      tamperAlertEnabledEl.checked = tamperAlertEnabled;
+      return;
+    }
+    tamperAlertEnabled = wantsEnable;
+    chrome.storage.local.set({ tamperAlertEnabled }, ()=>{
+      setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+      updateAlertAvailability();
     });
   });
 }
@@ -1273,6 +1455,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
         setProfileMessage('Select a profile to preview recommended settings.', 'muted');
       }
     }
+    updateAlertAvailability();
   }
   if (area === 'sync' && changes.sensitivity){
     currentSensitivity = Number(changes.sensitivity.newValue) || currentSensitivity;
@@ -1287,10 +1470,17 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     overrideAlertsEnabled = Boolean(changes.overrideAlertEnabled.newValue);
     if (alertEnabledEl) alertEnabledEl.checked = overrideAlertsEnabled;
     setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
+    updateAlertAvailability();
   }
   if (area === 'local' && changes.overrideAlertWebhook){
     overrideAlertWebhook = typeof changes.overrideAlertWebhook.newValue === 'string' ? changes.overrideAlertWebhook.newValue : '';
     if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
+  }
+  if (area === 'local' && changes.tamperAlertEnabled){
+    tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
+    if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
+    setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+    updateAlertAvailability();
   }
   if (area === 'local' && changes.approverPromptEnabled){
     approverPromptEnabled = Boolean(changes.approverPromptEnabled.newValue);
