@@ -468,9 +468,6 @@
         if (processed >= VISUAL_SAMPLE_LIMIT) break;
         const ratio = sampleImageSkinRatio(img);
         if (Number.isFinite(ratio) && ratio > maxRatio) maxRatio = ratio;
-        if (ratio >= 0.45){
-          try{ mask(img); }catch(_e){}
-        }
         const vision = runLocalVisionScan(img);
         if (vision && Array.isArray(vision.detections)){
           vision.detections.forEach((det)=>{
@@ -479,7 +476,7 @@
             if (!aiHits[key] || (det.confidence || 0) > (aiHits[key].confidence || 0)){
               aiHits[key] = det;
             }
-            if (det.label === 'nsfw' && (det.confidence || 0) >= 0.55){
+            if (det.label === 'nsfw' && ratio >= 0.6 && (det.confidence || 0) >= 0.7){
               try{ mask(img); }catch(_e){}
             }
           });
@@ -699,15 +696,9 @@
       if (!det || !det.label) return;
       const conf = clamp01(det.confidence || 0);
       if (det.label === 'nsfw'){
-        if (conf >= 0.6) score = Math.max(score, 12);
-        else if (conf >= 0.5) score = Math.max(score, 10);
-        else score = Math.max(score, 6 + conf * 3);
-      } else if (det.label === 'violence'){
-        if (conf >= 0.55) score = Math.max(score, 10);
-        else score = Math.max(score, 6 + conf * 3);
-      } else if (det.label === 'weapon'){
-        if (conf >= 0.55) score = Math.max(score, 10);
-        else score = Math.max(score, 6 + conf * 3);
+        if (conf >= 0.7) score = Math.max(score, 12);
+        else if (conf >= 0.6) score = Math.max(score, 10);
+        else score = Math.max(score, 6 + conf * 2);
       }
     });
     return Math.min(12, score || 0);
@@ -1852,9 +1843,7 @@
         const hit = vision.detections.find((det)=>{
           if (!det || !det.label) return false;
           const conf = clamp01(det.confidence || 0);
-          if (det.label === 'nsfw') return conf >= 0.35;
-          if (det.label === 'violence') return conf >= 0.35;
-          if (det.label === 'weapon') return conf >= 0.35;
+          if (det.label === 'nsfw') return conf >= 0.7; // only blur clearly nude images
           return false;
         });
         if (hit) return true;
