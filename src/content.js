@@ -17,6 +17,7 @@
   const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report)/i;
   const PIN_ITERATIONS_FALLBACK = 200000;
   const VISUAL_SAMPLE_LIMIT = 8;
+  const RISKY_MEDIA_HOSTS = ['instagram.com','cdninstagram.com','twitter.com','x.com','tiktok.com','facebook.com','fbcdn.net','messenger.com','snapchat.com','reddit.com','discord.com','pinimg.com'];
   const PHISHING_BRANDS = [
     { name: 'PayPal', keywords: ['paypal','pay pal'], domains: ['paypal.com', 'paypalobjects.com'] },
     { name: 'Microsoft', keywords: ['microsoft','office 365','outlook','onedrive'], domains: ['microsoft.com', 'live.com', 'office.com', 'sharepoint.com'] },
@@ -467,6 +468,9 @@
         if (processed >= VISUAL_SAMPLE_LIMIT) break;
         const ratio = sampleImageSkinRatio(img);
         if (Number.isFinite(ratio) && ratio > maxRatio) maxRatio = ratio;
+        if (ratio >= 0.45){
+          try{ mask(img); }catch(_e){}
+        }
         const vision = runLocalVisionScan(img);
         if (vision && Array.isArray(vision.detections)){
           vision.detections.forEach((det)=>{
@@ -474,6 +478,9 @@
             const key = det.label;
             if (!aiHits[key] || (det.confidence || 0) > (aiHits[key].confidence || 0)){
               aiHits[key] = det;
+            }
+            if (det.label === 'nsfw' && (det.confidence || 0) >= 0.55){
+              try{ mask(img); }catch(_e){}
             }
           });
         }
@@ -545,29 +552,48 @@
     const key = img && (img.currentSrc || img.src || '');
     if (key && visionCache.has(key)) return visionCache.get(key);
     const features = sampleImageFeatures(img);
+    const host = getHost();
+    if (features && features.tainted){
+      if (isRiskyMediaHost(host)){
+        try{ mask(img); }catch(_e){}
+        const taintDetection = {
+          detections: [{
+            label: 'nsfw',
+            confidence: 0.55,
+            meta: 'Cross-origin media on social host',
+            tainted: true
+          }],
+          features
+        };
+        if (key) visionCache.set(key, taintDetection);
+        return taintDetection;
+      }
+      if (key) visionCache.set(key, null);
+      return null;
+    }
     if (!features){
       if (key) visionCache.set(key, null);
       return null;
     }
     const detections = [];
-    const nsfwConfidence = clamp01((features.skinRatio - 0.22) / 0.35);
-    if (nsfwConfidence > 0.35){
+    const nsfwConfidence = clamp01((features.skinRatio - 0.18) / 0.28);
+    if (nsfwConfidence > 0.2){
       detections.push({
         label: 'nsfw',
         confidence: nsfwConfidence,
         meta: `Skin-tone density ${(features.skinRatio * 100).toFixed(0)}%`
       });
     }
-    const violenceConfidence = clamp01(((features.redRatio - 0.18) / 0.25) * (features.darkRatio > 0.25 ? 1 : 0.6));
-    if (violenceConfidence > 0.35){
+    const violenceConfidence = clamp01(((features.redRatio - 0.14) / 0.22) * (features.darkRatio > 0.2 ? 1 : 0.6));
+    if (violenceConfidence > 0.25){
       detections.push({
         label: 'violence',
         confidence: violenceConfidence,
         meta: `Red-heavy ${(features.redRatio * 100).toFixed(0)}%, dark ${(features.darkRatio * 100).toFixed(0)}%`
       });
     }
-    const weaponConfidence = clamp01(((features.edgeDensity - 0.12) / 0.18) * (features.grayRatio > 0.4 ? 1 : 0.6));
-    if (weaponConfidence > 0.35){
+    const weaponConfidence = clamp01(((features.edgeDensity - 0.1) / 0.16) * (features.grayRatio > 0.35 ? 1 : 0.6));
+    if (weaponConfidence > 0.25){
       detections.push({
         label: 'weapon',
         confidence: weaponConfidence,
@@ -593,7 +619,13 @@
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return null;
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let imageData = null;
+      try{
+        imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      } catch(_sec){
+        return { tainted: true };
+      }
+      const data = imageData.data;
       let skin = 0;
       let total = 0;
       let redHeavy = 0;
@@ -640,8 +672,17 @@
         edgeDensity: edgeScore / total
       };
     }catch(_e){
-      return null;
+      return { tainted: true };
     }
+  }
+
+  function isRiskyMediaHost(host){
+    if (!host) return false;
+    const h = host.toLowerCase();
+    return RISKY_MEDIA_HOSTS.some((entry)=>{
+      const normalized = entry.toLowerCase();
+      return h === normalized || h.endsWith('.' + normalized);
+    });
   }
 
   function clamp01(value){
@@ -658,11 +699,15 @@
       if (!det || !det.label) return;
       const conf = clamp01(det.confidence || 0);
       if (det.label === 'nsfw'){
-        score = Math.max(score, 5 + conf * 7); // up to 12
+        if (conf >= 0.6) score = Math.max(score, 12);
+        else if (conf >= 0.5) score = Math.max(score, 10);
+        else score = Math.max(score, 6 + conf * 3);
       } else if (det.label === 'violence'){
-        score = Math.max(score, 4 + conf * 6); // up to ~10
+        if (conf >= 0.55) score = Math.max(score, 10);
+        else score = Math.max(score, 6 + conf * 3);
       } else if (det.label === 'weapon'){
-        score = Math.max(score, 4 + conf * 6);
+        if (conf >= 0.55) score = Math.max(score, 10);
+        else score = Math.max(score, 6 + conf * 3);
       }
     });
     return Math.min(12, score || 0);
@@ -888,7 +933,9 @@
         icon: 'AI',
         label: `On-device AI flagged: ${unique.join(', ')}`,
         detail: detailParts.join('; '),
-        weight: Math.max(...visualEval.aiDetections.map((d)=>clamp01(d.confidence || 0) * 10 + 2)),
+        weight: Math.max(...visualEval.aiDetections.map((d)=>{
+          return clamp01(d.confidence || 0) * 10 + 2;
+        })),
         meta: ['Local-only scan, no images leave the browser']
       });
     }
@@ -1702,7 +1749,7 @@
     if (styleInjected) return; styleInjected = true;
     const st = document.createElement('style');
     st.textContent = `
-      .sg-blur { filter: blur(28px) saturate(0.6) contrast(0.8) !important; }
+      .sg-blur { filter: blur(36px) saturate(0.4) contrast(0.6) !important; pointer-events: none !important; }
       .sg-tag { position: absolute; top: 6px; left: 6px; background: rgba(185,28,28,0.9); color: #fff;
                 padding: 2px 6px; font: 12px/1 system-ui,sans-serif; border-radius: 3px; z-index: 2147483647; }
       .sg-wrap { position: relative !important; display: inline-block; }
@@ -1795,7 +1842,25 @@
     // Use a reduced threshold for element-level masking
     const cfgSens = window.__sg_sensitivity || 60;
     const textThreshold = Math.max(3, Math.floor((12 - 6*(cfgSens/100)) * 0.6));
-    return scoreFromText(t) >= textThreshold;
+    if (scoreFromText(t) >= textThreshold){
+      return true;
+    }
+    // Vision-based per-element check (on images only)
+    if (el instanceof HTMLImageElement){
+      const vision = runLocalVisionScan(el);
+      if (vision && Array.isArray(vision.detections)){
+        const hit = vision.detections.find((det)=>{
+          if (!det || !det.label) return false;
+          const conf = clamp01(det.confidence || 0);
+          if (det.label === 'nsfw') return conf >= 0.35;
+          if (det.label === 'violence') return conf >= 0.35;
+          if (det.label === 'weapon') return conf >= 0.35;
+          return false;
+        });
+        if (hit) return true;
+      }
+    }
+    return false;
   }
 
   function initMediaFilter(){
@@ -3016,7 +3081,8 @@
     const visualEval = evaluateVisualSignals();
     const urlScore = urlEval.score;
     const metaScore = metaEval.score;
-    const visualScore = visualEval.score;
+    const isSocialMediaHost = isRiskyMediaHost(host);
+    const visualScore = isSocialMediaHost ? 0 : visualEval.score; // keep blur, avoid full-page block on social feeds
     window.__sg_visualScore = visualScore;
     const total = urlScore + metaScore + bodyScore + visualScore;
     const sens = Number(cfg.sensitivity)||60; window.__sg_sensitivity = sens;
@@ -3029,7 +3095,7 @@
         metaEval,
         bodyEval,
         bodyScore,
-        visualEval,
+        visualEval: isSocialMediaHost ? { ...visualEval, score: 0 } : visualEval,
         total,
         threshold
       });
