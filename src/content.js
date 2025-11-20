@@ -46,6 +46,146 @@
   const SUSPICIOUS_HOST_HINTS = ['trycloudflare.com','cloudflarepages.dev','cloudflarepage','repl.co','github.io','vercel.app','netlify.app','firebaseapp.com','appspot.com','glitch.me','pages.dev'];
   const LOGIN_HINTS = ['login','log in','sign in','signin','account','secure login','enter password'];
   const IMMEDIATE_BLOCK_HOSTS = ['trycloudflare.com','cloudflarepage','cloudflarepages.dev','repl.co','github.io','netlify.app','vercel.app','appspot.com','firebaseapp.com','glitch.me','render.com'];
+  const ENABLE_INSIGHTS_PANEL = false;
+  const PROFILE_TONE_COPY = {
+    kids: {
+      heading: 'Hold on - we are keeping kid-safe pages only.',
+      detailFallback: 'Safeguard spotted something that looks grown-up or violent, so we paused the page.',
+      suggestionPrefix: 'Try',
+      suggestionFallback: 'Ask a trusted adult before opening a different site.',
+      defaultSuggestions: ['BBC Bitesize','Nat Geo Kids','Duolingo'],
+      microTitle: 'Mini safety lesson',
+      microIntro: 'Before you continue, remember:',
+      defaultProfileLabel: 'Kids (ages 7-12)'
+    },
+    teens: {
+      heading: 'Heads up - this page didn\'t look safe for teens.',
+      detailFallback: 'We saw wording or media that usually means adult or deceptive content.',
+      suggestionPrefix: 'Switch to',
+      suggestionFallback: 'Check with a safeguarding lead if this is needed for GCSE/KS4 work.',
+      defaultSuggestions: ['BBC Bitesize GCSE','Khan Academy','Quizlet'],
+      microTitle: 'AI literacy boost',
+      microIntro: 'Use these quick checks next time:',
+      defaultProfileLabel: 'Teens (ages 13-16)'
+    },
+    college: {
+      heading: 'Pause and double-check this research page.',
+      detailFallback: 'The page signalled adult themes or untrusted sources, so we blocked it for now.',
+      suggestionPrefix: 'Try credible sources like',
+      suggestionFallback: 'Talk to your DSL/tutor if this content is essential.',
+      defaultSuggestions: ['Google Scholar','FutureLearn','GOV.UK education'],
+      microTitle: 'Research-safe habits',
+      microIntro: 'Keep coursework clean with these tips:',
+      defaultProfileLabel: 'College profile'
+    },
+    work: {
+      heading: 'Blocked to keep work accounts safe and focused.',
+      detailFallback: 'The site matched a distraction or phishing pattern monitored for this profile.',
+      suggestionPrefix: 'Stay on trusted portals such as',
+      suggestionFallback: 'Log a request with IT/SecOps if this is a genuine business need.',
+      defaultSuggestions: ['Microsoft 365','Slack','Notion'],
+      microTitle: 'Cyber hygiene reminder',
+      microIntro: 'Share these habits with your team:',
+      defaultProfileLabel: 'Work profile'
+    },
+    general: {
+      heading: 'Safeguard blocked this page.',
+      detailFallback: 'Our local rules detected risky content before the page loaded.',
+      suggestionPrefix: 'Use trusted sites like',
+      suggestionFallback: 'Ask a safeguarding lead or parent before overriding.',
+      defaultSuggestions: ['BBC Bitesize','National Geographic','Khan Academy'],
+      microTitle: 'AI literacy tip',
+      microIntro: 'Quick ways to stay safe:',
+      defaultProfileLabel: 'this profile'
+    }
+  };
+  const MICRO_LESSONS = {
+    general: {
+      mature: [
+        'If a page asks you to confirm you are 18, treat it as adult-only and close it.',
+        'Search the topic on a trusted education site instead of bypassing the block.',
+        'Ask a safeguarding lead to review the need before overriding policy.'
+      ],
+      phishing: [
+        'Check the full address bar for spelling errors before entering passwords.',
+        'Real services never ask for MFA codes in random forms or popups.',
+        'Open a fresh tab and navigate to the homepage manually when in doubt.'
+      ],
+      wellbeing: [
+        'Take a short break every 30 minutes to reset your focus.',
+        'Urgent or emotional headlines are often clickbait - slow down and verify.',
+        'If something feels odd or too personal, ask a trusted adult before engaging.'
+      ]
+    },
+    kids: {
+      mature: [
+        'If a page looks scary or grown-up, close it and tell a trusted adult.',
+        'Stick to school links like BBC Bitesize or Nat Geo Kids for research.',
+        'Never share photos or your name with strangers online.'
+      ],
+      phishing: [
+        'Only type passwords into sites your teacher or parent showed you.',
+        'If a page offers prizes for personal info, it is safer to say no and leave.',
+        'Ask an adult before clicking links that look unusual or urgent.'
+      ],
+      wellbeing: [
+        'Take eye breaks every 20 minutes so screens stay fun and safe.',
+        'If something online feels uncomfortable, screenshot and show an adult.',
+        'Use homework timers or Focus Mode to finish tasks before play time.'
+      ]
+    },
+    teens: {
+      mature: [
+        'Cross-check shocking claims with a second trusted source before sharing.',
+        'Sensational thumbnails are often clickbait - look for better sources.',
+        'Keep revision on-task by bookmarking reliable study sites.'
+      ],
+      phishing: [
+        'Look beyond the logo and inspect the URL before signing in.',
+        'Urgent "verify now" popups are usually scams - open the service in a new tab instead.',
+        'Use 2FA and never share one-time codes with anyone, even friends.'
+      ],
+      wellbeing: [
+        'Set short break reminders so scrolling does not eat revision time.',
+        'Mute or block accounts that pressure you to share personal info.',
+        'AI images can fake events - compare them with trusted news first.'
+      ]
+    },
+    college: {
+      mature: [
+        'Check whether an article cites primary sources before using it in coursework.',
+        'If a topic feels sensitive, ask your DSL or tutor to approve material first.',
+        'Only disable aggressive filtering if visuals are critical to the assignment.'
+      ],
+      phishing: [
+        'Inspect the certificate padlock before entering institution credentials.',
+        'Never reuse your uni password on other sites or tools.',
+        'Hover over links in email to reveal the real destination before clicking.'
+      ],
+      wellbeing: [
+        'Use a 45 minute focus timer so study blocks stay intentional.',
+        'Summarise research in your own words instead of copy/pasting questionable sources.',
+        'Pausing when a page feels manipulative protects your judgement.'
+      ]
+    },
+    work: {
+      mature: [
+        'Keep work devices on approved research portals when reviewing sensitive topics.',
+        'Separate personal browsing into another profile so audits stay simple.',
+        'Document the business reason before overriding a block for compliance.'
+      ],
+      phishing: [
+        'Verify payment or reset emails out-of-band before clicking links.',
+        'Look for domain mismatches even if the branding looks polished.',
+        'Use the report phishing control so SecOps can warn others quickly.'
+      ],
+      wellbeing: [
+        'Use Focus or Do Not Disturb modes to protect deep work.',
+        'Blocking social feeds during work hours keeps your audit trail clean.',
+        'Escalate anything suspicious to IT/SecOps instead of investigating alone.'
+      ]
+    }
+  };
   let interactionGuard = null;
   let phishObserver = null;
   let phishObserverTimer = null;
@@ -455,6 +595,109 @@
       return 'The page embeds brand logos in an unusual way to impersonate trusted sites.';
     }
     return 'Safeguard spotted patterns that usually mean the page is unsafe.';
+  }
+
+  function normalizeTone(value){
+    if (!value) return null;
+    const tone = String(value).toLowerCase();
+    if (tone.startsWith('kid') || tone.startsWith('primary')) return 'kids';
+    if (tone.startsWith('teen')) return 'teens';
+    if (tone.includes('college') || tone.includes('sixth')) return 'college';
+    if (tone === 'work' || tone === 'adult') return 'work';
+    return null;
+  }
+
+  function sanitizeSuggestionList(list){
+    const entries = [];
+    if (!Array.isArray(list)) return entries;
+    list.forEach((item)=>{
+      const text = String(item || '').trim();
+      if (!text) return;
+      if (entries.length >= 3) return;
+      entries.push(text);
+    });
+    return entries;
+  }
+
+  function pickHighestWeightSignal(signals){
+    if (!Array.isArray(signals) || !signals.length) return null;
+    return signals.reduce((best, current)=>{
+      if (!current) return best;
+      const weight = typeof current.weight === 'number' ? current.weight : 0;
+      const bestWeight = typeof (best && best.weight) === 'number' ? best.weight : -Infinity;
+      if (!best || weight > bestWeight) return current;
+      return best;
+    }, null);
+  }
+
+  function formatFriendlyList(list){
+    if (!Array.isArray(list) || !list.length) return '';
+    if (list.length === 1) return list[0];
+    if (list.length === 2) return `${list[0]} or ${list[1]}`;
+    const head = list.slice(0, list.length - 1).join(', ');
+    const tail = list[list.length - 1];
+    return `${head}, or ${tail}`;
+  }
+
+  function buildFriendlyExplanation({ reason, tone, profileLabel, signal, suggestions }){
+    const normalizedTone = normalizeTone(tone) || 'general';
+    const copy = PROFILE_TONE_COPY[normalizedTone] || PROFILE_TONE_COPY.general;
+    const resolvedProfileLabel = profileLabel || copy.defaultProfileLabel;
+    const friendly = signalFriendlySummary(signal);
+    const detail = friendly || copy.detailFallback.replace('{reason}', reason || 'our safety rules');
+    const suggestionList = sanitizeSuggestionList(suggestions);
+    const sourceList = suggestionList.length ? suggestionList : copy.defaultSuggestions;
+    const suggestion = sourceList && sourceList.length
+      ? `${copy.suggestionPrefix} ${formatFriendlyList(sourceList)}.`
+      : copy.suggestionFallback;
+    return {
+      tone: normalizedTone,
+      heading: copy.heading,
+      detail,
+      suggestion,
+      microTitle: copy.microTitle,
+      microIntro: copy.microIntro,
+      profileLabel: resolvedProfileLabel
+    };
+  }
+
+  function determineSignalTopic(signal){
+    const id = signal && signal.id ? String(signal.id) : '';
+    if (!id) return 'wellbeing';
+    if (id.startsWith('phish')) return 'phishing';
+    if (id === 'policy' || id === 'host' || id === 'host-hint' || id === 'tld' || id === 'query' ||
+        id === 'visual' || id === 'body-keywords' || id === 'meta-keywords' ||
+        id === 'body-age-gate' || id === 'meta-age-gate'){
+      return 'mature';
+    }
+    return 'wellbeing';
+  }
+
+  function pickMicroLessons(tone, topic, seedValue){
+    const normalizedTone = normalizeTone(tone) || 'general';
+    const bank = MICRO_LESSONS[normalizedTone] || MICRO_LESSONS.general;
+    const topicList = (bank[topic] && bank[topic].length) ? bank[topic] : null;
+    const fallbackBank = MICRO_LESSONS.general;
+    const resolvedTopic = topicList && topicList.length
+      ? topicList
+      : ((fallbackBank[topic] && fallbackBank[topic].length) ? fallbackBank[topic] : fallbackBank.wellbeing);
+    return rotateList(resolvedTopic || [], seedValue || '', 3);
+  }
+
+  function rotateList(list, seed, take){
+    if (!Array.isArray(list) || !list.length) return [];
+    const length = Math.min(take || 3, list.length);
+    const source = String(seed || 'safeguard');
+    let hash = 0;
+    for (let i = 0; i < source.length; i += 1){
+      hash = (hash + source.charCodeAt(i)) % 100000;
+    }
+    const start = hash % list.length;
+    const result = [];
+    for (let i = 0; i < length; i += 1){
+      result.push(list[(start + i) % list.length]);
+    }
+    return result;
   }
 
   function createHeuristicInsights(context){
@@ -907,7 +1150,7 @@
     };
   }
 
-  function handlePhishingHit(phishingEval, pinConfig){
+  function handlePhishingHit(phishingEval, pinConfig, audienceContext = {}){
     if (!ENABLE_CYBER) return;
     if (!phishingEval) return;
     lockInteractionShield();
@@ -915,6 +1158,9 @@
       pinConfig,
       pillText: 'Cybersecurity defense',
       supportLink: { text: 'Report phishing', href: 'https://dipesthapa.github.io/safebrowse-ai/site/support.html' },
+      profileTone: audienceContext.profileTone,
+      profileLabel: audienceContext.profileLabel,
+      profileSuggestions: sanitizeSuggestionList(audienceContext.profileSuggestions),
       ...phishingEval
     });
     try {
@@ -933,11 +1179,12 @@
 
   let formGuardAttached = false;
   let bypassFormGuard = false;
-  function attachPhishFormGuard(cfg, pinConfig){
+  function attachPhishFormGuard(cfg, pinConfig, audienceContext = {}){
     if (!ENABLE_CYBER) return;
     if (!cfg || !cfg.phishingProtectionEnabled || cfg.phishingFormMonitorEnabled === false) return;
     if (formGuardAttached) return;
     formGuardAttached = true;
+    const context = audienceContext || {};
     document.addEventListener('submit', async (event)=>{
       try {
         if (bypassFormGuard) return;
@@ -953,7 +1200,7 @@
           scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
         });
         if (phishingEval){
-          handlePhishingHit(phishingEval, pinConfig);
+          handlePhishingHit(phishingEval, pinConfig, context);
           return;
         }
         bypassFormGuard = true;
@@ -967,15 +1214,16 @@
   }
 
   let networkGuardsAttached = false;
-  function attachNetworkGuards(cfg, pinConfig){
+  function attachNetworkGuards(cfg, pinConfig, audienceContext = {}){
     if (!ENABLE_CYBER) return;
     if (!cfg || !cfg.phishingProtectionEnabled) return;
     if (networkGuardsAttached) return;
     networkGuardsAttached = true;
-    interceptFetch(cfg, pinConfig);
-    interceptXHR(cfg, pinConfig);
+    const context = audienceContext || {};
+    interceptFetch(cfg, pinConfig, context);
+    interceptXHR(cfg, pinConfig, context);
     interceptBeacon();
-    interceptWebSocket(cfg, pinConfig);
+    interceptWebSocket(cfg, pinConfig, context);
     monitorInputsForExfil();
   }
 
@@ -1027,9 +1275,10 @@
     return payloadLooksSensitive(bodySample) || payloadLooksEncrypted(bodySample);
   }
 
-  function interceptFetch(cfg, pinConfig){
+  function interceptFetch(cfg, pinConfig, audienceContext = {}){
     if (!window.fetch) return;
     const originalFetch = window.fetch;
+    const context = audienceContext || {};
     window.fetch = async (...args)=>{
       try {
         const [resource, init = {}] = args;
@@ -1046,7 +1295,7 @@
             scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
           });
           if (phishingEval){
-            handlePhishingHit(phishingEval, pinConfig);
+            handlePhishingHit(phishingEval, pinConfig, context);
             return Promise.reject(new Error('Blocked by Safeguard phishing guard'));
           }
         }
@@ -1055,9 +1304,10 @@
     };
   }
 
-  function interceptXHR(cfg, pinConfig){
+  function interceptXHR(cfg, pinConfig, audienceContext = {}){
     if (!window.XMLHttpRequest) return;
     const OriginalXHR = window.XMLHttpRequest;
+    const context = audienceContext || {};
     function WrappedXHR(){
       const xhr = new OriginalXHR();
       let targetUrl = '';
@@ -1081,7 +1331,7 @@
               scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
             });
             if (phishingEval){
-              handlePhishingHit(phishingEval, pinConfig);
+              handlePhishingHit(phishingEval, pinConfig, context);
               throw new Error('Blocked by Safeguard phishing guard');
             }
           }
@@ -1128,10 +1378,11 @@
     }, true);
   }
 
-  function interceptWebSocket(cfg, pinConfig){
+  function interceptWebSocket(cfg, pinConfig, audienceContext = {}){
     if (!ENABLE_CYBER) return;
     if (!window.WebSocket) return;
     const OriginalWS = window.WebSocket;
+    const context = audienceContext || {};
     function WrappedWebSocket(...args){
       const ws = new OriginalWS(...args);
       const nativeSend = ws.send;
@@ -1141,7 +1392,7 @@
           if (bodySample && shouldBlockPayload(bodySample)){
             const phishingEval = await evaluateOnDemand(cfg);
             if (phishingEval){
-              handlePhishingHit(phishingEval, pinConfig);
+              handlePhishingHit(phishingEval, pinConfig, context);
               return;
             }
           }
@@ -1175,7 +1426,7 @@
     return IMMEDIATE_BLOCK_HOSTS.find((hint)=>normalized.includes(hint.toLowerCase()));
   }
 
-  function setupPhishObserver(cfg, pinConfig){
+  function setupPhishObserver(cfg, pinConfig, audienceContext = {}){
     if (!ENABLE_CYBER) return;
     if (!cfg || !cfg.phishingProtectionEnabled) return;
     if (phishObserver) return;
@@ -1185,6 +1436,7 @@
         feedEnabled: cfg.phishingFeedEnabled !== false,
         scriptMonitor: cfg.phishingScriptMonitorEnabled !== false
       };
+      const context = audienceContext || {};
       phishObserver = new MutationObserver(()=>{
         if (phishObserverTimer) return;
         phishObserverTimer = setTimeout(async ()=>{
@@ -1200,10 +1452,10 @@
             const hint = hostLooksSuspicious(getHost());
             if (phishingEval){
               lockInteractionShield();
-              handlePhishingHit(phishingEval, pinConfig);
+              handlePhishingHit(phishingEval, pinConfig, context);
             } else if (hint){
               lockInteractionShield();
-              handlePhishingHit(createHostHintBlock(getHost(), hint), pinConfig);
+              handlePhishingHit(createHostHintBlock(getHost(), hint), pinConfig, context);
             }
           } catch(_e){}
         }, 250);
@@ -1561,6 +1813,9 @@
       : null;
     const signals = Array.isArray(opts.signals) ? opts.signals.filter((signal)=>signal && typeof signal === 'object') : [];
     const supportLink = opts.supportLink && typeof opts.supportLink.href === 'string' ? opts.supportLink : null;
+    const profileTone = normalizeTone(opts.profileTone);
+    const profileLabel = typeof opts.profileLabel === 'string' && opts.profileLabel.trim() ? opts.profileLabel.trim() : null;
+    const profileSuggestions = sanitizeSuggestionList(opts.profileSuggestions);
     doc.title = 'Safeguard – Page blocked';
 
     const root = doc.documentElement;
@@ -1852,6 +2107,33 @@
         font-weight: 600;
         letter-spacing: 0.3px;
       }
+      .sg-explain {
+        border: 1px solid rgba(37,99,235,0.16);
+        border-radius: 20px;
+        padding: 18px 22px;
+        background: rgba(37,99,235,0.08);
+        margin: 6px 0 24px;
+      }
+      .sg-explain__eyebrow {
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+      .sg-explain__title {
+        margin: 6px 0;
+        font-size: 18px;
+        color: var(--text-primary);
+      }
+      .sg-explain__suggestion {
+        margin: 10px 0 0;
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+      .sg-explain__context {
+        margin: 6px 0 0;
+      }
       .sg-reason {
         margin: 0 0 24px;
         color: var(--text-secondary);
@@ -2007,6 +2289,11 @@
         font-size: 15px;
         color: var(--text-primary);
       }
+      .sg-guidance__intro {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
       .sg-guidance__list {
         margin: 0;
         padding-left: 18px;
@@ -2130,22 +2417,7 @@
       panel.appendChild(risk);
     }
 
-    const reasonPara = doc.createElement('p');
-    reasonPara.className = 'sg-reason';
-    const reasonLabel = doc.createElement('strong');
-    reasonLabel.textContent = 'Reason: ';
-    reasonPara.appendChild(reasonLabel);
-    reasonPara.append(String(reason || 'Policy enforcement'));
-    panel.appendChild(reasonPara);
-
-    const insights = doc.createElement('div');
-    insights.className = 'sg-insights';
-    const insightsTitle = doc.createElement('h3');
-    insightsTitle.textContent = 'What Safeguard detected';
-    insights.appendChild(insightsTitle);
-    const insightsList = doc.createElement('div');
-    insightsList.className = 'sg-insights__list';
-    insightsList.setAttribute('role', 'list');
+    let insightsList = null;
     const hostName = getHost();
     const fallbackSignals = [
       { id: 'host', icon: 'URL', label: 'Site', detail: hostName || 'Unknown host', weight: 0 },
@@ -2153,6 +2425,43 @@
       { id: 'tip', icon: 'TIP', label: 'Next steps', detail: 'Review allowlist options with a safeguarding lead if this needs access.', weight: 0 }
     ];
     const displaySignals = (signals.length ? signals : fallbackSignals).slice(0, 5);
+    const topSignal = pickHighestWeightSignal(displaySignals);
+    const friendlyBlock = buildFriendlyExplanation({
+      reason: reason || 'Policy enforcement',
+      tone: profileTone,
+      profileLabel,
+      signal: topSignal,
+      suggestions: profileSuggestions
+    });
+    const signalTopic = determineSignalTopic(topSignal);
+    const microLessons = pickMicroLessons(profileTone, signalTopic, hostName || '');
+    const explain = doc.createElement('div');
+    explain.className = 'sg-explain';
+    const explainEyebrow = doc.createElement('span');
+    explainEyebrow.className = 'sg-explain__eyebrow';
+    explainEyebrow.textContent = 'Why this was blocked';
+    explain.appendChild(explainEyebrow);
+    const explainTitle = doc.createElement('h2');
+    explainTitle.className = 'sg-explain__title';
+    explainTitle.textContent = friendlyBlock.heading;
+    explain.appendChild(explainTitle);
+    const explainDetail = doc.createElement('p');
+    explainDetail.textContent = friendlyBlock.detail;
+    explain.appendChild(explainDetail);
+    const context = doc.createElement('p');
+    context.className = 'sg-reason sg-explain__context';
+    const contextBits = [];
+    if (friendlyBlock.profileLabel) contextBits.push(`Profile: ${friendlyBlock.profileLabel}`);
+    contextBits.push(`Safeguard rule: ${reason || 'Policy enforcement'}`);
+    context.textContent = contextBits.join(' • ');
+    explain.appendChild(context);
+    if (friendlyBlock.suggestion){
+      const suggestionPara = doc.createElement('p');
+      suggestionPara.className = 'sg-explain__suggestion';
+      suggestionPara.textContent = friendlyBlock.suggestion;
+      explain.appendChild(suggestionPara);
+    }
+    panel.appendChild(explain);
     const heuristicsSnapshot = {
       riskScore,
       riskThreshold,
@@ -2169,52 +2478,62 @@
         meta: Array.isArray(signal.meta) ? signal.meta.slice(0, 3) : null
       }))
     };
-    displaySignals.forEach((signal)=>{
-      const item = doc.createElement('div');
-      item.className = 'sg-insights__item';
-      item.setAttribute('role', 'listitem');
-      const icon = doc.createElement('div');
-      icon.className = 'sg-insights__icon';
-      const iconText = typeof signal.icon === 'string' && signal.icon.trim() ? signal.icon.trim().slice(0, 4) : 'SIG';
-      icon.textContent = iconText.toUpperCase();
-      item.appendChild(icon);
-      const bodyWrap = doc.createElement('div');
-      bodyWrap.className = 'sg-insights__body';
-      const titleRow = doc.createElement('div');
-      titleRow.className = 'sg-insights__title';
-      const titleText = doc.createElement('span');
-      titleText.textContent = signal.label || 'Signal detected';
-      titleRow.appendChild(titleText);
-      if (typeof signal.weight === 'number' && signal.weight){
-        const weightChip = doc.createElement('span');
-        weightChip.className = 'sg-insights__score';
-        const rounded = Math.round(signal.weight);
-        weightChip.textContent = `${rounded > 0 ? '+' : ''}${rounded}`;
-        titleRow.appendChild(weightChip);
-      }
-      bodyWrap.appendChild(titleRow);
-      if (signal.detail){
-        const detail = doc.createElement('p');
-        detail.textContent = String(signal.detail);
-        bodyWrap.appendChild(detail);
-      }
-      const friendly = signalFriendlySummary(signal);
-      if (friendly){
-        const friendlyEl = doc.createElement('p');
-        friendlyEl.className = 'sg-insights__friendly';
-        friendlyEl.textContent = friendly;
-        bodyWrap.appendChild(friendlyEl);
-      }
-      if (Array.isArray(signal.meta) && signal.meta.length){
-        const metaDetail = doc.createElement('p');
-        metaDetail.textContent = signal.meta.slice(0, 3).join(' • ');
-        bodyWrap.appendChild(metaDetail);
-      }
-      item.appendChild(bodyWrap);
-      insightsList.appendChild(item);
-    });
-    insights.appendChild(insightsList);
-    panel.appendChild(insights);
+    if (ENABLE_INSIGHTS_PANEL){
+      const insights = doc.createElement('div');
+      insights.className = 'sg-insights';
+      const insightsTitle = doc.createElement('h3');
+      insightsTitle.textContent = 'What Safeguard detected';
+      insights.appendChild(insightsTitle);
+      insightsList = doc.createElement('div');
+      insightsList.className = 'sg-insights__list';
+      insightsList.setAttribute('role', 'list');
+      displaySignals.forEach((signal)=>{
+        const item = doc.createElement('div');
+        item.className = 'sg-insights__item';
+        item.setAttribute('role', 'listitem');
+        const icon = doc.createElement('div');
+        icon.className = 'sg-insights__icon';
+        const iconText = typeof signal.icon === 'string' && signal.icon.trim() ? signal.icon.trim().slice(0, 4) : 'SIG';
+        icon.textContent = iconText.toUpperCase();
+        item.appendChild(icon);
+        const bodyWrap = doc.createElement('div');
+        bodyWrap.className = 'sg-insights__body';
+        const titleRow = doc.createElement('div');
+        titleRow.className = 'sg-insights__title';
+        const titleText = doc.createElement('span');
+        titleText.textContent = signal.label || 'Signal detected';
+        titleRow.appendChild(titleText);
+        if (typeof signal.weight === 'number' && signal.weight){
+          const weightChip = doc.createElement('span');
+          weightChip.className = 'sg-insights__score';
+          const rounded = Math.round(signal.weight);
+          weightChip.textContent = `${rounded > 0 ? '+' : ''}${rounded}`;
+          titleRow.appendChild(weightChip);
+        }
+        bodyWrap.appendChild(titleRow);
+        if (signal.detail){
+          const detail = doc.createElement('p');
+          detail.textContent = String(signal.detail);
+          bodyWrap.appendChild(detail);
+        }
+        const friendly = signalFriendlySummary(signal);
+        if (friendly){
+          const friendlyEl = doc.createElement('p');
+          friendlyEl.className = 'sg-insights__friendly';
+          friendlyEl.textContent = friendly;
+          bodyWrap.appendChild(friendlyEl);
+        }
+        if (Array.isArray(signal.meta) && signal.meta.length){
+          const metaDetail = doc.createElement('p');
+          metaDetail.textContent = signal.meta.slice(0, 3).join(' • ');
+          bodyWrap.appendChild(metaDetail);
+        }
+        item.appendChild(bodyWrap);
+        insightsList.appendChild(item);
+      });
+      insights.appendChild(insightsList);
+      panel.appendChild(insights);
+    }
 
     const actions = doc.createElement('div');
     actions.className = 'sg-actions';
@@ -2446,18 +2765,24 @@
     const guidance = doc.createElement('div');
     guidance.className = 'sg-guidance';
     const guidanceTitle = doc.createElement('h3');
-    guidanceTitle.textContent = 'What should I do?';
+    guidanceTitle.textContent = friendlyBlock.microTitle || 'AI literacy tips';
     guidance.appendChild(guidanceTitle);
+    if (friendlyBlock.microIntro){
+      const intro = doc.createElement('p');
+      intro.className = 'sg-guidance__intro';
+      intro.textContent = friendlyBlock.microIntro;
+      guidance.appendChild(intro);
+    }
     const guidanceList = doc.createElement('ul');
     guidanceList.className = 'sg-guidance__list';
-    const steps = [
-      'If this page is needed for schoolwork, ask a safeguarding lead or teacher to review it.',
-      'Use trusted education sites (e.g., BBC Bitesize) until an adult approves access.',
-      'Only enter the PIN if a parent or safeguarding lead is supervising you.'
+    const lessons = microLessons.length ? microLessons : [
+      'If this page is needed, ask a safeguarding lead to review it.',
+      'Stick to trusted sites listed in your allowlist.',
+      'Never share passwords or personal info on unfamiliar forms.'
     ];
-    steps.forEach((step)=>{
+    lessons.forEach((lesson)=>{
       const li = doc.createElement('li');
-      li.textContent = step;
+      li.textContent = lesson;
       guidanceList.appendChild(li);
     });
     guidance.appendChild(guidanceList);
@@ -2478,7 +2803,7 @@
 
   async function scan(){
     const [cfg, localOverrides] = await Promise.all([
-      new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60}, resolve)),
+      new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, profileTone: null, profileLabel: null, profileSafeSuggestions: []}, resolve)),
       new Promise((resolve)=>chrome.storage.local.get({
         requirePin: false,
         overridePinHash: null,
@@ -2493,6 +2818,10 @@
       salt: localOverrides.overridePinSalt,
       iterations: localOverrides.overridePinIterations
     };
+    const profileTone = normalizeTone(cfg.profileTone);
+    const profileLabel = typeof cfg.profileLabel === 'string' && cfg.profileLabel.trim() ? cfg.profileLabel.trim() : null;
+    const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
+    const profileContext = { profileTone, profileLabel, profileSuggestions };
     const host = getHost();
     try {
       if (host && sessionStorage.getItem('sg-ov:' + host) === '1'){
@@ -2506,13 +2835,13 @@
     if(BL.domains && BL.domains.includes(host)) {
       lockInteractionShield();
       const blockPayload = createBlocklistInsights({ host });
-      showInterstitial("domain blocklist", { pinConfig, ...blockPayload });
+      showInterstitial("domain blocklist", { pinConfig, ...profileContext, ...blockPayload });
       return;
     }
 
     if (ENABLE_CYBER){
-      attachPhishFormGuard(cfg, pinConfig);
-      attachNetworkGuards(cfg, pinConfig);
+      attachPhishFormGuard(cfg, pinConfig, profileContext);
+      attachNetworkGuards(cfg, pinConfig, profileContext);
     }
 
     const text = document.body && document.body.innerText ? document.body.innerText.slice(0, 40000) : "";
@@ -2541,7 +2870,7 @@
         total,
         threshold
       });
-      showInterstitial("Heuristic risk score", { pinConfig, ...heuristicPayload });
+      showInterstitial("Heuristic risk score", { pinConfig, ...profileContext, ...heuristicPayload });
       return;
     }
 
@@ -2549,7 +2878,7 @@
       const forcedHint = hostLooksSuspicious(host);
       if (forcedHint){
         lockInteractionShield();
-        handlePhishingHit(createHostHintBlock(host, forcedHint), pinConfig);
+        handlePhishingHit(createHostHintBlock(host, forcedHint), pinConfig, profileContext);
         return;
       }
       const feedEntries = await loadPhishingFeed();
@@ -2561,14 +2890,14 @@
       });
       if (phishingEval){
         lockInteractionShield();
-        handlePhishingHit(phishingEval, pinConfig);
+        handlePhishingHit(phishingEval, pinConfig, profileContext);
         return;
       }
     }
 
     if (ENABLE_CYBER){
       releaseInteractionShield();
-      setupPhishObserver(cfg, pinConfig);
+      setupPhishObserver(cfg, pinConfig, profileContext);
     }
 
     // No page-level block: still protect by masking on-screen images/videos

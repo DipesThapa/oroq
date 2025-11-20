@@ -15,19 +15,189 @@
     <span id="statusBadge" class="status-badge">Active</span>
   </header>
 
-  <div class="section-switcher">
-    <label class="section-switcher__label" for="sectionSelect">View</label>
-    <select id="sectionSelect" class="section-switcher__select">
-      <option value="cardProtection">Protection</option>
-      <option value="cardProfiles">Profiles</option>
-      <option value="cardAllowlist">Allowlist</option>
-      <option value="cardBlocklist">Custom blocklist</option>
-      <option value="cardOverrides">Override log</option>
-      <option value="cardReports">Safeguarding digest</option>
-    </select>
+  <div class="parent-toggle">
+    <button id="parentModeBtn" class="button button--secondary parent-toggle__button" type="button">Parent mode</button>
   </div>
 
   <main>
+    <section class="card" id="cardParent" hidden>
+      <h2 class="card__title">Parent mode</h2>
+      <p class="card__subtitle">Quick access to safeguarding controls for guardians and DSLs.</p>
+      <div class="parent-panel">
+        <div class="parent-panel__row" id="parentProfilesRow">
+          <div>
+            <h3 class="parent-panel__title">Profiles</h3>
+            <p id="parentProfileStatus" class="parent-panel__status">Loading…</p>
+          </div>
+            <button id="parentProfilesBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
+        <div class="parent-panel__row" id="parentOverrideRow">
+          <div>
+            <h3 class="parent-panel__title">Override log</h3>
+            <p id="parentOverrideStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentOverrideBtn" class="button button--secondary" type="button">Review</button>
+        </div>
+        <div class="parent-panel__row" id="parentAllowlistRow">
+          <div>
+            <h3 class="parent-panel__title">Allowlist</h3>
+            <p id="parentAllowlistStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentAllowlistBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
+        <div class="parent-panel__row" id="parentBlocklistRow">
+          <div>
+            <h3 class="parent-panel__title">Custom blocklist</h3>
+            <p id="parentBlocklistStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentBlocklistBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
+        <div class="parent-panel__row" id="parentAlertsRow">
+          <div>
+            <h3 class="parent-panel__title">Override alerts</h3>
+            <p id="parentAlertsStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentAlertsBtn" class="button button--secondary" type="button">Configure</button>
+        </div>
+        <div class="parent-panel__row" id="parentTamperRow">
+          <div>
+            <h3 class="parent-panel__title">Tamper alerts</h3>
+            <p id="parentTamperStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentTamperBtn" class="button button--secondary" type="button">Configure</button>
+        </div>
+        <div class="parent-panel__row" id="parentDigestRow">
+          <div>
+            <h3 class="parent-panel__title">Safeguarding digest</h3>
+            <p id="parentDigestStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentDigestBtn" class="button button--secondary" type="button">Download</button>
+        </div>
+        <div class="parent-panel__row" id="parentApproverRow">
+          <div>
+            <h3 class="parent-panel__title">Approver prompt</h3>
+            <p id="parentApproverStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentApproverBtn" class="button button--secondary" type="button">Open</button>
+        </div>
+      </div>
+      <div class="parent-section" id="parentProfilesSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Profiles</h3>
+            <p class="parent-section__status">Apply age-based presets. This overwrites current allowlists and blocklists.</p>
+          </div>
+        </div>
+        <div id="profileList" class="profile-list"></div>
+        <small id="profileMessage" class="message">Select a profile to preview recommended settings.</small>
+
+        <div id="profileDetails" class="profile-details" hidden>
+          <p id="profileDescription" class="profile-details__desc"></p>
+          <div id="profileSummary" class="profile-summary"></div>
+        </div>
+
+        <div class="actions actions--wrap">
+          <button id="profileApply" class="button button--primary" type="button" disabled>Apply profile</button>
+          <button id="profileReset" class="button button--link actions__end" type="button">Clear selection</button>
+        </div>
+      </div>
+      <div class="parent-section" id="parentOverrides" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Override log</h3>
+            <p class="parent-section__status">Reasons for manual overrides stay on this device for safeguarding reviews.</p>
+          </div>
+        </div>
+        <ul id="overrideList" class="log-list"></ul>
+        <small id="overrideMessage" class="message">No overrides recorded yet.</small>
+        <div class="actions actions--wrap">
+          <button id="overrideExport" class="button button--secondary" type="button">Download log</button>
+          <button id="overrideClear" class="button button--link actions__end" type="button">Clear log</button>
+        </div>
+      </div>
+      <div class="parent-section" id="parentAllowlistSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Allowlist</h3>
+            <p class="parent-section__status">Bypass filtering for trusted domains (e.g. intranet portals).</p>
+          </div>
+        </div>
+        <div class="field">
+          <input id="allowHost" type="text" placeholder="example.com">
+          <button id="addAllow" class="button button--primary" type="button">Add</button>
+        </div>
+        <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
+        <ul id="allowList" class="pill-list"></ul>
+        <div class="actions actions--wrap">
+          <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
+          <button id="allowExport" class="button button--secondary" type="button">Download</button>
+          <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
+        </div>
+        <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
+      </div>
+      <div class="parent-section" id="parentBlocklistSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Custom blocklist</h3>
+            <p class="parent-section__status">Import policy domains that should always be blocked.</p>
+          </div>
+        </div>
+        <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
+        <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
+        <div class="actions actions--wrap">
+          <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
+          <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
+          <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
+          <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
+          <span id="blockCount" class="badge">0 domains</span>
+        </div>
+        <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+      </div>
+      <div class="parent-section" id="parentAlertsSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Override alerts</h3>
+            <p class="parent-section__status">Send webhooks when PIN overrides or tamper events occur.</p>
+          </div>
+        </div>
+        <div class="alert-config">
+          <label class="toggle">
+            <input id="alertEnabled" type="checkbox">
+            <span>
+              <span class="toggle__label">Send override alerts</span>
+              <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
+            </span>
+          </label>
+          <div id="alertForm" class="alert-form">
+            <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
+            <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
+          </div>
+          <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
+          <label class="toggle">
+            <input id="tamperAlertEnabled" type="checkbox">
+            <span>
+              <span class="toggle__label">Tamper alerts</span>
+              <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
+            </span>
+          </label>
+          <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
+        </div>
+        <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
+      </div>
+      <div class="parent-section" id="parentDigestSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Safeguarding digest</h3>
+            <p class="parent-section__status">Generate a CSV summary for safeguarding meetings or audit trails.</p>
+          </div>
+        </div>
+        <div class="actions actions--wrap">
+          <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
+        </div>
+        <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
+      </div>
+    </section>
+
     <section class="card" id="cardProtection">
       <h2 class="card__title">Protection</h2>
       <p class="card__subtitle">Control network filtering and visual safeguards for every site.</p>
@@ -89,102 +259,90 @@
       </div>
     </section>
 
-    <section class="card" id="cardProfiles">
-      <h2 class="card__title">Profiles</h2>
-      <p class="card__subtitle">Apply age-based presets. This overwrites current allowlists and blocklists.</p>
-
-      <div id="profileList" class="profile-list"></div>
-      <small id="profileMessage" class="message">Select a profile to preview recommended settings.</small>
-
-      <div id="profileDetails" class="profile-details" hidden>
-        <p id="profileDescription" class="profile-details__desc"></p>
-        <div id="profileSummary" class="profile-summary"></div>
-      </div>
-
-      <div class="actions actions--wrap">
-        <button id="profileApply" class="button button--primary" type="button" disabled>Apply profile</button>
-        <button id="profileReset" class="button button--link actions__end" type="button">Clear selection</button>
-      </div>
-    </section>
-
-    <section class="card" id="cardAllowlist">
-      <h2 class="card__title">Allowlist</h2>
-      <p class="card__subtitle">Bypass filtering for trusted domains (e.g. intranet portals).</p>
-
-      <div class="field">
-        <input id="allowHost" type="text" placeholder="example.com">
-        <button id="addAllow" class="button button--primary" type="button">Add</button>
-      </div>
-      <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
-      <ul id="allowList" class="pill-list"></ul>
-      <div class="actions actions--wrap">
-        <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
-        <button id="allowExport" class="button button--secondary" type="button">Download</button>
-        <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
-      </div>
-      <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
-    </section>
-
-    <section class="card" id="cardBlocklist">
-      <h2 class="card__title">Custom blocklist</h2>
-      <p class="card__subtitle">Import policy domains that should always be blocked.</p>
-
-      <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
-      <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
-      <div class="actions actions--wrap">
-        <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
-        <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
-        <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
-        <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
-        <span id="blockCount" class="badge">0 domains</span>
-      </div>
-      <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
-    </section>
-
-    <section class="card" id="cardOverrides">
-      <h2 class="card__title">Override log</h2>
-      <p class="card__subtitle">Reasons for manual overrides stay on this device for safeguarding reviews.</p>
-      <ul id="overrideList" class="log-list"></ul>
-      <small id="overrideMessage" class="message">No overrides recorded yet.</small>
-      <div class="actions actions--wrap">
-        <button id="overrideExport" class="button button--secondary" type="button">Download log</button>
-        <button id="overrideClear" class="button button--link actions__end" type="button">Clear log</button>
-      </div>
-      <div class="alert-config">
-        <label class="toggle">
-          <input id="alertEnabled" type="checkbox">
-          <span>
-            <span class="toggle__label">Send override alerts</span>
-            <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
-          </span>
-        </label>
-        <div id="alertForm" class="alert-form">
-          <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
-          <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
+      <div class="parent-section" id="parentAllowlistSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Allowlist</h3>
+            <p class="parent-section__status">Bypass filtering for trusted domains (e.g. intranet portals).</p>
+          </div>
         </div>
-        <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
-        <label class="toggle">
-          <input id="tamperAlertEnabled" type="checkbox">
-          <span>
-            <span class="toggle__label">Tamper alerts</span>
-            <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
-          </span>
-        </label>
-        <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
+        <div class="field">
+          <input id="allowHost" type="text" placeholder="example.com">
+          <button id="addAllow" class="button button--primary" type="button">Add</button>
+        </div>
+        <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
+        <ul id="allowList" class="pill-list"></ul>
+        <div class="actions actions--wrap">
+          <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
+          <button id="allowExport" class="button button--secondary" type="button">Download</button>
+          <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
+        </div>
+        <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
       </div>
-      <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
+      <div class="parent-section" id="parentBlocklistSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Custom blocklist</h3>
+            <p class="parent-section__status">Import policy domains that should always be blocked.</p>
+          </div>
+        </div>
+        <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
+        <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
+        <div class="actions actions--wrap">
+          <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
+          <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
+          <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
+          <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
+          <span id="blockCount" class="badge">0 domains</span>
+        </div>
+        <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+      </div>
+      <div class="parent-section" id="parentDigestSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Safeguarding digest</h3>
+            <p class="parent-section__status">Generate a CSV summary for safeguarding meetings or audit trails.</p>
+          </div>
+        </div>
+        <div class="actions actions--wrap">
+          <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
+        </div>
+        <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
+      </div>
+      <div class="parent-section" id="parentAlertsSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Override alerts</h3>
+            <p class="parent-section__status">Send webhooks when PIN overrides or tamper events occur.</p>
+          </div>
+        </div>
+        <div class="alert-config">
+          <label class="toggle">
+            <input id="alertEnabled" type="checkbox">
+            <span>
+              <span class="toggle__label">Send override alerts</span>
+              <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
+            </span>
+          </label>
+          <div id="alertForm" class="alert-form">
+            <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
+            <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
+          </div>
+          <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
+          <label class="toggle">
+            <input id="tamperAlertEnabled" type="checkbox">
+            <span>
+              <span class="toggle__label">Tamper alerts</span>
+              <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
+            </span>
+          </label>
+          <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
+        </div>
+        <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
+      </div>
     </section>
 
-    <section class="card" id="cardReports">
-      <h2 class="card__title">Safeguarding digest</h2>
-      <p class="card__subtitle">Generate a CSV summary for safeguarding meetings or audit trails.</p>
-      <div class="actions actions--wrap">
-        <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
-      </div>
-      <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
-    </section>
-
-    <section class="card" id="cardApprover">
+    <section class="card" id="cardApprover" hidden>
       <h2 class="card__title">Override approvers</h2>
       <p class="card__subtitle">Collect initials/names when PIN overrides happen for audit trails.</p>
       <label class="toggle">

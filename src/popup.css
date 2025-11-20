@@ -94,36 +94,6 @@ a:hover {
   color: #991b1b;
 }
 
-.section-switcher {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px 0;
-}
-
-.section-switcher__label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.section-switcher__select {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text-primary);
-  background: #fff;
-  cursor: pointer;
-}
-
-.section-switcher__select:focus {
-  outline: none;
-  border-color: rgba(37, 99, 235, 0.4);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
-}
-
 main {
   padding: 16px;
 }
@@ -151,6 +121,67 @@ main {
   margin: 4px 0 12px;
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.parent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.parent-panel__row {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface-soft);
+}
+
+.parent-panel__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.parent-panel__status {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.parent-panel__row .button {
+  flex-shrink: 0;
+}
+
+.parent-section {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.parent-section__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.parent-section__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.parent-section__status {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .toggle {
@@ -746,4 +777,18 @@ textarea {
   position: relative;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.45), 0 8px 24px rgba(15, 23, 42, 0.18);
   transition: box-shadow 0.2s ease;
+}
+.parent-toggle {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.parent-toggle__button {
+  width: 100%;
+}
+
+.parent-toggle__button.parent-toggle__button--active {
+  background: var(--brand-green);
+  color: #fff;
 }

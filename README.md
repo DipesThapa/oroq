@@ -9,7 +9,8 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 - **On-page protection**: optional Aggressive mode to blur/pause images/videos on-device
 - **Visual detection**: image heuristics sample pixels to escalate or block graphic imagery even without text
 - **Domain blocklist**: packaged defaults + user-importable list; allowlist overrides
-- **Age-based profiles**: one-click presets for EYFS through post-16, tuned for UK safeguarding
+- **Sensitivity profiles**: Kids (7-12), Teens (13-16), College, and Work presets tuned for safeguarding and productivity goals
+- **Explain why this was blocked**: interstitial gives kid-friendly reasoning, safe suggestions, and rotating AI literacy micro-lessons
 - **SafeSearch enforcement**: redirects Google/Bing to strict modes (DNR)
 - **Control centre**: refreshed popup with live status badge, quick toggles, and policy management in one place
 - **First-run tour**: onboarding highlights key controls and policy workflows for new admins

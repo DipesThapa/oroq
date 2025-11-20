@@ -46,7 +46,6 @@ const overrideListEl = document.getElementById('overrideList');
 const overrideMessageEl = document.getElementById('overrideMessage');
 const overrideExportBtn = document.getElementById('overrideExport');
 const overrideClearBtn = document.getElementById('overrideClear');
-const sectionSelect = document.getElementById('sectionSelect');
 const digestDownloadBtn = document.getElementById('digestDownload');
 const digestMessageEl = document.getElementById('digestMessage');
 const alertEnabledEl = document.getElementById('alertEnabled');
@@ -59,7 +58,31 @@ const tamperAlertEnabledEl = document.getElementById('tamperAlertEnabled');
 const tamperMessageEl = document.getElementById('tamperMessage');
 const approverPromptEnabledEl = document.getElementById('approverPromptEnabled');
 const approverMessageEl = document.getElementById('approverMessage');
-const SECTION_IDS = ['cardProtection', 'cardProfiles', 'cardAllowlist', 'cardBlocklist', 'cardOverrides', 'cardReports', 'cardApprover'];
+const parentProfileStatusEl = document.getElementById('parentProfileStatus');
+const parentAllowlistStatusEl = document.getElementById('parentAllowlistStatus');
+const parentBlocklistStatusEl = document.getElementById('parentBlocklistStatus');
+const parentOverrideStatusEl = document.getElementById('parentOverrideStatus');
+const parentAlertsStatusEl = document.getElementById('parentAlertsStatus');
+const parentTamperStatusEl = document.getElementById('parentTamperStatus');
+const parentApproverStatusEl = document.getElementById('parentApproverStatus');
+const parentDigestStatusEl = document.getElementById('parentDigestStatus');
+const parentModeBtn = document.getElementById('parentModeBtn');
+const parentProfilesBtn = document.getElementById('parentProfilesBtn');
+const parentAllowlistBtn = document.getElementById('parentAllowlistBtn');
+const parentBlocklistBtn = document.getElementById('parentBlocklistBtn');
+const parentOverrideBtn = document.getElementById('parentOverrideBtn');
+const parentAlertsBtn = document.getElementById('parentAlertsBtn');
+const parentTamperBtn = document.getElementById('parentTamperBtn');
+const parentDigestBtn = document.getElementById('parentDigestBtn');
+const parentApproverBtn = document.getElementById('parentApproverBtn');
+const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
+const parentOverrideSectionEl = document.getElementById('parentOverrides');
+const parentProfilesSectionEl = document.getElementById('parentProfilesSection');
+const parentAllowlistSectionEl = document.getElementById('parentAllowlistSection');
+const parentBlocklistSectionEl = document.getElementById('parentBlocklistSection');
+const parentDigestSectionEl = document.getElementById('parentDigestSection');
+const parentCardEl = document.getElementById('cardParent');
+const approverCardEl = document.getElementById('cardApprover');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -69,12 +92,12 @@ const TOUR_STEPS = [
     body: 'Use the master toggle and aggressive mode to decide how Safeguard protects each site.'
   },
   {
-    target: document.getElementById('cardAllowlist'),
+    target: document.getElementById('parentAllowlistRow'),
     title: 'Allow trusted domains',
-    body: 'Add internal portals or education sites to the allowlist so they bypass filtering.'
+    body: 'Use the parent allowlist control to add intranet or learning portals that should bypass filtering.'
   },
   {
-    target: document.getElementById('cardBlocklist'),
+    target: document.getElementById('parentBlocklistRow'),
     title: 'Import policy blocklists',
     body: 'Paste domains or import exports from your policy team to block them across every user.'
   }
@@ -101,6 +124,24 @@ let approverPromptEnabled = false;
 let pinSetupPrompted = false;
 let tamperAlertEnabled = false;
 let profileDependentControlsLocked = true;
+if (parentAlertsSectionEl){
+  parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
+}
+if (parentOverrideSectionEl){
+  parentOverrideSectionEl.dataset.expanded = parentOverrideSectionEl.dataset.expanded || '0';
+}
+if (parentProfilesSectionEl){
+  parentProfilesSectionEl.dataset.expanded = parentProfilesSectionEl.dataset.expanded || '0';
+}
+if (parentAllowlistSectionEl){
+  parentAllowlistSectionEl.dataset.expanded = parentAllowlistSectionEl.dataset.expanded || '0';
+}
+if (parentBlocklistSectionEl){
+  parentBlocklistSectionEl.dataset.expanded = parentBlocklistSectionEl.dataset.expanded || '0';
+}
+if (parentDigestSectionEl){
+  parentDigestSectionEl.dataset.expanded = parentDigestSectionEl.dataset.expanded || '0';
+}
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
@@ -185,7 +226,15 @@ function updateAlertAvailability(){
   const disable = profileDependentControlsLocked;
   if (alertConfigEl) alertConfigEl.hidden = disable;
   if (alertPlaceholderEl) alertPlaceholderEl.hidden = !disable;
+  if (parentAlertsSectionEl){
+    if (disable){
+      parentAlertsSectionEl.hidden = true;
+    } else if (parentAlertsSectionEl.dataset.expanded === '1'){
+      parentAlertsSectionEl.hidden = false;
+    }
+  }
   if (disable){
+    updateParentSummaries();
     return;
   }
   if (alertEnabledEl){
@@ -204,6 +253,7 @@ function updateAlertAvailability(){
   }
   setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts stay on-device until you enable them.', overrideAlertsEnabled ? 'success' : 'muted');
   setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+  updateParentSummaries();
 }
 
 function setApproverMessage(text, tone = 'muted'){
@@ -212,31 +262,155 @@ function setApproverMessage(text, tone = 'muted'){
   approverMessageEl.classList.remove('message--success', 'message--error');
   if (tone === 'success') approverMessageEl.classList.add('message--success');
   else if (tone === 'error') approverMessageEl.classList.add('message--error');
+  updateParentSummaries();
 }
 
-
-function showSection(sectionId){
-  SECTION_IDS.forEach((id)=>{
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === sectionId){
-      el.removeAttribute('hidden');
+function updateParentSummaries(){
+  if (parentProfileStatusEl){
+    const appliedProfile = appliedProfileId ? findProfile(appliedProfileId) : null;
+    if (appliedProfile){
+      parentProfileStatusEl.textContent = `${appliedProfile.label || appliedProfile.id} applied`;
     } else {
-      el.setAttribute('hidden', 'hidden');
+      parentProfileStatusEl.textContent = 'Custom settings (no profile applied)';
+    }
+  }
+  if (parentAlertsStatusEl){
+    let text = 'Disabled';
+    if (profileDependentControlsLocked){
+      text = 'Locked (apply profile first)';
+    } else if (overrideAlertsEnabled){
+      text = overrideAlertWebhook ? 'Enabled (webhook saved)' : 'Enabled (add webhook)';
+    }
+    parentAlertsStatusEl.textContent = text;
+  }
+  if (parentTamperStatusEl){
+    const locked = profileDependentControlsLocked;
+    parentTamperStatusEl.textContent = locked ? 'Locked (apply profile first)' : (tamperAlertEnabled ? 'Enabled' : 'Disabled');
+  }
+  if (parentApproverStatusEl){
+    parentApproverStatusEl.textContent = approverPromptEnabled ? 'Names required for overrides' : 'Prompt disabled';
+  }
+  if (parentOverrideStatusEl){
+    const count = Array.isArray(currentOverrideLog) ? currentOverrideLog.length : 0;
+    parentOverrideStatusEl.textContent = count ? `${count} recorded` : 'No overrides recorded yet';
+  }
+  if (parentAllowlistStatusEl){
+    const count = Array.isArray(currentAllowlist) ? currentAllowlist.length : 0;
+    parentAllowlistStatusEl.textContent = count ? `${count} domain${count === 1 ? '' : 's'}` : 'No domains yet';
+  }
+  if (parentBlocklistStatusEl){
+    const count = Array.isArray(currentBlocklist) ? currentBlocklist.length : 0;
+    parentBlocklistStatusEl.textContent = count ? `${count} domain${count === 1 ? '' : 's'}` : 'No domains yet';
+  }
+  if (parentDigestStatusEl){
+    parentDigestStatusEl.textContent = 'Download the weekly CSV summary';
+  }
+}
+
+function collapseParentSections(activeKey){
+  const keys = Array.isArray(activeKey) ? activeKey : [activeKey];
+  const set = new Set(keys.filter(Boolean));
+  const sections = [
+    ['profiles', parentProfilesSectionEl],
+    ['override', parentOverrideSectionEl],
+    ['allowlist', parentAllowlistSectionEl],
+    ['blocklist', parentBlocklistSectionEl],
+    ['alerts', parentAlertsSectionEl],
+    ['digest', parentDigestSectionEl]
+  ];
+  sections.forEach(([key, el])=>{
+    if (!el) return;
+    if (set.has(key)) return;
+    el.hidden = true;
+    el.dataset.expanded = '0';
+  });
+}
+
+function expandParentProfilesSection(){
+  if (!parentProfilesSectionEl) return;
+  collapseParentSections('profiles');
+  parentProfilesSectionEl.dataset.expanded = '1';
+  parentProfilesSectionEl.hidden = false;
+}
+
+function expandParentOverrideSection(){
+  if (!parentOverrideSectionEl) return;
+  collapseParentSections('override');
+  parentOverrideSectionEl.dataset.expanded = '1';
+  parentOverrideSectionEl.hidden = false;
+}
+
+function expandParentAllowlistSection(){
+  if (!parentAllowlistSectionEl) return;
+  collapseParentSections('allowlist');
+  parentAllowlistSectionEl.dataset.expanded = '1';
+  parentAllowlistSectionEl.hidden = false;
+}
+
+function expandParentBlocklistSection(){
+  if (!parentBlocklistSectionEl) return;
+  collapseParentSections('blocklist');
+  parentBlocklistSectionEl.dataset.expanded = '1';
+  parentBlocklistSectionEl.hidden = false;
+}
+
+function expandParentAlertsSection(){
+  if (!parentAlertsSectionEl) return;
+  collapseParentSections('alerts');
+  parentAlertsSectionEl.dataset.expanded = '1';
+  if (!profileDependentControlsLocked){
+    parentAlertsSectionEl.hidden = false;
+  }
+}
+
+function expandParentDigestSection(){
+  if (!parentDigestSectionEl) return;
+  collapseParentSections('digest');
+  parentDigestSectionEl.dataset.expanded = '1';
+  parentDigestSectionEl.hidden = false;
+}
+
+function scrollToCard(el){
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function ensureParentCardVisible(){
+  if (!parentCardEl) return;
+  if (parentCardEl.hidden){
+    parentCardEl.hidden = false;
+    if (parentModeBtn) parentModeBtn.classList.add('parent-toggle__button--active');
+  }
+  const protectionCard = document.getElementById('cardProtection');
+  if (protectionCard) protectionCard.hidden = true;
+}
+
+function hideParentCard(){
+  if (!parentCardEl) return;
+  parentCardEl.hidden = true;
+  const protectionCard = document.getElementById('cardProtection');
+  if (protectionCard) protectionCard.hidden = false;
+  if (parentModeBtn) parentModeBtn.classList.remove('parent-toggle__button--active');
+}
+
+function ensureApproverCardVisible(){
+  if (!approverCardEl) return;
+  if (approverCardEl.hidden){
+    approverCardEl.hidden = false;
+  }
+}
+
+if (parentModeBtn){
+  parentModeBtn.addEventListener('click', ()=>{
+    if (!parentCardEl) return;
+    const willShow = parentCardEl.hidden;
+    if (willShow){
+      ensureParentCardVisible();
+      scrollToCard(parentCardEl);
+    } else {
+      hideParentCard();
     }
   });
-}
-
-if (sectionSelect){
-  sectionSelect.addEventListener('change', ()=>{
-    showSection(sectionSelect.value);
-  });
-  if (!sectionSelect.value){
-    sectionSelect.value = SECTION_IDS[0];
-  }
-  showSection(sectionSelect.value);
-} else {
-  showSection(SECTION_IDS[0]);
 }
 
 function bufferToBase64(buffer){
@@ -474,16 +648,19 @@ function render(list){
   clearAllow.disabled = !(list && list.length);
   updateMetrics();
   updateSiteToggle();
+  updateParentSummaries();
 }
 
 function renderOverrideLog(list){
   currentOverrideLog = Array.isArray(list) ? [...list] : [];
   if (!overrideListEl){
+    updateParentSummaries();
     return;
   }
   overrideListEl.innerHTML = '';
   if (!currentOverrideLog.length){
     setOverrideMessage('No overrides recorded yet.', 'muted');
+    updateParentSummaries();
     return;
   }
   const reversed = [...currentOverrideLog].reverse();
@@ -584,6 +761,7 @@ function renderOverrideLog(list){
     overrideListEl.appendChild(li);
   });
   setOverrideMessage(`Logged ${currentOverrideLog.length} override${currentOverrideLog.length === 1 ? '' : 's'}.`, 'muted');
+  updateParentSummaries();
 }
 
 function formatTimestamp(value){
@@ -689,6 +867,7 @@ function clearProfileSelection(){
   renderProfileOptions();
   setProfileMessage('Select a profile to preview recommended settings.', 'muted');
   updateAlertAvailability();
+  updateParentSummaries();
 }
 
 function markProfileCustomised(){
@@ -701,6 +880,7 @@ function markProfileCustomised(){
   renderProfileOptions();
   setProfileMessage(`"${profile.label || profile.id}" applied with custom adjustments.`, 'muted');
   updateAlertAvailability();
+  updateParentSummaries();
 }
 
 async function ensureProfilePinAuthorization(actionLabel){
@@ -800,11 +980,15 @@ async function applySelectedProfile(){
   }
   const allowDomains = sanitizeDomains(profile.allowlist || []);
   const blockDomains = sanitizeDomains(profile.blocklist || []);
+  const safeSuggestions = sanitizeSuggestions(profile.safeSuggestions);
   await new Promise((resolve)=>chrome.storage.sync.set({
     allowlist: allowDomains,
     sensitivity: profile.sensitivity,
     aggressive: Boolean(profile.aggressive),
-    selectedProfileId: profile.id
+    selectedProfileId: profile.id,
+    profileTone: profile.tone || null,
+    profileLabel: profile.label || profile.id,
+    profileSafeSuggestions: safeSuggestions
   }, resolve));
   render(allowDomains);
   setAllowMessage('Allowlisted domains updated from profile.', 'success');
@@ -830,6 +1014,7 @@ async function applySelectedProfile(){
   setProfileMessage(`Applied profile "${profile.label || profile.id}".`, 'success');
   updateProfileSummary(profile);
   updateAlertAvailability();
+  updateParentSummaries();
   setTimeout(()=>{
     const applied = findProfile(appliedProfileId);
     if (applied){
@@ -844,6 +1029,9 @@ chrome.storage.sync.get({
   aggressive:false,
   sensitivity:60,
   selectedProfileId: null,
+  profileTone: null,
+  profileLabel: null,
+  profileSafeSuggestions: [],
   [TOUR_KEY]: false
 }, (cfg)=>{
   enabledEl.checked = cfg.enabled;
@@ -863,6 +1051,7 @@ chrome.storage.sync.get({
   }
   renderProfileOptions();
   updateAlertAvailability();
+  updateParentSummaries();
 });
 chrome.storage.local.get({
   userBlocklist: [],
@@ -918,6 +1107,7 @@ chrome.storage.local.get({
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
   updateAlertAvailability();
+  updateParentSummaries();
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -1102,6 +1292,17 @@ function sanitizeDomains(domains){
   return out;
 }
 
+function sanitizeSuggestions(list){
+  const entries = [];
+  (Array.isArray(list) ? list : []).forEach((item)=>{
+    const text = String(item || '').trim();
+    if (!text) return;
+    if (entries.length >= 3) return;
+    entries.push(text);
+  });
+  return entries;
+}
+
 function parseDomainJson(text, key){
   try {
     const data = JSON.parse(text);
@@ -1187,6 +1388,7 @@ importBlocklist.addEventListener('click', ()=>{
     setTimeout(()=>{ setBlockMessage('Paste or import domains to replace the current list.'); }, 2500);
     updateMetrics();
     markProfileCustomised();
+    updateParentSummaries();
   });
 });
 
@@ -1197,6 +1399,7 @@ clearBlocklist.addEventListener('click', ()=>{
     setBlockMessage('Blocklist cleared.', 'muted');
     updateMetrics();
     markProfileCustomised();
+    updateParentSummaries();
   });
 });
 
@@ -1328,6 +1531,7 @@ if (blockUpload && blockFileInput){
         setBlockMessage(`Uploaded ${domains.length} domain${domains.length===1?'':'s'} from file.`, 'success');
         updateMetrics();
         markProfileCustomised();
+        updateParentSummaries();
       });
     };
     reader.onerror = ()=>{
@@ -1363,6 +1567,7 @@ if (alertSaveBtn){
     overrideAlertWebhook = url;
     chrome.storage.local.set({ overrideAlertWebhook: overrideAlertWebhook }, ()=>{
       setAlertMessage('Webhook saved.', 'success');
+      updateParentSummaries();
     });
   });
 }
@@ -1392,10 +1597,89 @@ if (approverPromptEnabledEl){
     }
     approverPromptEnabled = wantsEnable;
     chrome.storage.local.set({ approverPromptEnabled }, ()=>{
-      setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Override approver prompt disabled.', approverPromptEnabled ? 'success' : 'muted');
+      setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
     });
   });
 }
+
+if (parentOverrideBtn){
+  parentOverrideBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentOverrideSection();
+    const overridesCard = document.getElementById('parentOverrides');
+    if (overridesCard) overridesCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentAllowlistBtn){
+  parentAllowlistBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentAllowlistSection();
+    const section = document.getElementById('parentAllowlistSection');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentBlocklistBtn){
+  parentBlocklistBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentBlocklistSection();
+    const section = document.getElementById('parentBlocklistSection');
+    if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentProfilesBtn){
+  parentProfilesBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentProfilesSection();
+    const profilesSection = document.getElementById('parentProfilesSection');
+    if (profilesSection) profilesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentAlertsBtn){
+  parentAlertsBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentAlertsSection();
+    const alertsSection = document.getElementById('parentAlertsSection');
+    if (alertsSection) alertsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentTamperBtn){
+  parentTamperBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentAlertsSection();
+    const alertsSection = document.getElementById('parentAlertsSection');
+    if (alertsSection) alertsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentDigestBtn){
+  parentDigestBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentDigestSection();
+    const digestSection = document.getElementById('parentDigestSection');
+    if (digestSection) digestSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+if (parentApproverBtn){
+  parentApproverBtn.addEventListener('click', ()=>{
+    ensureApproverCardVisible();
+    scrollToCard(approverCardEl);
+  });
+}
+
+updateParentSummaries();
 
 if (tourNext){
   tourNext.addEventListener('click', ()=>{
@@ -1475,6 +1759,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.overrideAlertWebhook){
     overrideAlertWebhook = typeof changes.overrideAlertWebhook.newValue === 'string' ? changes.overrideAlertWebhook.newValue : '';
     if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
+    updateParentSummaries();
   }
   if (area === 'local' && changes.tamperAlertEnabled){
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
@@ -1513,7 +1798,16 @@ if (profileApplyBtn){
 if (profileResetBtn){
   profileResetBtn.addEventListener('click', async ()=>{
     if (!(await ensureProfilePinAuthorization('reset the profile selection'))) return;
-    clearProfileSelection();
+    appliedProfileId = null;
+    chrome.storage.sync.set({
+      selectedProfileId: null,
+      profileTone: null,
+      profileLabel: null,
+      profileSafeSuggestions: []
+    }, ()=>{
+      clearProfileSelection();
+      setProfileMessage('Profile selection cleared. Current settings stay as-is.', 'success');
+    });
   });
 }
 
@@ -1577,6 +1871,9 @@ if (digestDownloadBtn){
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       setDigestMessage('Digest downloaded.', 'success');
+      if (parentDigestStatusEl){
+        parentDigestStatusEl.textContent = 'Downloaded just now';
+      }
     } catch(_e){
       setDigestMessage('Failed to build digest.', 'error');
     }

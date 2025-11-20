@@ -1,42 +1,12 @@
 {
-  "version": 1,
+  "version": 2,
   "profiles": [
     {
-      "id": "eyfs",
-      "label": "EYFS (ages 3-5)",
-      "description": "Maximum filtering, aggressive mode on, block adult searches and risky domains.",
-      "sensitivity": 90,
-      "aggressive": true,
-      "allowlist": [],
-      "blocklist": [
-        "reddit.com",
-        "imgur.com",
-        "x.com",
-        "discord.com"
-      ],
-      "requirePin": true
-    },
-    {
-      "id": "ks1",
-      "label": "Key Stage 1 (ages 5-7)",
-      "description": "High sensitivity with aggressive mode enabled; social media blocked.",
-      "sensitivity": 80,
-      "aggressive": true,
-      "allowlist": [],
-      "blocklist": [
-        "reddit.com",
-        "imgur.com",
-        "x.com",
-        "discord.com",
-        "tiktok.com"
-      ],
-      "requirePin": true
-    },
-    {
-      "id": "ks2",
-      "label": "Key Stage 2 (ages 7-11)",
-      "description": "Balanced filtering; aggressive mode on; add trusted learning portals as needed.",
-      "sensitivity": 70,
+      "id": "kids",
+      "label": "Kids (ages 7-12)",
+      "description": "Strict homework mode for primary learners. Blocks social media, gaming, and streaming; aggressive blur stays on.",
+      "tone": "kids",
+      "sensitivity": 88,
       "aggressive": true,
       "allowlist": [
         "bbc.co.uk",
@@ -44,43 +14,96 @@
         "duolingo.com"
       ],
       "blocklist": [
-        "reddit.com",
-        "imgur.com",
+        "youtube.com",
         "tiktok.com",
-        "instagram.com"
+        "roblox.com",
+        "discord.com",
+        "reddit.com",
+        "x.com"
       ],
-      "requirePin": true
+      "requirePin": true,
+      "safeSuggestions": [
+        "BBC Bitesize",
+        "Nat Geo Kids",
+        "Duolingo"
+      ]
     },
     {
-      "id": "ks3",
-      "label": "Key Stage 3 (ages 11-14)",
-      "description": "Moderate sensitivity; aggressive mode optional; supports curriculum research.",
-      "sensitivity": 60,
+      "id": "teens",
+      "label": "Teens (ages 13-16)",
+      "description": "Balanced filtering for KS3/4. Allows curriculum research but blocks adult sites and high-distraction networks.",
+      "tone": "teens",
+      "sensitivity": 70,
       "aggressive": false,
       "allowlist": [
         "bbc.co.uk",
-        "theguardian.com/education"
+        "khanacademy.org",
+        "quizlet.com"
       ],
       "blocklist": [
-        "pornhub.com",
         "onlyfans.com",
+        "pornhub.com",
         "tiktok.com",
-        "snapchat.com"
+        "snapchat.com",
+        "discord.com"
       ],
-      "requirePin": true
+      "requirePin": true,
+      "safeSuggestions": [
+        "BBC Bitesize GCSE",
+        "Khan Academy",
+        "Quizlet"
+      ]
     },
     {
-      "id": "ks4",
-      "label": "Key Stage 4 & Post-16",
-      "description": "Standard sensitivity; aggressive mode optional; overrides still require PIN.",
-      "sensitivity": 50,
+      "id": "college",
+      "label": "College / Sixth Form",
+      "description": "Moderate safety with phishing protection; keeps adult, gambling, and streaming sites blocked while research stays open.",
+      "tone": "college",
+      "sensitivity": 60,
       "aggressive": false,
-      "allowlist": [],
-      "blocklist": [
-        "pornhub.com",
-        "onlyfans.com"
+      "allowlist": [
+        "scholar.google.com",
+        "gov.uk",
+        "futurelearn.com"
       ],
-      "requirePin": true
+      "blocklist": [
+        "onlyfans.com",
+        "pornhub.com",
+        "bet365.com",
+        "twitch.tv"
+      ],
+      "requirePin": true,
+      "safeSuggestions": [
+        "Google Scholar",
+        "FutureLearn",
+        "GOV.UK education"
+      ]
+    },
+    {
+      "id": "work",
+      "label": "Adult / Work Mode",
+      "description": "Productivity-first filtering: focuses on phishing protection, tracker blocking, and removing major distractions.",
+      "tone": "work",
+      "sensitivity": 55,
+      "aggressive": false,
+      "allowlist": [
+        "slack.com",
+        "notion.so",
+        "office.com"
+      ],
+      "blocklist": [
+        "tiktok.com",
+        "twitch.tv",
+        "discord.com",
+        "roblox.com",
+        "x.com"
+      ],
+      "requirePin": false,
+      "safeSuggestions": [
+        "Microsoft 365",
+        "Slack",
+        "Notion"
+      ]
     }
   ]
 }
