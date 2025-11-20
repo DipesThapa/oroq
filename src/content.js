@@ -189,6 +189,7 @@
   let interactionGuard = null;
   let phishObserver = null;
   let phishObserverTimer = null;
+  const visionCache = new Map(); // local-only image inference cache
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     if (message && message.type === 'sg-open-approver-prompt'){
@@ -455,16 +456,27 @@
   }
 
   function evaluateVisualSignals(){
-    const result = { score: 0, ratio: 0, sampled: 0 };
+    const result = { score: 0, ratio: 0, sampled: 0, aiDetections: [] };
     try {
       const imgs = Array.from(document.images || []).filter((img)=>img && img.complete && img.naturalWidth && img.naturalHeight);
       if (!imgs.length) return result;
       let maxRatio = 0;
       let processed = 0;
+      const aiHits = {};
       for (const img of imgs){
         if (processed >= VISUAL_SAMPLE_LIMIT) break;
         const ratio = sampleImageSkinRatio(img);
         if (Number.isFinite(ratio) && ratio > maxRatio) maxRatio = ratio;
+        const vision = runLocalVisionScan(img);
+        if (vision && Array.isArray(vision.detections)){
+          vision.detections.forEach((det)=>{
+            if (!det || !det.label) return;
+            const key = det.label;
+            if (!aiHits[key] || (det.confidence || 0) > (aiHits[key].confidence || 0)){
+              aiHits[key] = det;
+            }
+          });
+        }
         processed += 1;
         if (maxRatio >= 0.6) break;
       }
@@ -473,6 +485,13 @@
       if (maxRatio >= 0.55) result.score = 9;
       else if (maxRatio >= 0.4) result.score = 6;
       else if (maxRatio >= 0.25) result.score = 3;
+
+      const aiList = Object.values(aiHits);
+      result.aiDetections = aiList;
+      if (aiList.length){
+        const aiScore = deriveAiScore(aiList);
+        result.score = Math.max(result.score, aiScore);
+      }
     } catch(_e){
       // ignore visual sampling failures; leave score at 0
     }
@@ -520,6 +539,133 @@
     } catch(_e){
       return 0;
     }
+  }
+
+  function runLocalVisionScan(img){
+    const key = img && (img.currentSrc || img.src || '');
+    if (key && visionCache.has(key)) return visionCache.get(key);
+    const features = sampleImageFeatures(img);
+    if (!features){
+      if (key) visionCache.set(key, null);
+      return null;
+    }
+    const detections = [];
+    const nsfwConfidence = clamp01((features.skinRatio - 0.22) / 0.35);
+    if (nsfwConfidence > 0.35){
+      detections.push({
+        label: 'nsfw',
+        confidence: nsfwConfidence,
+        meta: `Skin-tone density ${(features.skinRatio * 100).toFixed(0)}%`
+      });
+    }
+    const violenceConfidence = clamp01(((features.redRatio - 0.18) / 0.25) * (features.darkRatio > 0.25 ? 1 : 0.6));
+    if (violenceConfidence > 0.35){
+      detections.push({
+        label: 'violence',
+        confidence: violenceConfidence,
+        meta: `Red-heavy ${(features.redRatio * 100).toFixed(0)}%, dark ${(features.darkRatio * 100).toFixed(0)}%`
+      });
+    }
+    const weaponConfidence = clamp01(((features.edgeDensity - 0.12) / 0.18) * (features.grayRatio > 0.4 ? 1 : 0.6));
+    if (weaponConfidence > 0.35){
+      detections.push({
+        label: 'weapon',
+        confidence: weaponConfidence,
+        meta: `High-contrast edges ${(features.edgeDensity * 100).toFixed(0)}%`
+      });
+    }
+    const result = { detections, features };
+    if (key) visionCache.set(key, result);
+    return result;
+  }
+
+  function sampleImageFeatures(img){
+    try{
+      if (!img || !img.naturalWidth || !img.naturalHeight) return null;
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (w < 60 || h < 60) return null;
+      const maxSample = 140;
+      const scale = Math.min(1, maxSample / Math.max(w, h));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(w * scale));
+      canvas.height = Math.max(1, Math.round(h * scale));
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) return null;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let skin = 0;
+      let total = 0;
+      let redHeavy = 0;
+      let dark = 0;
+      let grayish = 0;
+      let edgeScore = 0;
+      const width = canvas.width;
+      const height = canvas.height;
+      for (let y = 0; y < height; y += 1){
+        for (let x = 0; x < width; x += 1){
+          const idx = (y * width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          const bright = (r + g + b) / 3;
+          if (isLikelySkin(r, g, b)) skin += 1;
+          if (r > g + 25 && r > b + 25) redHeavy += 1;
+          if (bright < 60) dark += 1;
+          const max = Math.max(r, g, b);
+          const min = Math.min(r, g, b);
+          if (max - min < 18) grayish += 1;
+          // crude edge magnitude using right/down neighbors
+          if (x < width - 1 && y < height - 1){
+            const idxRight = idx + 4;
+            const idxDown = idx + width * 4;
+            const dr = Math.abs(r - data[idxRight]);
+            const dg = Math.abs(g - data[idxRight + 1]);
+            const db = Math.abs(b - data[idxRight + 2]);
+            const dr2 = Math.abs(r - data[idxDown]);
+            const dg2 = Math.abs(g - data[idxDown + 1]);
+            const db2 = Math.abs(b - data[idxDown + 2]);
+            const mag = dr + dg + db + dr2 + dg2 + db2;
+            if (mag > 200) edgeScore += 1;
+          }
+          total += 1;
+        }
+      }
+      if (!total) return null;
+      return {
+        skinRatio: skin / total,
+        redRatio: redHeavy / total,
+        darkRatio: dark / total,
+        grayRatio: grayish / total,
+        edgeDensity: edgeScore / total
+      };
+    }catch(_e){
+      return null;
+    }
+  }
+
+  function clamp01(value){
+    if (!Number.isFinite(value)) return 0;
+    if (value < 0) return 0;
+    if (value > 1) return 1;
+    return value;
+  }
+
+  function deriveAiScore(detections){
+    if (!Array.isArray(detections) || !detections.length) return 0;
+    let score = 0;
+    detections.forEach((det)=>{
+      if (!det || !det.label) return;
+      const conf = clamp01(det.confidence || 0);
+      if (det.label === 'nsfw'){
+        score = Math.max(score, 5 + conf * 7); // up to 12
+      } else if (det.label === 'violence'){
+        score = Math.max(score, 4 + conf * 6); // up to ~10
+      } else if (det.label === 'weapon'){
+        score = Math.max(score, 4 + conf * 6);
+      }
+    });
+    return Math.min(12, score || 0);
   }
 
   function formatKeywordList(list, limit = 4){
@@ -727,6 +873,23 @@
         detail,
         weight: visualEval.score,
         meta
+      });
+    }
+    if (visualEval && Array.isArray(visualEval.aiDetections) && visualEval.aiDetections.length){
+      const labels = visualEval.aiDetections.map((d)=>d && d.label ? d.label : null).filter(Boolean);
+      const unique = Array.from(new Set(labels));
+      const detailParts = visualEval.aiDetections.map((d)=>{
+        if (!d || !d.label) return null;
+        const conf = Number.isFinite(d.confidence) ? `${Math.round(clamp01(d.confidence) * 100)}%` : '';
+        return `${d.label.toUpperCase()}${conf ? ` (${conf})` : ''}${d.meta ? ` — ${d.meta}` : ''}`;
+      }).filter(Boolean);
+      signals.push({
+        id: 'visual-ai',
+        icon: 'AI',
+        label: `On-device AI flagged: ${unique.join(', ')}`,
+        detail: detailParts.join('; '),
+        weight: Math.max(...visualEval.aiDetections.map((d)=>clamp01(d.confidence || 0) * 10 + 2)),
+        meta: ['Local-only scan, no images leave the browser']
       });
     }
     if (bodyEval){

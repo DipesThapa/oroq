@@ -2,12 +2,26 @@
 
 - Listing basics
   - Title: Safeguard (SafeBrowse AI)
-  - Short description: Privacy‑first web safety — blocklist, SafeSearch, simple heuristics.
-  - Full description: Features, permissions rationale, privacy statement, how to use.
+  - Short description: Privacy‑first web safety — blocklist, SafeSearch, simple heuristics; one-click Focus Mode for homework.
+  - Full description: Features, Focus Mode (Kid Homework Mode), AI captions/object detection (local-only mini model for NSFW/violence/weapons), permissions rationale, privacy statement, how to use.
+  - Store copy snippets:
+    - Line 1: “One-click homework Focus Mode; blocks social/gaming/streaming and leaves educational sites open.”
+    - Line 2: “Local-only AI scans catch NSFW/violence/weapons; privacy preserved.”
   - Category: Productivity or Family
+- Focus Mode (Kid Homework Mode)
+  - One-click toggle blocks social, gaming, streaming/video; only educational sites allowed during session.
+  - Session timer options: 30/45/60 minutes; countdown visible in popup and badge.
+  - Default allowlist: Wikipedia, Khan Academy, .edu/.org domains; user can extend allowlist.
+  - Optional PIN to end early; override prompt noted in UI.
+  - SafeSearch enforced while active.
+- AI captions/object detection (local-only)
+  - Lightweight model (ONNX Runtime Web or TFLite WASM) for NSFW/violence/weapon classes; no images leave device.
+  - Runs on-demand against thumbnails/screenshots; cached per-URL; throttled to limit battery/CPU.
+  - If risky: trigger interstitial, log signal for override review, and optionally show a short caption.
+  - Messaging: “On-device AI scan — no data leaves your browser.”
 - Assets
   - Icons (128/48/16) — already present under `assets/icons/`
-  - Screenshots (1280×800 or 640×400): popup, interstitial, allowlist management
+  - Screenshots (1280×800 or 640×400): popup, interstitial, allowlist management, Focus Mode toggle with timer countdown, interstitial showing “on-device AI scan” note
   - Optional promo video (YouTube)
 - Privacy & policy
   - Link `PRIVACY.md` (no data collection; storage for settings only)
@@ -21,6 +35,13 @@
   - Visit a blocklisted domain -> interstitial; test override
   - Google/Bing search -> verify SafeSearch params
   - Heuristic keywords -> verify interstitial
+  - Start Focus Mode for 30/45/60 min -> verify social/gaming/streaming blocked, edu allowlist works
+  - Focus timer survives browser restart/sleep; countdown/badge updates
+  - Attempt to end early -> prompt respects PIN setting; override restores normal rules
+  - Edit allowlist during Focus Mode -> rules update without ending session
+  - Multiple windows/tabs -> same session state; interstitial still appears on blocked domains
+  - Focus duration dropdown -> persists selection; 2-minute test works; badge/countdown reflect chosen duration
+  - AI scan: mixed content pages (cartoons vs. real images), small thumbnails, low-light images; confirm local inference blocks NSFW/violence/weapons and SafeSearch/DNR still apply
 - Release process
   - Tag `vX.Y.Z` -> GitHub Release artifact via workflow
   - Upload the same zip to Chrome Web Store for review

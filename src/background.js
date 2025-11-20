@@ -4,11 +4,164 @@ const HEARTBEAT_ALARM = 'sg-heartbeat';
 const HEARTBEAT_PERIOD_MIN = 2;
 const HEARTBEAT_THRESHOLD_MIN = 6;
 const HEARTBEAT_SNOOZE_MIN = 5;
+const FOCUS_ALARM = 'sg-focus-timer';
+
+const FOCUS_DEFAULT_STATE = {
+  active: false,
+  startedAt: 0,
+  endsAt: 0,
+  durationMinutes: 0,
+  pinProtected: false
+};
+const FOCUS_ALLOWED_DURATIONS = [30, 45, 60, 2]; // 2 minutes for quick testing
+const FOCUS_DEFAULT_ALLOWLIST = [
+  'wikipedia.org',
+  'khanacademy.org',
+  'britannica.com',
+  'pbs.org',
+  'scholastic.com',
+  'nationalgeographic.com',
+  'nasa.gov',
+  'noaa.gov',
+  'ed.gov',
+  'quizlet.com',
+  'classroom.google.com',
+  'docs.google.com',
+  'drive.google.com'
+];
+const FOCUS_ALLOW_REGEXES = [
+  '^https?://([a-z0-9-]+\\.)*[^/]*\\.edu(/|$)',
+  '^https?://([a-z0-9-]+\\.)*[^/]*\\.org(/|$)'
+];
+const FOCUS_BLOCK_DOMAINS = {
+  social: [
+    'facebook.com',
+    'instagram.com',
+    'tiktok.com',
+    'twitter.com',
+    'x.com',
+    'snapchat.com',
+    'reddit.com',
+    'discord.com',
+    'whatsapp.com',
+    'messenger.com'
+  ],
+  gaming: [
+    'roblox.com',
+    'steampowered.com',
+    'store.steampowered.com',
+    'epicgames.com',
+    'fortnite.com',
+    'minecraft.net',
+    'leagueoflegends.com',
+    'valorant.com'
+  ],
+  streaming: [
+    'youtube.com',
+    'youtu.be',
+    'netflix.com',
+    'hulu.com',
+    'twitch.tv',
+    'disneyplus.com',
+    'primevideo.com',
+    'max.com',
+    'hbomax.com',
+    'vimeo.com',
+    'spotify.com',
+    'pandora.com',
+    'soundcloud.com'
+  ]
+};
 
 function scheduleHeartbeat(){
   try {
     chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: HEARTBEAT_PERIOD_MIN });
   } catch(_e){}
+}
+
+function scheduleFocusAlarm(active){
+  if (active){
+    try {
+      chrome.alarms.create(FOCUS_ALARM, { periodInMinutes: 1 });
+    } catch(_e){}
+    return;
+  }
+  chrome.alarms.clear(FOCUS_ALARM);
+}
+
+function clampFocusDuration(value){
+  const minutes = Number(value);
+  if (FOCUS_ALLOWED_DURATIONS.includes(minutes)) return minutes;
+  return FOCUS_ALLOWED_DURATIONS[0];
+}
+
+async function getFocusState(){
+  const stored = await new Promise((resolve)=>chrome.storage.local.get({ focusMode: FOCUS_DEFAULT_STATE }, resolve));
+  const raw = stored.focusMode || {};
+  const merged = { ...FOCUS_DEFAULT_STATE, ...raw };
+  const now = Date.now();
+  const active = Boolean(merged.active) && Number(merged.endsAt) > now;
+  return {
+    ...merged,
+    active,
+    endsAt: active ? Number(merged.endsAt) : 0
+  };
+}
+
+async function startFocusSession(durationMinutes, options = {}){
+  const duration = clampFocusDuration(durationMinutes);
+  const now = Date.now();
+  const focusMode = {
+    active: true,
+    startedAt: now,
+    endsAt: now + duration * 60000,
+    durationMinutes: duration,
+    pinProtected: Boolean(options.pinProtected)
+  };
+  await chrome.storage.local.set({ focusMode });
+  scheduleFocusAlarm(true);
+  await updateBadge();
+  return focusMode;
+}
+
+async function stopFocusSession(){
+  const focusMode = { ...FOCUS_DEFAULT_STATE, endedAt: Date.now() };
+  await chrome.storage.local.set({ focusMode });
+  scheduleFocusAlarm(false);
+  await updateBadge();
+  return focusMode;
+}
+
+async function recoverFocusSession(){
+  const state = await getFocusState();
+  if (state.active){
+    if (state.endsAt <= Date.now()){
+      await stopFocusSession();
+      return;
+    }
+    scheduleFocusAlarm(true);
+  } else {
+    scheduleFocusAlarm(false);
+  }
+  await updateBadge();
+}
+
+async function handleFocusTick(){
+  try{
+    const state = await getFocusState();
+    if (!state.active){
+      scheduleFocusAlarm(false);
+      await updateBadge();
+      return;
+    }
+    if (state.endsAt <= Date.now()){
+      await stopFocusSession();
+      return;
+    }
+    await updateBadge();
+  } catch(err){
+    console.error('[Safeguard] Focus timer error', err);
+  }
 }
 
 
@@ -18,32 +171,46 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
       console.error('[Safeguard] Heartbeat error', err);
     });
   }
+  if (alarm && alarm.name === FOCUS_ALARM){
+    handleFocusTick();
+  }
 });
 
 chrome.runtime.onInstalled.addListener(()=>{
   console.log('Safeguard installed');
-  initBadge();
+  updateBadge();
   rebuildDynamicRules();
   scheduleHeartbeat();
+  recoverFocusSession();
 });
 
-function setBadge(enabled){
-  const text = enabled ? 'ON' : '';
-  try {
-    chrome.action.setBadgeText({ text });
-    if (enabled) chrome.action.setBadgeBackgroundColor({ color: '#16a34a' }); // green
-  } catch(_e) {}
+function formatFocusBadge(remainingMs){
+  const minutes = Math.max(0, Math.ceil(remainingMs / 60000));
+  if (minutes > 999) return 'F!';
+  return `F${minutes}`;
 }
 
-async function initBadge(){
-  const { enabled = true } = await new Promise(r => chrome.storage.sync.get({ enabled: true }, r));
-  setBadge(enabled);
+async function updateBadge(){
+  try {
+    const [{ enabled = true }, focus] = await Promise.all([
+      new Promise((resolve)=>chrome.storage.sync.get({ enabled: true }, resolve)),
+      getFocusState()
+    ]);
+    const now = Date.now();
+    const focusActive = focus.active && focus.endsAt > now;
+    const text = focusActive ? formatFocusBadge(focus.endsAt - now) : (enabled ? 'ON' : '');
+    const color = focusActive ? '#2563eb' : (enabled ? '#16a34a' : '#9ca3af');
+    chrome.action.setBadgeText({ text });
+    if (text){
+      chrome.action.setBadgeBackgroundColor({ color });
+    }
+  } catch(_e) {}
 }
 
 chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'sync'){
     if (Object.prototype.hasOwnProperty.call(changes, 'enabled')){
-      setBadge(Boolean(changes.enabled.newValue));
+      updateBadge();
       handleProtectionToggle(Boolean(changes.enabled.newValue)).catch((err)=>{
         console.error('[Safeguard] Protection toggle alert failed', err);
       });
@@ -56,12 +223,17 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     if (Object.prototype.hasOwnProperty.call(changes, 'userBlocklist')){
       rebuildDynamicRules();
     }
+    if (Object.prototype.hasOwnProperty.call(changes, 'focusMode')){
+      rebuildDynamicRules();
+      recoverFocusSession();
+    }
   }
 });
 
 // Also set badge when the service worker starts
-initBadge();
+updateBadge();
 scheduleHeartbeat();
+recoverFocusSession();
 // Rebuild dynamic rules on service worker start to ensure rules are present
 rebuildDynamicRules().catch((err)=>{
   console.error('[Safeguard] Initial DNR rebuild failed', err);
@@ -75,6 +247,7 @@ chrome.runtime.onStartup.addListener(()=>{
   handleHeartbeat({ startup: true }).catch((err)=>{
     console.error('[Safeguard] Heartbeat startup check failed', err);
   });
+  recoverFocusSession();
 });
 
 // ---- DNR dynamic rules (blocklist + allowlist) ----
@@ -104,6 +277,8 @@ async function rebuildDynamicRules(){
       const allowlist = Array.isArray(cfg.allowlist) ? cfg.allowlist : [];
       const local = await new Promise(r => chrome.storage.local.get({ userBlocklist: [] }, r));
       const userBlocklist = Array.isArray(local.userBlocklist) ? local.userBlocklist : [];
+      const focus = await getFocusState();
+      const focusActive = focus.active && focus.endsAt > Date.now();
       const block = await loadJsonResource('data/blocklist.json');
       const blockDomains = (block && Array.isArray(block.domains)) ? block.domains : [];
 
@@ -115,14 +290,28 @@ async function rebuildDynamicRules(){
       const rules = [];
 
       // Allow rules take precedence via higher priority
-      for(const d of allowDomains){
+      const focusAllowDomains = focusActive
+        ? Array.from(new Set([ ...allowDomains, ...FOCUS_DEFAULT_ALLOWLIST.map(normalizeDomain) ]))
+        : allowDomains;
+      const allowPriority = focusActive ? 11000 : 10000;
+      for(const d of focusAllowDomains){
         const rx = domainToRegex(d);
         rules.push({
           id: id++,
-          priority: 10000,
+          priority: allowPriority,
           action: { type: 'allow' },
           condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
         });
+      }
+      if (focusActive){
+        for (const rx of FOCUS_ALLOW_REGEXES){
+          rules.push({
+            id: id++,
+            priority: allowPriority,
+            action: { type: 'allow' },
+            condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
+          });
+        }
       }
 
       // Block rules for domains: packaged + user list (truncated to fit DNR limits)
@@ -137,6 +326,28 @@ async function rebuildDynamicRules(){
           priority: 10,
           action: { type: 'block' },
           condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
+        });
+      }
+      if (focusActive){
+        const focusBlockDomains = Array.from(new Set([
+          ...FOCUS_BLOCK_DOMAINS.social,
+          ...FOCUS_BLOCK_DOMAINS.gaming,
+          ...FOCUS_BLOCK_DOMAINS.streaming
+        ].map(normalizeDomain).filter(Boolean)));
+        for(const d of focusBlockDomains){
+          const rx = domainToRegex(d);
+          rules.push({
+            id: id++,
+            priority: 500,
+            action: { type: 'block' },
+            condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
+          });
+        }
+        rules.push({
+          id: id++,
+          priority: 1,
+          action: { type: 'block' },
+          condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'] }
         });
       }
       if (uniq.length > take.length){
@@ -179,6 +390,48 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
         const approver = resp && typeof resp.approver === 'string' ? resp.approver.trim() : '';
         sendResponse({ approver });
       });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-focus-get-state'){
+    getFocusState().then((state)=>{
+      const now = Date.now();
+      sendResponse({
+        ok: true,
+        state: {
+          ...state,
+          remainingMs: state.active && state.endsAt ? Math.max(0, state.endsAt - now) : 0
+        }
+      });
+    }).catch((err)=>{
+      console.error('[Safeguard] Focus state fetch failed', err);
+      sendResponse({ ok: false, error: 'failed-focus-state' });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-focus-start'){
+    const duration = clampFocusDuration(message.durationMinutes || message.duration);
+    startFocusSession(duration, { pinProtected: Boolean(message.pinProtected) }).then((state)=>{
+      const now = Date.now();
+      sendResponse({
+        ok: true,
+        state: {
+          ...state,
+          remainingMs: Math.max(0, state.endsAt - now)
+        }
+      });
+    }).catch((err)=>{
+      console.error('[Safeguard] Focus start failed', err);
+      sendResponse({ ok: false, error: 'failed-focus-start' });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-focus-stop'){
+    stopFocusSession().then((state)=>{
+      sendResponse({ ok: true, state });
+    }).catch((err)=>{
+      console.error('[Safeguard] Focus stop failed', err);
+      sendResponse({ ok: false, error: 'failed-focus-stop' });
     });
     return true;
   }

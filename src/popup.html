@@ -38,6 +38,13 @@
           </div>
           <button id="parentOverrideBtn" class="button button--secondary" type="button">Review</button>
         </div>
+        <div class="parent-panel__row" id="parentFocusRow">
+          <div>
+            <h3 class="parent-panel__title">Focus Mode</h3>
+            <p id="parentFocusStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentFocusBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
         <div class="parent-panel__row" id="parentAllowlistRow">
           <div>
             <h3 class="parent-panel__title">Allowlist</h3>
@@ -196,6 +203,55 @@
         </div>
         <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
       </div>
+      <div class="parent-section" id="parentFocusSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Focus Mode</h3>
+            <p class="parent-section__status">Kid Homework Mode — block social/gaming/streaming and allow only educational sites.</p>
+          </div>
+        </div>
+        <label class="toggle">
+          <input id="focusToggle" type="checkbox">
+          <span>
+            <span class="toggle__label">Enable Focus Mode</span>
+            <span class="toggle__hint">Starts a timed homework session across every tab.</span>
+          </span>
+        </label>
+
+        <div class="focus-grid">
+          <div class="focus-durations" id="focusDurations">
+            <label class="select-label" for="focusDurationSelect">Session length</label>
+            <div class="select">
+              <select id="focusDurationSelect">
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60">60 minutes</option>
+                <option value="2">2 minutes (test)</option>
+              </select>
+            </div>
+          </div>
+          <div class="focus-status">
+            <div>
+              <p id="focusCountdown" class="focus-countdown">Focus Mode is off</p>
+              <p id="focusEta" class="focus-eta">Duration 45 minutes</p>
+            </div>
+            <button id="focusEnd" class="button button--secondary" type="button">End early</button>
+          </div>
+        </div>
+
+        <label class="toggle">
+          <input id="focusPin" type="checkbox">
+          <span>
+            <span class="toggle__label">Require PIN to end early</span>
+            <span class="toggle__hint">Prevents kids from turning off Focus Mode without approval.</span>
+          </span>
+        </label>
+
+        <p class="focus-note">
+          Social media, gaming, and streaming are blocked. Wikipedia, Khan Academy, .edu/.org domains, and your allowlist stay open.
+        </p>
+        <small id="focusMessage" class="message">Pick a duration and start homework mode.</small>
+      </div>
     </section>
 
     <section class="card" id="cardProtection">
@@ -258,90 +314,6 @@
         </div>
       </div>
     </section>
-
-      <div class="parent-section" id="parentAllowlistSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Allowlist</h3>
-            <p class="parent-section__status">Bypass filtering for trusted domains (e.g. intranet portals).</p>
-          </div>
-        </div>
-        <div class="field">
-          <input id="allowHost" type="text" placeholder="example.com">
-          <button id="addAllow" class="button button--primary" type="button">Add</button>
-        </div>
-        <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
-        <ul id="allowList" class="pill-list"></ul>
-        <div class="actions actions--wrap">
-          <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
-          <button id="allowExport" class="button button--secondary" type="button">Download</button>
-          <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
-        </div>
-        <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
-      </div>
-      <div class="parent-section" id="parentBlocklistSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Custom blocklist</h3>
-            <p class="parent-section__status">Import policy domains that should always be blocked.</p>
-          </div>
-        </div>
-        <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
-        <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
-        <div class="actions actions--wrap">
-          <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
-          <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
-          <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
-          <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
-          <span id="blockCount" class="badge">0 domains</span>
-        </div>
-        <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
-      </div>
-      <div class="parent-section" id="parentDigestSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Safeguarding digest</h3>
-            <p class="parent-section__status">Generate a CSV summary for safeguarding meetings or audit trails.</p>
-          </div>
-        </div>
-        <div class="actions actions--wrap">
-          <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
-        </div>
-        <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
-      </div>
-      <div class="parent-section" id="parentAlertsSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Override alerts</h3>
-            <p class="parent-section__status">Send webhooks when PIN overrides or tamper events occur.</p>
-          </div>
-        </div>
-        <div class="alert-config">
-          <label class="toggle">
-            <input id="alertEnabled" type="checkbox">
-            <span>
-              <span class="toggle__label">Send override alerts</span>
-              <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
-            </span>
-          </label>
-          <div id="alertForm" class="alert-form">
-            <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
-            <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
-          </div>
-          <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
-          <label class="toggle">
-            <input id="tamperAlertEnabled" type="checkbox">
-            <span>
-              <span class="toggle__label">Tamper alerts</span>
-              <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
-            </span>
-          </label>
-          <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
-        </div>
-        <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
-      </div>
-    </section>
-
     <section class="card" id="cardApprover" hidden>
       <h2 class="card__title">Override approvers</h2>
       <p class="card__subtitle">Collect initials/names when PIN overrides happen for audit trails.</p>

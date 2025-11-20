@@ -66,6 +66,7 @@ const parentAlertsStatusEl = document.getElementById('parentAlertsStatus');
 const parentTamperStatusEl = document.getElementById('parentTamperStatus');
 const parentApproverStatusEl = document.getElementById('parentApproverStatus');
 const parentDigestStatusEl = document.getElementById('parentDigestStatus');
+const parentFocusStatusEl = document.getElementById('parentFocusStatus');
 const parentModeBtn = document.getElementById('parentModeBtn');
 const parentProfilesBtn = document.getElementById('parentProfilesBtn');
 const parentAllowlistBtn = document.getElementById('parentAllowlistBtn');
@@ -74,6 +75,7 @@ const parentOverrideBtn = document.getElementById('parentOverrideBtn');
 const parentAlertsBtn = document.getElementById('parentAlertsBtn');
 const parentTamperBtn = document.getElementById('parentTamperBtn');
 const parentDigestBtn = document.getElementById('parentDigestBtn');
+const parentFocusBtn = document.getElementById('parentFocusBtn');
 const parentApproverBtn = document.getElementById('parentApproverBtn');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
@@ -81,8 +83,16 @@ const parentProfilesSectionEl = document.getElementById('parentProfilesSection')
 const parentAllowlistSectionEl = document.getElementById('parentAllowlistSection');
 const parentBlocklistSectionEl = document.getElementById('parentBlocklistSection');
 const parentDigestSectionEl = document.getElementById('parentDigestSection');
+const parentFocusSectionEl = document.getElementById('parentFocusSection');
 const parentCardEl = document.getElementById('cardParent');
 const approverCardEl = document.getElementById('cardApprover');
+const focusToggleEl = document.getElementById('focusToggle');
+const focusDurationSelect = document.getElementById('focusDurationSelect');
+const focusCountdownEl = document.getElementById('focusCountdown');
+const focusEtaEl = document.getElementById('focusEta');
+const focusMessageEl = document.getElementById('focusMessage');
+const focusEndBtn = document.getElementById('focusEnd');
+const focusPinEl = document.getElementById('focusPin');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -124,6 +134,12 @@ let approverPromptEnabled = false;
 let pinSetupPrompted = false;
 let tamperAlertEnabled = false;
 let profileDependentControlsLocked = true;
+const FOCUS_ALLOWED_DURATIONS = [30, 45, 60, 2]; // includes 2 minutes for testing
+let focusState = { active: false, endsAt: 0, durationMinutes: 45, pinProtected: false, remainingMs: 0 };
+let focusDurationChoice = 45;
+let focusPinPreference = false;
+let focusTicker = null;
+let focusBusy = false;
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
@@ -141,6 +157,9 @@ if (parentBlocklistSectionEl){
 }
 if (parentDigestSectionEl){
   parentDigestSectionEl.dataset.expanded = parentDigestSectionEl.dataset.expanded || '0';
+}
+if (parentFocusSectionEl){
+  parentFocusSectionEl.dataset.expanded = parentFocusSectionEl.dataset.expanded || '0';
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -221,6 +240,233 @@ function setTamperMessage(text, tone = 'muted'){
   else if (tone === 'error') tamperMessageEl.classList.add('message--error');
 }
 
+function setFocusMessage(text, tone = 'muted'){
+  if (!focusMessageEl) return;
+  focusMessageEl.textContent = text;
+  focusMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') focusMessageEl.classList.add('message--success');
+  else if (tone === 'error') focusMessageEl.classList.add('message--error');
+}
+
+function clampFocusDuration(minutes){
+  const value = Number(minutes);
+  if (FOCUS_ALLOWED_DURATIONS.includes(value)) return value;
+  return FOCUS_ALLOWED_DURATIONS[1];
+}
+
+function formatFocusCountdown(ms){
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes >= 60) return `${minutes} min left`;
+  if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s left`;
+  if (seconds > 0) return `${seconds}s left`;
+  return 'Ending now';
+}
+
+function formatFocusEta(ts){
+  if (!ts) return '';
+  const date = new Date(ts);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function sendMessagePromise(payload){
+  return new Promise((resolve)=>{
+    try{
+      chrome.runtime.sendMessage(payload, (resp)=>{
+        if (chrome.runtime.lastError){
+          resolve({ ok: false, error: chrome.runtime.lastError.message });
+          return;
+        }
+        resolve(resp || { ok: false });
+      });
+    }catch(_err){
+      resolve({ ok: false });
+    }
+  });
+}
+
+function syncFocusTicker(active){
+  if (focusTicker){
+    clearInterval(focusTicker);
+    focusTicker = null;
+  }
+  if (!active) return;
+  focusTicker = setInterval(()=>{
+    renderFocusCountdown();
+  }, 1000);
+}
+
+function renderFocusCountdown(){
+  if (!focusCountdownEl) return;
+  const now = Date.now();
+  if (!focusState.active || !focusState.endsAt || focusState.endsAt <= now){
+    focusCountdownEl.textContent = 'Focus Mode is off';
+    if (focusEtaEl) focusEtaEl.textContent = `Duration ${focusDurationChoice} minutes`;
+    return;
+  }
+  const remaining = Math.max(0, focusState.endsAt - now);
+  focusCountdownEl.textContent = formatFocusCountdown(remaining);
+  if (focusEtaEl) focusEtaEl.textContent = `Ends ${formatFocusEta(focusState.endsAt)}`;
+}
+
+function renderFocusState(){
+  const now = Date.now();
+  const active = Boolean(focusState.active) && focusState.endsAt > now;
+  if (active){
+    focusState.remainingMs = Math.max(0, focusState.endsAt - now);
+  }
+  const durationLabel = `${focusDurationChoice} minutes`;
+  if (focusToggleEl){
+    focusToggleEl.checked = active;
+    focusToggleEl.disabled = focusBusy;
+  }
+  if (focusDurationSelect){
+    focusDurationSelect.value = String(focusDurationChoice);
+    focusDurationSelect.disabled = focusBusy && active;
+  }
+  if (focusEndBtn){
+    focusEndBtn.disabled = focusBusy || !active;
+  }
+  if (focusPinEl){
+    focusPinEl.checked = active ? Boolean(focusState.pinProtected) : Boolean(focusPinPreference);
+    focusPinEl.disabled = focusBusy;
+  }
+  renderFocusCountdown();
+  if (focusEtaEl && !active){
+    focusEtaEl.textContent = `Duration ${durationLabel}`;
+  }
+  if (active){
+    setFocusMessage('Educational-only session running. Social, gaming, and streaming are blocked.', 'success');
+  } else {
+    setFocusMessage('Pick a duration and start homework mode.', 'muted');
+  }
+  updateParentSummaries();
+  syncFocusTicker(active);
+}
+
+function applyFocusState(state){
+  const now = Date.now();
+  const active = Boolean(state && state.active && state.endsAt && state.endsAt > now);
+  const duration = clampFocusDuration(state && state.durationMinutes ? state.durationMinutes : focusDurationChoice);
+  const endsAt = state && state.endsAt ? Number(state.endsAt) : 0;
+  focusState = {
+    active,
+    endsAt: active ? endsAt : 0,
+    durationMinutes: duration,
+    pinProtected: Boolean(state && state.pinProtected),
+    remainingMs: state && state.remainingMs ? Number(state.remainingMs) : 0
+  };
+  if (active && !focusState.endsAt && focusState.remainingMs){
+    focusState.endsAt = now + focusState.remainingMs;
+  }
+  focusDurationChoice = duration || focusDurationChoice;
+  renderFocusState();
+}
+
+async function refreshFocusState(){
+  const resp = await sendMessagePromise({ type: 'sg-focus-get-state' });
+  if (resp && resp.ok && resp.state){
+    applyFocusState(resp.state);
+  } else {
+    renderFocusState();
+  }
+}
+
+async function ensureFocusPinAvailable(){
+  if (storedPin) return true;
+  const newPin = await promptForNewPin();
+  if (!newPin) return false;
+  storedPin = newPin;
+  const payload = {
+    overridePinHash: newPin.hash,
+    overridePinSalt: newPin.salt,
+    overridePinIterations: newPin.iterations
+  };
+  if (requirePinEl && requirePinEl.checked){
+    payload.requirePin = true;
+  }
+  await new Promise((resolve)=>chrome.storage.local.set(payload, resolve));
+  syncPinControls();
+  setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN required for overrides and allowlist edits.' : 'PIN saved for overrides and Focus Mode.', 'success');
+  return true;
+}
+
+async function startFocusFromUi(){
+  if (focusBusy){
+    renderFocusState();
+    return;
+  }
+  focusBusy = true;
+  renderFocusState();
+  const wantsPin = focusPinEl ? focusPinEl.checked : false;
+  if (wantsPin){
+    const ok = await ensureFocusPinAvailable();
+    if (!ok){
+      focusBusy = false;
+      if (focusToggleEl) focusToggleEl.checked = false;
+      renderFocusState();
+      return;
+    }
+  }
+  focusPinPreference = Boolean(wantsPin);
+  chrome.storage.local.set({ focusPinPreference, focusDurationMinutes: focusDurationChoice });
+  setFocusMessage('Starting Focus Mode…', 'muted');
+  const resp = await sendMessagePromise({
+    type: 'sg-focus-start',
+    durationMinutes: focusDurationChoice,
+    pinProtected: wantsPin
+  });
+  focusBusy = false;
+  if (!resp || !resp.ok){
+    setFocusMessage('Could not start Focus Mode. Try again.', 'error');
+    if (focusToggleEl) focusToggleEl.checked = false;
+    renderFocusState();
+    return;
+  }
+  applyFocusState(resp.state);
+  setFocusMessage('Focus Mode running. Educational sites only.', 'success');
+}
+
+async function stopFocusFromUi(){
+  if (!focusState.active){
+    applyFocusState({ active: false, durationMinutes: focusDurationChoice });
+    return;
+  }
+  if (focusBusy){
+    renderFocusState();
+    return;
+  }
+  focusBusy = true;
+  renderFocusState();
+  if (focusState.pinProtected){
+    const { ok, cancelled } = await requestPinConfirmation('Enter your PIN to end Focus Mode');
+    if (!ok){
+      focusBusy = false;
+      if (focusToggleEl) focusToggleEl.checked = true;
+      renderFocusState();
+      if (cancelled){
+        setFocusMessage('Focus Mode stays on.', 'muted');
+      } else {
+        setFocusMessage('Incorrect PIN.', 'error');
+      }
+      return;
+    }
+  }
+  setFocusMessage('Ending Focus Mode…', 'muted');
+  const resp = await sendMessagePromise({ type: 'sg-focus-stop' });
+  focusBusy = false;
+  if (!resp || !resp.ok){
+    setFocusMessage('Could not end Focus Mode. Try again.', 'error');
+    if (focusToggleEl) focusToggleEl.checked = true;
+    renderFocusState();
+    return;
+  }
+  applyFocusState(resp.state);
+  if (focusToggleEl) focusToggleEl.checked = false;
+  setFocusMessage('Focus Mode ended. Normal protection resumes.', 'muted');
+}
+
 function updateAlertAvailability(){
   profileDependentControlsLocked = !appliedProfileId;
   const disable = profileDependentControlsLocked;
@@ -290,6 +536,14 @@ function updateParentSummaries(){
   if (parentApproverStatusEl){
     parentApproverStatusEl.textContent = approverPromptEnabled ? 'Names required for overrides' : 'Prompt disabled';
   }
+  if (parentFocusStatusEl){
+    if (focusState.active && focusState.endsAt){
+      const mins = focusState.durationMinutes || Math.round((focusState.remainingMs || 0) / 60000);
+      parentFocusStatusEl.textContent = `Running (${mins} min)`;
+    } else {
+      parentFocusStatusEl.textContent = 'Off';
+    }
+  }
   if (parentOverrideStatusEl){
     const count = Array.isArray(currentOverrideLog) ? currentOverrideLog.length : 0;
     parentOverrideStatusEl.textContent = count ? `${count} recorded` : 'No overrides recorded yet';
@@ -316,7 +570,8 @@ function collapseParentSections(activeKey){
     ['allowlist', parentAllowlistSectionEl],
     ['blocklist', parentBlocklistSectionEl],
     ['alerts', parentAlertsSectionEl],
-    ['digest', parentDigestSectionEl]
+    ['digest', parentDigestSectionEl],
+    ['focus', parentFocusSectionEl]
   ];
   sections.forEach(([key, el])=>{
     if (!el) return;
@@ -370,6 +625,13 @@ function expandParentDigestSection(){
   parentDigestSectionEl.hidden = false;
 }
 
+function expandParentFocusSection(){
+  if (!parentFocusSectionEl) return;
+  collapseParentSections('focus');
+  parentFocusSectionEl.dataset.expanded = '1';
+  parentFocusSectionEl.hidden = false;
+}
+
 function scrollToCard(el){
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -410,6 +672,13 @@ if (parentModeBtn){
     } else {
       hideParentCard();
     }
+  });
+}
+
+if (parentFocusBtn){
+  parentFocusBtn.addEventListener('click', ()=>{
+    expandParentFocusSection();
+    scrollToCard(parentFocusSectionEl);
   });
 }
 
@@ -1063,7 +1332,9 @@ chrome.storage.local.get({
   overrideAlertEnabled: false,
   overrideAlertWebhook: '',
   approverPromptEnabled: false,
-  tamperAlertEnabled: false
+  tamperAlertEnabled: false,
+  focusPinPreference: false,
+  focusDurationMinutes: 45
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -1106,6 +1377,10 @@ chrome.storage.local.get({
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
+  focusPinPreference = Boolean(cfg.focusPinPreference);
+  focusDurationChoice = clampFocusDuration(cfg.focusDurationMinutes || focusDurationChoice);
+  renderFocusState();
+  refreshFocusState();
   updateAlertAvailability();
   updateParentSummaries();
 });
@@ -1144,6 +1419,46 @@ sensitivityEl.addEventListener('input', ()=>{
   updateSensitivityDisplay(v);
   markProfileCustomised();
 });
+
+if (focusDurationSelect){
+  focusDurationSelect.addEventListener('change', ()=>{
+    const minutes = clampFocusDuration(focusDurationSelect.value);
+    focusDurationChoice = minutes;
+    chrome.storage.local.set({ focusDurationMinutes: minutes });
+    renderFocusState();
+  });
+}
+
+if (focusToggleEl){
+  focusToggleEl.addEventListener('change', ()=>{
+    if (focusToggleEl.checked){
+      startFocusFromUi();
+    } else {
+      stopFocusFromUi();
+    }
+  });
+}
+
+if (focusEndBtn){
+  focusEndBtn.addEventListener('click', ()=>{
+    stopFocusFromUi();
+  });
+}
+
+if (focusPinEl){
+  focusPinEl.addEventListener('change', async ()=>{
+    focusPinPreference = focusPinEl.checked;
+    if (focusPinPreference){
+      const ok = await ensureFocusPinAvailable();
+      if (!ok){
+        focusPinPreference = false;
+        focusPinEl.checked = false;
+      }
+    }
+    chrome.storage.local.set({ focusPinPreference });
+    renderFocusState();
+  });
+}
 
 if (requirePinEl){
   requirePinEl.addEventListener('change', async ()=>{
@@ -1760,6 +2075,17 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     overrideAlertWebhook = typeof changes.overrideAlertWebhook.newValue === 'string' ? changes.overrideAlertWebhook.newValue : '';
     if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
     updateParentSummaries();
+  }
+  if (area === 'local' && changes.focusMode){
+    refreshFocusState();
+  }
+  if (area === 'local' && changes.focusDurationMinutes){
+    focusDurationChoice = clampFocusDuration(changes.focusDurationMinutes.newValue || focusDurationChoice);
+    renderFocusState();
+  }
+  if (area === 'local' && changes.focusPinPreference){
+    focusPinPreference = Boolean(changes.focusPinPreference.newValue);
+    renderFocusState();
   }
   if (area === 'local' && changes.tamperAlertEnabled){
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
