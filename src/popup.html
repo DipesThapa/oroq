@@ -349,6 +349,26 @@
     </div>
   </div>
 
+  <div id="pinModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+    <div class="modal__panel">
+      <h3 id="pinModalTitle" class="modal__title">Enter PIN</h3>
+      <p id="pinModalMessage" class="modal__message"></p>
+      <div class="modal__field">
+        <label for="pinModalInput">PIN (4-8 digits)</label>
+        <input id="pinModalInput" type="password" inputmode="numeric" pattern="\\d{4,8}" maxlength="8" autocomplete="off" aria-label="PIN">
+      </div>
+      <div id="pinModalConfirmGroup" class="modal__field modal__field--hidden">
+        <label for="pinModalConfirm">Confirm PIN</label>
+        <input id="pinModalConfirm" type="password" inputmode="numeric" pattern="\\d{4,8}" maxlength="8" autocomplete="off" aria-label="Confirm PIN">
+      </div>
+      <div id="pinModalError" class="modal__error" aria-live="polite"></div>
+      <div class="modal__actions">
+        <button type="button" id="pinModalCancel" class="button button--secondary">Cancel</button>
+        <button type="button" id="pinModalSubmit" class="button button--primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
   <script src="popup.js"></script>
 </body>
 </html>

@@ -115,6 +115,15 @@ const TOUR_STEPS = [
 
 const PIN_SALT_BYTES = 16;
 const PIN_ITERATIONS = 200000;
+const pinModalEl = document.getElementById('pinModal');
+const pinModalTitle = document.getElementById('pinModalTitle');
+const pinModalMessage = document.getElementById('pinModalMessage');
+const pinModalInput = document.getElementById('pinModalInput');
+const pinModalConfirmGroup = document.getElementById('pinModalConfirmGroup');
+const pinModalConfirm = document.getElementById('pinModalConfirm');
+const pinModalError = document.getElementById('pinModalError');
+const pinModalCancel = document.getElementById('pinModalCancel');
+const pinModalSubmit = document.getElementById('pinModalSubmit');
 
 let tourIndex = 0;
 let tourActive = false;
@@ -745,37 +754,17 @@ function syncPinControls(){
 }
 
 async function promptForNewPin(){
-  const first = window.prompt('Enter a new PIN (4-8 digits)');
-  if (first === null) return null;
-  const primary = first.trim();
-  if (!/^\d{4,8}$/.test(primary)){
-    setPinMessage('PIN must be 4-8 digits.', 'error');
-    return null;
-  }
-  const second = window.prompt('Confirm the new PIN');
-  if (second === null){
-    setPinMessage('PIN setup cancelled.', 'muted');
-    return null;
-  }
-  const confirm = second.trim();
-  if (primary !== confirm){
-    setPinMessage('PIN entries did not match.', 'error');
-    return null;
-  }
-  const hashed = await derivePinHash(primary);
+  const value = await openPinSetupModal();
+  if (!value) return null;
+  const hashed = await derivePinHash(value);
   return hashed;
 }
 
 async function requestPinConfirmation(message){
   if (!storedPin) return { ok: false, cancelled: true };
-  const attempt = window.prompt(message || 'Enter your PIN to continue');
-  if (attempt === null) return { ok: false, cancelled: true };
-  const value = attempt.trim();
-  if (!value){
-    setPinMessage('PIN cannot be empty.', 'error');
-    return { ok: false, cancelled: false };
-  }
-  const valid = await verifyPinInput(value, storedPin);
+  const pin = await openPinVerifyModal(message || 'Enter your PIN to continue');
+  if (!pin) return { ok: false, cancelled: true };
+  const valid = await verifyPinInput(pin, storedPin);
   if (!valid){
     setPinMessage('Incorrect PIN.', 'error');
     return { ok: false, cancelled: false };
@@ -1051,6 +1040,95 @@ function normalizeHost(raw){
   let s = (raw||'').trim().toLowerCase();
   s = s.replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
   return s;
+}
+
+function onlyDigits(str){
+  return (str || '').replace(/\D+/g, '');
+}
+
+function clampPin(value){
+  const digits = onlyDigits(value).slice(0, 8);
+  if (digits.length < 4) return null;
+  return digits;
+}
+
+function openPinModal({ title, message, confirm = false }){
+  if (!pinModalEl) return Promise.resolve(null);
+  return new Promise((resolve)=>{
+    const cleanup = (value)=>{
+      pinModalEl.classList.add('modal--hidden');
+      if (pinModalInput) pinModalInput.value = '';
+      if (pinModalConfirm) pinModalConfirm.value = '';
+      if (pinModalError) pinModalError.textContent = '';
+      document.removeEventListener('keydown', onKey);
+      resolve(value);
+    };
+    const showError = (text)=>{
+      if (pinModalError) pinModalError.textContent = text || '';
+    };
+    const handleSubmit = ()=>{
+      const primary = clampPin(pinModalInput ? pinModalInput.value : '');
+      if (!primary){
+        showError('PIN must be 4-8 digits.');
+        return;
+      }
+      if (confirm){
+        const confirmValue = clampPin(pinModalConfirm ? pinModalConfirm.value : '');
+        if (!confirmValue){
+          showError('Confirm your PIN (4-8 digits).');
+          return;
+        }
+        if (primary !== confirmValue){
+          showError('PIN entries do not match.');
+          return;
+        }
+      }
+      cleanup(primary);
+    };
+    const onKey = (e)=>{
+      if (e.key === 'Escape'){
+        e.preventDefault();
+        cleanup(null);
+      }
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        handleSubmit();
+      }
+    };
+    if (pinModalTitle) pinModalTitle.textContent = title || 'Enter PIN';
+    if (pinModalMessage) pinModalMessage.textContent = message || '';
+    if (pinModalError) pinModalError.textContent = '';
+    if (pinModalConfirmGroup) pinModalConfirmGroup.classList.toggle('modal__field--hidden', !confirm);
+    pinModalEl.classList.remove('modal--hidden');
+    if (pinModalInput){
+      pinModalInput.value = '';
+      pinModalInput.focus();
+    }
+    if (pinModalConfirm) pinModalConfirm.value = '';
+    document.addEventListener('keydown', onKey);
+    if (pinModalCancel){
+      pinModalCancel.onclick = ()=>cleanup(null);
+    }
+    if (pinModalSubmit){
+      pinModalSubmit.onclick = handleSubmit;
+    }
+  });
+}
+
+function openPinSetupModal(){
+  return openPinModal({
+    title: 'Enter a new PIN',
+    message: 'Protect overrides with a 4-8 digit PIN (stays on this device).',
+    confirm: true
+  });
+}
+
+function openPinVerifyModal(message){
+  return openPinModal({
+    title: 'Enter PIN',
+    message: message || 'Enter your PIN to continue.',
+    confirm: false
+  });
 }
 
 function validHostname(s){

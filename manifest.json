@@ -28,7 +28,8 @@
         "site/index.html",
         "site/privacy.html",
         "site/support.html",
-        "site/*.html"
+        "site/*.html",
+        "model/nsfw/*"
       ],
       "matches": [
         "<all_urls>"

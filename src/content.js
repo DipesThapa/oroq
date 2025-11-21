@@ -18,6 +18,10 @@
   const PIN_ITERATIONS_FALLBACK = 200000;
   const VISUAL_SAMPLE_LIMIT = 8;
   const RISKY_MEDIA_HOSTS = ['instagram.com','cdninstagram.com','twitter.com','x.com','tiktok.com','facebook.com','fbcdn.net','messenger.com','snapchat.com','reddit.com','discord.com','pinimg.com'];
+  // Leave empty to disable TF.js when the file is not bundled; prevents CSP fetch errors
+  const TFJS_SRC = ''; // set to chrome.runtime.getURL('model/nsfw/tf.min.js') if bundled
+  const NSFW_MODEL_PATH = 'model/nsfw/model.json'; // optional bundled model; place under /model/nsfw/
+  const TF_NSWF_CONF_THRESHOLD = 0.9; // only blur when TF.js model is very confident
   const PHISHING_BRANDS = [
     { name: 'PayPal', keywords: ['paypal','pay pal'], domains: ['paypal.com', 'paypalobjects.com'] },
     { name: 'Microsoft', keywords: ['microsoft','office 365','outlook','onedrive'], domains: ['microsoft.com', 'live.com', 'office.com', 'sharepoint.com'] },
@@ -191,6 +195,11 @@
   let phishObserver = null;
   let phishObserverTimer = null;
   const visionCache = new Map(); // local-only image inference cache
+  let tfImportPromise = null;
+  let nsfwModelPromise = null;
+  let tfLib = null;
+  let nsfwModel = null;
+  const tfDetectionCache = new Map();
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     if (message && message.type === 'sg-open-approver-prompt'){
@@ -476,8 +485,11 @@
             if (!aiHits[key] || (det.confidence || 0) > (aiHits[key].confidence || 0)){
               aiHits[key] = det;
             }
-            if (det.label === 'nsfw' && ratio >= 0.6 && (det.confidence || 0) >= 0.7){
-              try{ mask(img); }catch(_e){}
+            if (det.label === 'nsfw'){
+              const conf = det.confidence || 0;
+              if (conf >= 0.9 || (ratio >= 0.6 && conf >= 0.7)){
+                try{ mask(img); }catch(_e){}
+              }
             }
           });
         }
@@ -572,13 +584,13 @@
       if (key) visionCache.set(key, null);
       return null;
     }
-    const detections = [];
+    const detections = [...(classifyWithTf(img) || [])];
     const nsfwConfidence = clamp01((features.skinRatio - 0.18) / 0.28);
     if (nsfwConfidence > 0.2){
       detections.push({
         label: 'nsfw',
         confidence: nsfwConfidence,
-        meta: `Skin-tone density ${(features.skinRatio * 100).toFixed(0)}%`
+        meta: `Skin-tone density ${(features.skinRatio * 100).toFixed(0)}% (heuristic)`
       });
     }
     const violenceConfidence = clamp01(((features.redRatio - 0.14) / 0.22) * (features.darkRatio > 0.2 ? 1 : 0.6));
@@ -586,7 +598,7 @@
       detections.push({
         label: 'violence',
         confidence: violenceConfidence,
-        meta: `Red-heavy ${(features.redRatio * 100).toFixed(0)}%, dark ${(features.darkRatio * 100).toFixed(0)}%`
+        meta: `Red-heavy ${(features.redRatio * 100).toFixed(0)}%, dark ${(features.darkRatio * 100).toFixed(0)}% (heuristic)`
       });
     }
     const weaponConfidence = clamp01(((features.edgeDensity - 0.1) / 0.16) * (features.grayRatio > 0.35 ? 1 : 0.6));
@@ -594,12 +606,95 @@
       detections.push({
         label: 'weapon',
         confidence: weaponConfidence,
-        meta: `High-contrast edges ${(features.edgeDensity * 100).toFixed(0)}%`
+        meta: `High-contrast edges ${(features.edgeDensity * 100).toFixed(0)}% (heuristic)`
       });
     }
     const result = { detections, features };
     if (key) visionCache.set(key, result);
     return result;
+  }
+
+  async function loadTf(){
+    if (tfImportPromise) return tfImportPromise;
+    tfImportPromise = (async ()=>{
+      if (typeof window.tf !== 'undefined') return window.tf;
+      if (!TFJS_SRC){
+        return null;
+      }
+      try{
+        await import(TFJS_SRC);
+        return window.tf || null;
+      }catch(_e){
+        return null;
+      }
+    })();
+    return tfImportPromise;
+  }
+
+  async function loadNsfwModel(){
+    if (nsfwModelPromise) return nsfwModelPromise;
+    nsfwModelPromise = (async ()=>{
+      const tf = await loadTf();
+      if (!tf) return null;
+      try{
+        const url = chrome.runtime.getURL(NSFW_MODEL_PATH);
+        const model = await tf.loadGraphModel(url);
+        return model;
+      }catch(_e){
+        return null;
+      }
+    })();
+    return nsfwModelPromise;
+  }
+
+  async function ensureTfReady(){
+    if (tfLib && nsfwModel) return true;
+    tfLib = await loadTf();
+    if (!tfLib) return false;
+    nsfwModel = await loadNsfwModel();
+    return Boolean(tfLib && nsfwModel);
+  }
+
+  function classifyWithTf(img){
+    if (!TFJS_SRC) return [];
+    try{
+      if (!img || !img.naturalWidth || !img.naturalHeight) return [];
+      const w = img.naturalWidth;
+      const h = img.naturalHeight;
+      if (w < 60 || h < 60) return [];
+      const key = img.currentSrc || img.src || '';
+      if (!key) return [];
+      if (tfDetectionCache.has(key)){
+        const det = tfDetectionCache.get(key);
+        return Array.isArray(det) ? det : [];
+      }
+      // kick off load; if not ready, skip for now
+      ensureTfReady().then((ready)=>{
+        if (!ready) return;
+        try{
+          const input = tfLib.tidy(()=>{
+            const tensor = tfLib.browser.fromPixels(img);
+            const resized = tfLib.image.resizeBilinear(tensor, [224, 224], true);
+            const normalized = resized.div(255);
+            return normalized.expandDims(0);
+          });
+          const logits = nsfwModel.predict(input);
+          const probs = logits.dataSync ? logits.dataSync() : [];
+          tfLib.dispose([input, logits]);
+          const nsfwProb = Array.from(probs || [])[1] || 0;
+          if (nsfwProb > 0){
+            tfDetectionCache.set(key, [{ label: 'nsfw', confidence: clamp01(nsfwProb), meta: 'TF.js model' }]);
+          } else {
+            tfDetectionCache.set(key, []);
+          }
+        }catch(_e){
+          tfDetectionCache.set(key, []);
+        }
+      });
+      return [];
+    }catch(_e){
+      return [];
+    }
   }
 
   function sampleImageFeatures(img){
@@ -1833,17 +1928,29 @@
     // Use a reduced threshold for element-level masking
     const cfgSens = window.__sg_sensitivity || 60;
     const textThreshold = Math.max(3, Math.floor((12 - 6*(cfgSens/100)) * 0.6));
-    if (scoreFromText(t) >= textThreshold){
+    const host = getHost();
+    const isSocial = isRiskyMediaHost(host);
+    if (!isSocial && scoreFromText(t) >= textThreshold){
       return true;
     }
     // Vision-based per-element check (on images only)
     if (el instanceof HTMLImageElement){
       const vision = runLocalVisionScan(el);
       if (vision && Array.isArray(vision.detections)){
+        const skin = vision.features && Number.isFinite(vision.features.skinRatio) ? vision.features.skinRatio : 0;
         const hit = vision.detections.find((det)=>{
           if (!det || !det.label) return false;
           const conf = clamp01(det.confidence || 0);
-          if (det.label === 'nsfw') return conf >= 0.7; // only blur clearly nude images
+          if (det.label === 'nsfw'){
+            // Blur only when nudity is clear: either very high skin ratio, or decent skin with solid confidence
+            if (isSocial){
+              if (skin >= 0.65 && conf >= 0.75) return true;
+              return conf >= 0.9;
+            }
+            if (skin >= 0.6) return true;
+            if (skin >= 0.45 && conf >= 0.7) return true;
+            return conf >= TF_NSWF_CONF_THRESHOLD;
+          }
           return false;
         });
         if (hit) return true;

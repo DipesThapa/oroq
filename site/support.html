@@ -7,75 +7,161 @@
   <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-  <header>
-    <div class="container">
-      <span class="pill">We’re here to help</span>
-      <h1>Safeguard Support Guide</h1>
-      <p>Use the channels below to get assistance with onboarding, feature requests, incidents, or security reports.</p>
-      <nav>
+  <header class="hero hero--support">
+    <div class="hero__rays"></div>
+    <div class="container hero__content">
+      <div class="hero__badge pill">We’re here to help</div>
+      <div class="hero__heading">
+        <h1>Safeguard Support Guide</h1>
+        <p>Pick the right lane and we’ll respond with clear SLA expectations, from feature asks to incident response.</p>
+        <div class="hero__actions">
+          <a class="cta" href="https://github.com/DipesThapa/safebrowse-ai/discussions" target="_blank" rel="noopener">Open Discussions</a>
+          <a class="cta cta--ghost" href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">View on GitHub</a>
+        </div>
+        <div class="hero__status">
+          <span class="status-dot status-dot--up"></span>
+          <span>Service status: Operational · Best-effort OSS support</span>
+        </div>
+      </div>
+      <nav class="support-nav">
         <a href="index.html">Overview</a>
         <a href="privacy.html">Privacy</a>
-        <a href="support.html">Support</a>
+        <a class="active" href="support.html">Support</a>
         <a href="https://github.com/DipesThapa/safebrowse-ai" target="_blank" rel="noopener">GitHub</a>
       </nav>
+      <div class="hero__scroll">Scroll for contact options</div>
     </div>
+    <div class="hero__orb hero__orb--one"></div>
+    <div class="hero__orb hero__orb--two"></div>
+    <div class="hero__mesh"></div>
   </header>
 
   <main class="container">
-    <section class="card">
-      <h2>How to contact us</h2>
-      <table style="width:100%; border-collapse: collapse; margin-top: 16px;">
-        <thead>
-          <tr style="text-align:left; background: var(--surface-alt);">
-            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Need</th>
-            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Channel</th>
-            <th style="padding: 10px; border-bottom: 1px solid var(--border);">Expectations</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">General questions, onboarding help</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);"><a href="https://github.com/DipesThapa/safebrowse-ai/discussions" target="_blank" rel="noopener">GitHub Discussions</a></td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Community response, maintainer follow-up within 5 business days</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Feature suggestion</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Feature Request issue template</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Reviewed during roadmap planning (quarterly)</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug report</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug Report issue template with reproduction steps</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Triage within 3 business days; patch scheduled by severity</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Production incident</td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Bug report marked <strong>priority</strong> + email <a href="mailto:operations@safebrowse-ai.test">operations@safebrowse-ai.test</a></td>
-            <td style="padding: 10px; border-bottom: 1px solid var(--border);">Acknowledgement within 1 business day, status updates until resolved</td>
-          </tr>
-          <tr>
-            <td style="padding: 10px;">Security vulnerability</td>
-            <td style="padding: 10px;">GitHub Security Advisory or email <a href="mailto:security@safebrowse-ai.test">security@safebrowse-ai.test</a></td>
-            <td style="padding: 10px;">Initial response within 48 hours, coordinated disclosure process</td>
-          </tr>
-        </tbody>
-      </table>
+    <section class="card card-animated">
+      <div class="card__header">
+        <h2>Contact matrix</h2>
+        <p class="section__subtitle">Choose the path that matches your request type.</p>
+      </div>
+      <div class="channel-grid">
+        <div class="channel channel--accent">
+          <div class="channel__eyebrow">Questions</div>
+          <div class="channel__title">General & onboarding</div>
+          <div class="channel__body">GitHub Discussions</div>
+          <div class="channel__meta">Community + maintainer follow-up in 5 business days.</div>
+        </div>
+        <div class="channel">
+          <div class="channel__eyebrow">Product</div>
+          <div class="channel__title">Feature suggestions</div>
+          <div class="channel__body">Feature Request issue</div>
+          <div class="channel__meta">Reviewed in quarterly roadmap planning.</div>
+        </div>
+        <div class="channel">
+          <div class="channel__eyebrow">Quality</div>
+          <div class="channel__title">Bug reports</div>
+          <div class="channel__body">Bug Report issue template</div>
+          <div class="channel__meta">Triage in 3 business days; schedule by severity.</div>
+        </div>
+        <div class="channel channel--alert">
+          <div class="channel__eyebrow">Production</div>
+          <div class="channel__title">Incident escalation</div>
+          <div class="channel__body">Priority bug + operations@safebrowse-ai.test</div>
+          <div class="channel__meta">Ack in 1 business day; status updates until resolved.</div>
+        </div>
+        <div class="channel channel--alert">
+          <div class="channel__eyebrow">Security</div>
+          <div class="channel__title">Responsible disclosure</div>
+          <div class="channel__body">Security Advisory or security@safebrowse-ai.test</div>
+          <div class="channel__meta">Initial response within 48 hours; coordinated disclosure.</div>
+        </div>
+      </div>
+    </section>
 
-      <h2>Operational commitments (best-effort)</h2>
-      <ul>
-        <li>Maintenance releases at least once per quarter.</li>
-        <li>Hotfixes for critical blocking issues within 3 business days of confirmation.</li>
-        <li>Documentation updates alongside significant UI or behaviour changes.</li>
-      </ul>
+    <section class="card card-animated">
+      <div class="card__header">
+        <h2>Operational commitments</h2>
+        <p class="section__subtitle">Best-effort timelines you can plan around.</p>
+      </div>
+      <div class="timeline">
+        <div class="timeline__item">
+          <div class="timeline__dot"></div>
+          <div>
+            <div class="timeline__title">Maintenance releases</div>
+            <div class="timeline__meta">At least once per quarter.</div>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__dot"></div>
+          <div>
+            <div class="timeline__title">Critical hotfixes</div>
+            <div class="timeline__meta">Within 3 business days after confirmation.</div>
+          </div>
+        </div>
+        <div class="timeline__item">
+          <div class="timeline__dot"></div>
+          <div>
+            <div class="timeline__title">Docs alongside changes</div>
+            <div class="timeline__meta">Whenever UI/behaviour changes ship, docs update too.</div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-      <h2>Self-service resources</h2>
-      <ul>
-        <li><a href="index.html">Product overview</a></li>
-        <li><a href="privacy.html">Privacy policy</a></li>
-        <li><a href="https://github.com/DipesThapa/safebrowse-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">Security policy</a></li>
-        <li><a href="https://github.com/DipesThapa/safebrowse-ai/blob/main/docs/DEPLOYMENT.md" target="_blank" rel="noopener">Deployment guide</a></li>
-      </ul>
+    <section class="card card-animated">
+      <div class="card__header">
+        <h2>Response matrix</h2>
+        <p class="section__subtitle">How we acknowledge and ship fixes based on severity.</p>
+      </div>
+      <div class="severity-grid">
+        <div class="severity">
+          <div class="severity__label severity__label--p1">P1 · Critical</div>
+          <ul>
+            <li>Ack: within 1 business day</li>
+            <li>Fix: hotfix planned in 3 business days</li>
+            <li>Channel: priority bug + email</li>
+          </ul>
+        </div>
+        <div class="severity">
+          <div class="severity__label severity__label--p2">P2 · Major</div>
+          <ul>
+            <li>Ack: within 3 business days</li>
+            <li>Fix: targeted in next release</li>
+            <li>Channel: bug report</li>
+          </ul>
+        </div>
+        <div class="severity">
+          <div class="severity__label severity__label--p3">P3 · Minor</div>
+          <ul>
+            <li>Ack: within 5 business days</li>
+            <li>Fix: scheduled when bandwidth permits</li>
+            <li>Channel: bug/feature request</li>
+          </ul>
+        </div>
+      </div>
+    </section>
 
+    <section class="card card-animated">
+      <div class="card__header">
+        <h2>Self-service resources</h2>
+        <p class="section__subtitle">Quick links to unblock yourself fast.</p>
+      </div>
+      <div class="resource-grid">
+        <a class="resource" href="index.html">
+          <div class="resource__title">Product overview</div>
+          <div class="resource__meta">Features, benefits, and positioning.</div>
+        </a>
+        <a class="resource" href="privacy.html">
+          <div class="resource__title">Privacy policy</div>
+          <div class="resource__meta">Data handling and on-device guarantees.</div>
+        </a>
+        <a class="resource" href="https://github.com/DipesThapa/safebrowse-ai/blob/main/SECURITY.md" target="_blank" rel="noopener">
+          <div class="resource__title">Security policy</div>
+          <div class="resource__meta">Vulnerability reporting and disclosure.</div>
+        </a>
+        <a class="resource" href="https://github.com/DipesThapa/safebrowse-ai/blob/main/docs/DEPLOYMENT.md" target="_blank" rel="noopener">
+          <div class="resource__title">Deployment guide</div>
+          <div class="resource__meta">Rollout steps, packaging, enterprise tips.</div>
+        </a>
+      </div>
       <p class="footer">Need a bespoke support agreement? Fork the repository or open a discussion to coordinate sponsorship/commercial support.</p>
     </section>
   </main>
