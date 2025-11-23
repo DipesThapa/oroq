@@ -1,4 +1,9 @@
 (function(){
+  /*
+   * Content script runs entirely on-device to flag adult/phishing cues quickly: keyword heuristics, URL hints,
+   * and optional TF.js model hooks (left disabled unless bundled to avoid CSP fetch issues).
+   * Keep thresholds conservative to reduce false positives and avoid leaking page data off the device.
+   */
   // Advanced textual heuristic (non-exhaustive, on-device). Balanced for privacy and speed.
   const KW_STRONG = [
     'porn','xxx','hentai','onlyfans','pornhub','xvideos','xnxx','xhamster','redtube','youporn','brazzers','spankbang',
@@ -52,6 +57,10 @@
   const LOGIN_HINTS = ['login','log in','sign in','signin','account','secure login','enter password'];
   const IMMEDIATE_BLOCK_HOSTS = ['trycloudflare.com','cloudflarepage','cloudflarepages.dev','repl.co','github.io','netlify.app','vercel.app','appspot.com','firebaseapp.com','glitch.me','render.com'];
   const ENABLE_INSIGHTS_PANEL = false;
+  const NUDGE_DEFAULT_ENABLED = true;
+  const NUDGE_SOCIAL_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes
+  const NUDGE_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
+  const NUDGE_DAILY_CAP = 3;
   const PROFILE_TONE_COPY = {
     kids: {
       heading: 'Hold on - we are keeping kid-safe pages only.',
@@ -200,6 +209,10 @@
   let tfLib = null;
   let nsfwModel = null;
   const tfDetectionCache = new Map();
+  let nudgeConfig = { enabled: NUDGE_DEFAULT_ENABLED, snoozeUntil: 0, dailyCount: 0, lastNudgeAt: 0 };
+  let nudgeCooldownUntil = 0;
+  let nudgeDailyDate = null;
+  let socialNudgeTimer = null;
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     if (message && message.type === 'sg-open-approver-prompt'){
@@ -331,6 +344,160 @@
 
   function getHost(){
     try { return location.hostname.replace(/^www\./,'').toLowerCase(); } catch{ return ''; }
+  }
+
+  function ensureNudgeStyles(){
+    if (document.getElementById('sg-nudge-style')) return;
+    const st = document.createElement('style');
+    st.id = 'sg-nudge-style';
+    st.textContent = `
+      .sg-nudge {
+        position: fixed;
+        bottom: 18px;
+        right: 18px;
+        max-width: 320px;
+        background: rgba(15, 23, 42, 0.78);
+        backdrop-filter: blur(14px) saturate(1.4);
+        -webkit-backdrop-filter: blur(14px) saturate(1.4);
+        color: #fff;
+        border-radius: 14px;
+        padding: 12px 14px;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.2);
+        z-index: 2147483646;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        animation: sg-nudge-in 0.22s ease-out forwards;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      .sg-nudge__title {
+        font-weight: 800;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .sg-nudge__body {
+        font-size: 13px;
+        opacity: 0.92;
+      }
+      .sg-nudge__actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .sg-nudge__btn {
+        appearance: none;
+        border: none;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: 12px;
+      }
+      .sg-nudge__btn--primary { background: #fff; color: #0f172a; }
+      .sg-nudge__btn--ghost { background: rgba(255,255,255,0.18); color: #fff; }
+      @keyframes sg-nudge-in {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    `;
+    document.documentElement.appendChild(st);
+  }
+
+  function showNudgeToast(body, options = {}){
+    if (!nudgeConfig.enabled) return;
+    const now = Date.now();
+    const force = options.force === true;
+    if (!force){
+      if (nudgeCooldownUntil && now < nudgeCooldownUntil) return;
+      if (nudgeConfig.snoozeUntil && now < nudgeConfig.snoozeUntil) return;
+      const today = new Date().toDateString();
+      if (nudgeDailyDate !== today){
+        nudgeConfig.dailyCount = 0;
+        nudgeDailyDate = today;
+      }
+      if (nudgeConfig.dailyCount >= NUDGE_DAILY_CAP) return;
+    }
+    ensureNudgeStyles();
+    const existing = document.querySelector('.sg-nudge');
+    if (existing) existing.remove();
+    const wrap = document.createElement('div');
+    wrap.className = 'sg-nudge';
+    const title = document.createElement('div');
+    title.className = 'sg-nudge__title';
+    title.innerHTML = '<span aria-hidden="true">💡</span><span>Healthy nudge</span>';
+    const copy = document.createElement('div');
+    copy.className = 'sg-nudge__body';
+    copy.textContent = body;
+    const actions = document.createElement('div');
+    actions.className = 'sg-nudge__actions';
+    const dismiss = document.createElement('button');
+    dismiss.className = 'sg-nudge__btn sg-nudge__btn--ghost';
+    dismiss.textContent = options.dismissLabel || 'Not now';
+    dismiss.onclick = ()=>{
+      wrap.remove();
+      nudgeCooldownUntil = Date.now() + NUDGE_COOLDOWN_MS; // 10m cooldown
+    };
+    actions.appendChild(dismiss);
+    if (options.primaryLabel){
+      const primary = document.createElement('button');
+      primary.className = 'sg-nudge__btn sg-nudge__btn--primary';
+      primary.textContent = options.primaryLabel;
+      primary.onclick = ()=>{
+        // Snooze nudges for 30 minutes on "Take a break"
+        nudgeConfig.snoozeUntil = Date.now() + 30 * 60 * 1000;
+        if (typeof options.onPrimary === 'function') options.onPrimary();
+        wrap.remove();
+      };
+      actions.appendChild(primary);
+    }
+    if (options.snoozeLabel){
+      const snooze = document.createElement('button');
+      snooze.className = 'sg-nudge__btn sg-nudge__btn--ghost';
+      snooze.textContent = options.snoozeLabel;
+      snooze.onclick = ()=>{
+        nudgeConfig.snoozeUntil = Date.now() + 60 * 60 * 1000; // 1h snooze
+        wrap.remove();
+      };
+      actions.appendChild(snooze);
+    }
+    wrap.appendChild(title);
+    wrap.appendChild(copy);
+    wrap.appendChild(actions);
+    document.body.appendChild(wrap);
+    if (!force){
+      nudgeConfig.dailyCount += 1;
+    }
+    nudgeConfig.lastNudgeAt = now;
+    setTimeout(()=>wrap.remove(), 10000);
+  }
+
+  function startSocialNudgeTimer(){
+    if (socialNudgeTimer) return;
+    socialNudgeTimer = setTimeout(()=>{
+      socialNudgeTimer = null;
+      if (!nudgeConfig.enabled) return;
+      showNudgeToast('You have been here a while — want a quick break?', {
+        primaryLabel: 'Take a break',
+        snoozeLabel: 'Snooze 1h'
+      });
+      startSocialNudgeTimer(); // re-arm for the next interval
+    }, NUDGE_SOCIAL_THRESHOLD_MS);
+  }
+
+  function setupNudges(){
+    try{
+      chrome.storage.sync.get({ nudgeEnabled: NUDGE_DEFAULT_ENABLED }, (cfg)=>{
+        nudgeConfig.enabled = cfg.nudgeEnabled !== false;
+        if (!nudgeConfig.enabled) return;
+        if (socialNudgeTimer){
+          clearTimeout(socialNudgeTimer);
+          socialNudgeTimer = null;
+        }
+        startSocialNudgeTimer();
+      });
+    }catch(_e){}
   }
 
   async function loadBlocklist(){
@@ -3147,6 +3314,7 @@
     const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
     const profileContext = { profileTone, profileLabel, profileSuggestions };
     const host = getHost();
+    setupNudges(host);
     try {
       if (host && sessionStorage.getItem('sg-ov:' + host) === '1'){
         sessionStorage.removeItem('sg-ov:' + host);

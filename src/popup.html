@@ -15,11 +15,12 @@
     <span id="statusBadge" class="status-badge">Active</span>
   </header>
 
-  <div class="parent-toggle">
-    <button id="parentModeBtn" class="button button--secondary parent-toggle__button" type="button">Parent mode</button>
-  </div>
+<div class="parent-toggle">
+  <button id="parentModeBtn" class="button button--secondary parent-toggle__button" type="button">Parent mode</button>
+</div>
+<button id="parentBackBtn" class="button button--secondary parent-back" type="button" hidden>← Back</button>
 
-  <main>
+<main>
     <section class="card" id="cardParent" hidden>
       <h2 class="card__title">Parent mode</h2>
       <p class="card__subtitle">Quick access to safeguarding controls for guardians and DSLs.</p>
@@ -279,6 +280,14 @@
         <span>
           <span class="toggle__label">Aggressive mode</span>
           <span class="toggle__hint">Blur and pause explicit images/videos detected on the page.</span>
+        </span>
+      </label>
+
+      <label class="toggle">
+        <input id="nudgeEnabled" type="checkbox">
+        <span>
+          <span class="toggle__label">Healthy nudges</span>
+          <span class="toggle__hint">Gentle reminders for breaks and staying on track. All on-device.</span>
         </span>
       </label>
 

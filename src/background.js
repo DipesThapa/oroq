@@ -1,3 +1,4 @@
+// Service worker orchestrates DNR rules, badge state, heartbeat checks, and focus-mode timers.
 let dnrRebuildMutex = Promise.resolve();
 
 const HEARTBEAT_ALARM = 'sg-heartbeat';
@@ -73,6 +74,7 @@ const FOCUS_BLOCK_DOMAINS = {
   ]
 };
 
+// Focus-mode helpers keep timers resilient across restarts by persisting storage + alarms.
 function scheduleHeartbeat(){
   try {
     chrome.alarms.create(HEARTBEAT_ALARM, { periodInMinutes: HEARTBEAT_PERIOD_MIN });

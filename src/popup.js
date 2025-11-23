@@ -6,6 +6,7 @@ const clearAllow = document.getElementById('clearAllow');
 const allowList = document.getElementById('allowList');
 const allowMessage = document.getElementById('allowMessage');
 const aggressiveEl = document.getElementById('aggressive');
+const nudgeEnabledEl = document.getElementById('nudgeEnabled');
 const sensitivityEl = document.getElementById('sensitivity');
 const sensitivityValue = document.getElementById('sensitivityValue');
 const blocklistInput = document.getElementById('blocklistInput');
@@ -85,6 +86,8 @@ const parentBlocklistSectionEl = document.getElementById('parentBlocklistSection
 const parentDigestSectionEl = document.getElementById('parentDigestSection');
 const parentFocusSectionEl = document.getElementById('parentFocusSection');
 const parentCardEl = document.getElementById('cardParent');
+const parentPanelEl = document.querySelector('.parent-panel');
+const parentBackBtn = document.getElementById('parentBackBtn');
 const approverCardEl = document.getElementById('cardApprover');
 const focusToggleEl = document.getElementById('focusToggle');
 const focusDurationSelect = document.getElementById('focusDurationSelect');
@@ -587,7 +590,16 @@ function collapseParentSections(activeKey){
     if (set.has(key)) return;
     el.hidden = true;
     el.dataset.expanded = '0';
+    el.classList.remove('parent-section--active');
   });
+}
+
+function showParentOverview(){
+  collapseParentSections();
+  if (parentPanelEl) parentPanelEl.hidden = false;
+  if (parentBackBtn) parentBackBtn.hidden = true;
+  document.body.classList.remove('parent-section-active');
+  scrollToCard(parentCardEl);
 }
 
 function expandParentProfilesSection(){
@@ -595,6 +607,11 @@ function expandParentProfilesSection(){
   collapseParentSections('profiles');
   parentProfilesSectionEl.dataset.expanded = '1';
   parentProfilesSectionEl.hidden = false;
+  parentProfilesSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentProfilesSectionEl);
 }
 
 function expandParentOverrideSection(){
@@ -602,6 +619,11 @@ function expandParentOverrideSection(){
   collapseParentSections('override');
   parentOverrideSectionEl.dataset.expanded = '1';
   parentOverrideSectionEl.hidden = false;
+  parentOverrideSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentOverrideSectionEl);
 }
 
 function expandParentAllowlistSection(){
@@ -609,6 +631,11 @@ function expandParentAllowlistSection(){
   collapseParentSections('allowlist');
   parentAllowlistSectionEl.dataset.expanded = '1';
   parentAllowlistSectionEl.hidden = false;
+  parentAllowlistSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentAllowlistSectionEl);
 }
 
 function expandParentBlocklistSection(){
@@ -616,6 +643,11 @@ function expandParentBlocklistSection(){
   collapseParentSections('blocklist');
   parentBlocklistSectionEl.dataset.expanded = '1';
   parentBlocklistSectionEl.hidden = false;
+  parentBlocklistSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentBlocklistSectionEl);
 }
 
 function expandParentAlertsSection(){
@@ -625,6 +657,11 @@ function expandParentAlertsSection(){
   if (!profileDependentControlsLocked){
     parentAlertsSectionEl.hidden = false;
   }
+  parentAlertsSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentAlertsSectionEl);
 }
 
 function expandParentDigestSection(){
@@ -632,6 +669,11 @@ function expandParentDigestSection(){
   collapseParentSections('digest');
   parentDigestSectionEl.dataset.expanded = '1';
   parentDigestSectionEl.hidden = false;
+  parentDigestSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentDigestSectionEl);
 }
 
 function expandParentFocusSection(){
@@ -639,11 +681,16 @@ function expandParentFocusSection(){
   collapseParentSections('focus');
   parentFocusSectionEl.dataset.expanded = '1';
   parentFocusSectionEl.hidden = false;
+  parentFocusSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentFocusSectionEl);
 }
 
 function scrollToCard(el){
   if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.scrollIntoView({ behavior: 'instant', block: 'start' });
 }
 
 function ensureParentCardVisible(){
@@ -681,6 +728,13 @@ if (parentModeBtn){
     } else {
       hideParentCard();
     }
+    document.body.classList.remove('parent-section-active');
+  });
+}
+
+if (parentBackBtn){
+  parentBackBtn.addEventListener('click', ()=>{
+    showParentOverview();
   });
 }
 
@@ -1374,6 +1428,7 @@ chrome.storage.sync.get({
   enabled:true,
   allowlist:[],
   aggressive:false,
+  nudgeEnabled:true,
   sensitivity:60,
   selectedProfileId: null,
   profileTone: null,
@@ -1387,6 +1442,7 @@ chrome.storage.sync.get({
   setAllowMessage((cfg.allowlist && cfg.allowlist.length) ? 'Allowlisted domains' : 'Enter hostnames without http/https.');
   currentAggressive = Boolean(cfg.aggressive);
   aggressiveEl.checked = currentAggressive;
+  if (nudgeEnabledEl) nudgeEnabledEl.checked = cfg.nudgeEnabled !== false;
   if (typeof cfg.sensitivity === 'number'){
     currentSensitivity = cfg.sensitivity;
     sensitivityEl.value = String(currentSensitivity);
@@ -1489,6 +1545,10 @@ enabledEl.addEventListener('change', async ()=>{
 aggressiveEl.addEventListener('change', ()=>{
   chrome.storage.sync.set({ aggressive: aggressiveEl.checked });
   markProfileCustomised();
+});
+
+nudgeEnabledEl.addEventListener('change', ()=>{
+  chrome.storage.sync.set({ nudgeEnabled: Boolean(nudgeEnabledEl.checked) });
 });
 
 sensitivityEl.addEventListener('input', ()=>{

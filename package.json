@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "lint": "eslint src content.js --max-warnings=0",
+    "lint": "eslint src --max-warnings=0",
     "zip:webstore": "mkdir -p dist && rm -f dist/extension.zip && zip -r dist/extension.zip assets/icons data site src manifest.json LICENSE README.md -x src/content.js.bak content.js manifest.backup.json assets/store/*"
   },
   "devDependencies": {
