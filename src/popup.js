@@ -1,3 +1,15 @@
+// Apply stored or system theme immediately (allowed by extension CSP: script-src 'self')
+(function(){
+  try {
+    const stored = localStorage.getItem('sgThemePreference');
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const initialTheme = (stored === 'dark' || stored === 'light') ? stored : (prefersDark ? 'dark' : 'light');
+    document.documentElement.dataset.theme = initialTheme;
+  } catch (_e){
+    document.documentElement.dataset.theme = 'light';
+  }
+})();
+
 const enabledEl = document.getElementById('enabled');
 const statusBadge = document.getElementById('statusBadge');
 const allowHost = document.getElementById('allowHost');
@@ -107,6 +119,8 @@ const classroomPlaylistsEl = document.getElementById('classroomPlaylists');
 const classroomVideosEl = document.getElementById('classroomVideos');
 const classroomSaveBtn = document.getElementById('classroomSave');
 const classroomMessageEl = document.getElementById('classroomMessage');
+const themeToggleBtn = document.getElementById('themeToggle');
+const themeToggleIcon = document.getElementById('themeToggleIcon');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -138,6 +152,18 @@ const pinModalConfirm = document.getElementById('pinModalConfirm');
 const pinModalError = document.getElementById('pinModalError');
 const pinModalCancel = document.getElementById('pinModalCancel');
 const pinModalSubmit = document.getElementById('pinModalSubmit');
+const THEME_KEY = 'themePreference';
+const TOUR_PENDING_KEY = 'onboardingPending';
+const prefersDarkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+const cachedThemePreference = (() => {
+  try {
+    const stored = localStorage.getItem('sgThemePreference');
+    if (stored === 'dark' || stored === 'light' || stored === 'system') return stored;
+    return 'system';
+  } catch (_e) {
+    return 'system';
+  }
+})();
 
 let tourIndex = 0;
 let tourActive = false;
@@ -166,6 +192,11 @@ let focusTicker = null;
 let focusBusy = false;
 const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
 let classroomState = { ...CLASSROOM_DEFAULT };
+let themePreference = cachedThemePreference;
+let appliedTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+let syncTourComplete = null;
+let localTourPending = null;
+let tourDecisionMade = false;
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
@@ -194,11 +225,59 @@ if (parentClassroomSectionEl){
 if (profileApplyBtn) profileApplyBtn.disabled = true;
 if (profileDetailsEl) profileDetailsEl.hidden = true;
 setProfileMessage('Select a profile to preview recommended settings.', 'muted');
+initThemeToggle();
 
 function setStatus(enabled){
   if (!statusBadge) return;
   statusBadge.textContent = enabled ? 'Active' : 'Paused';
   statusBadge.classList.toggle('status--off', !enabled);
+}
+
+function resolveTheme(pref){
+  if (pref === 'dark' || pref === 'light') return pref;
+  return (prefersDarkQuery && prefersDarkQuery.matches) ? 'dark' : 'light';
+}
+
+function updateThemeToggleUi(theme){
+  if (themeToggleIcon) themeToggleIcon.textContent = theme === 'dark' ? '☀' : '🌙';
+  if (themeToggleBtn) themeToggleBtn.setAttribute('aria-label', theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
+  if (themeToggleBtn) themeToggleBtn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+}
+
+function applyThemePreference(pref){
+  themePreference = (pref === 'dark' || pref === 'light') ? pref : 'system';
+  appliedTheme = resolveTheme(themePreference);
+  document.documentElement.dataset.theme = appliedTheme;
+  updateThemeToggleUi(appliedTheme);
+  try {
+    localStorage.setItem('sgThemePreference', themePreference);
+  } catch(_e){}
+}
+
+function initThemeToggle(){
+  applyThemePreference(themePreference);
+  chrome.storage.sync.get({ [THEME_KEY]: themePreference }, (cfg)=>{
+    applyThemePreference(cfg[THEME_KEY] || 'system');
+  });
+  if (themeToggleBtn){
+    themeToggleBtn.addEventListener('click', ()=>{
+      const next = appliedTheme === 'dark' ? 'light' : 'dark';
+      applyThemePreference(next);
+      chrome.storage.sync.set({ [THEME_KEY]: next });
+    });
+  }
+  if (prefersDarkQuery){
+    const handleSystemTheme = ()=>{
+      if (themePreference === 'system'){
+        applyThemePreference('system');
+      }
+    };
+    if (typeof prefersDarkQuery.addEventListener === 'function'){
+      prefersDarkQuery.addEventListener('change', handleSystemTheme);
+    } else if (typeof prefersDarkQuery.addListener === 'function'){
+      prefersDarkQuery.addListener(handleSystemTheme);
+    }
+  }
 }
 
 function updateSensitivityDisplay(value){
@@ -1030,6 +1109,19 @@ function startTour(){
   renderTourStep(tourIndex);
 }
 
+function maybeStartTour(){
+  if (tourDecisionMade) return;
+  if (syncTourComplete === null || localTourPending === null) return;
+  const needsTour = !syncTourComplete || localTourPending;
+  if (needsTour){
+    startTour();
+    if (localTourPending){
+      chrome.storage.local.set({ [TOUR_PENDING_KEY]: false });
+    }
+  }
+  tourDecisionMade = true;
+}
+
 function endTour(completed){
   clearHighlights();
   if (tourOverlay) tourOverlay.classList.add('tour--hidden');
@@ -1038,6 +1130,7 @@ function endTour(completed){
     chrome.storage.sync.set({ [TOUR_KEY]: true }, ()=>{
       ensurePinAfterOnboarding();
     });
+    chrome.storage.local.set({ [TOUR_PENDING_KEY]: false });
   }
 }
 
@@ -1557,12 +1650,11 @@ chrome.storage.sync.get({
     updateSensitivityDisplay(currentSensitivity);
   }
   appliedProfileId = cfg.selectedProfileId || null;
-  if (!cfg[TOUR_KEY]){
-    startTour();
-  }
+  syncTourComplete = Boolean(cfg[TOUR_KEY]);
   renderProfileOptions();
   updateAlertAvailability();
   updateParentSummaries();
+  maybeStartTour();
 });
 chrome.storage.local.get({
   userBlocklist: [],
@@ -1577,7 +1669,8 @@ chrome.storage.local.get({
   tamperAlertEnabled: false,
   focusPinPreference: false,
   focusDurationMinutes: 45,
-  classroomMode: CLASSROOM_DEFAULT
+  classroomMode: CLASSROOM_DEFAULT,
+  [TOUR_PENDING_KEY]: false
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -1630,6 +1723,8 @@ chrome.storage.local.get({
   renderClassroomState();
   updateAlertAvailability();
   updateParentSummaries();
+  localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
+  maybeStartTour();
 });
 
 enabledEl.addEventListener('change', async ()=>{
@@ -2360,6 +2455,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.overrideLog){
     const value = changes.overrideLog.newValue;
     renderOverrideLog(Array.isArray(value) ? value : []);
+  }
+  if (area === 'sync' && changes[THEME_KEY]){
+    applyThemePreference(changes[THEME_KEY].newValue || 'system');
   }
   if (area === 'sync' && changes.selectedProfileId){
     appliedProfileId = changes.selectedProfileId.newValue || null;

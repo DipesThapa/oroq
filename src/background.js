@@ -231,8 +231,15 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
   }
 });
 
-chrome.runtime.onInstalled.addListener(()=>{
+const TOUR_KEY = 'onboardingComplete';
+const TOUR_PENDING_KEY = 'onboardingPending';
+
+chrome.runtime.onInstalled.addListener((details)=>{
   console.log('Safeguard installed');
+  if (details && details.reason === 'install'){
+    chrome.storage.sync.set({ [TOUR_KEY]: false });
+    chrome.storage.local.set({ [TOUR_PENDING_KEY]: true });
+  }
   updateBadge();
   rebuildDynamicRules();
   scheduleHeartbeat();
