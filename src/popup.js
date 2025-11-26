@@ -68,7 +68,11 @@ const parentTamperStatusEl = document.getElementById('parentTamperStatus');
 const parentApproverStatusEl = document.getElementById('parentApproverStatus');
 const parentDigestStatusEl = document.getElementById('parentDigestStatus');
 const parentFocusStatusEl = document.getElementById('parentFocusStatus');
+const parentClassroomStatusEl = document.getElementById('parentClassroomStatus');
 const parentModeBtn = document.getElementById('parentModeBtn');
+const classroomModeBtn = document.getElementById('classroomModeBtn');
+const parentTitleEl = document.querySelector('#cardParent .card__title');
+const parentSubtitleEl = document.querySelector('#cardParent .card__subtitle');
 const parentProfilesBtn = document.getElementById('parentProfilesBtn');
 const parentAllowlistBtn = document.getElementById('parentAllowlistBtn');
 const parentBlocklistBtn = document.getElementById('parentBlocklistBtn');
@@ -78,6 +82,7 @@ const parentTamperBtn = document.getElementById('parentTamperBtn');
 const parentDigestBtn = document.getElementById('parentDigestBtn');
 const parentFocusBtn = document.getElementById('parentFocusBtn');
 const parentApproverBtn = document.getElementById('parentApproverBtn');
+const parentClassroomBtn = document.getElementById('parentClassroomBtn');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
 const parentProfilesSectionEl = document.getElementById('parentProfilesSection');
@@ -85,6 +90,7 @@ const parentAllowlistSectionEl = document.getElementById('parentAllowlistSection
 const parentBlocklistSectionEl = document.getElementById('parentBlocklistSection');
 const parentDigestSectionEl = document.getElementById('parentDigestSection');
 const parentFocusSectionEl = document.getElementById('parentFocusSection');
+const parentClassroomSectionEl = document.getElementById('parentClassroomSection');
 const parentCardEl = document.getElementById('cardParent');
 const parentPanelEl = document.querySelector('.parent-panel');
 const parentBackBtn = document.getElementById('parentBackBtn');
@@ -96,6 +102,11 @@ const focusEtaEl = document.getElementById('focusEta');
 const focusMessageEl = document.getElementById('focusMessage');
 const focusEndBtn = document.getElementById('focusEnd');
 const focusPinEl = document.getElementById('focusPin');
+const classroomToggleEl = document.getElementById('classroomToggle');
+const classroomPlaylistsEl = document.getElementById('classroomPlaylists');
+const classroomVideosEl = document.getElementById('classroomVideos');
+const classroomSaveBtn = document.getElementById('classroomSave');
+const classroomMessageEl = document.getElementById('classroomMessage');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -146,12 +157,15 @@ let approverPromptEnabled = false;
 let pinSetupPrompted = false;
 let tamperAlertEnabled = false;
 let profileDependentControlsLocked = true;
+let parentCardMode = 'parent';
 const FOCUS_ALLOWED_DURATIONS = [30, 45, 60, 2]; // includes 2 minutes for testing
 let focusState = { active: false, endsAt: 0, durationMinutes: 45, pinProtected: false, remainingMs: 0 };
 let focusDurationChoice = 45;
 let focusPinPreference = false;
 let focusTicker = null;
 let focusBusy = false;
+const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
+let classroomState = { ...CLASSROOM_DEFAULT };
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
@@ -172,6 +186,9 @@ if (parentDigestSectionEl){
 }
 if (parentFocusSectionEl){
   parentFocusSectionEl.dataset.expanded = parentFocusSectionEl.dataset.expanded || '0';
+}
+if (parentClassroomSectionEl){
+  parentClassroomSectionEl.dataset.expanded = parentClassroomSectionEl.dataset.expanded || '0';
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -523,6 +540,14 @@ function setApproverMessage(text, tone = 'muted'){
   updateParentSummaries();
 }
 
+function setClassroomMessage(text, tone = 'muted'){
+  if (!classroomMessageEl) return;
+  classroomMessageEl.textContent = text;
+  classroomMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') classroomMessageEl.classList.add('message--success');
+  else if (tone === 'error') classroomMessageEl.classList.add('message--error');
+}
+
 function updateParentSummaries(){
   if (parentProfileStatusEl){
     const appliedProfile = appliedProfileId ? findProfile(appliedProfileId) : null;
@@ -556,6 +581,9 @@ function updateParentSummaries(){
       parentFocusStatusEl.textContent = 'Off';
     }
   }
+  if (parentClassroomStatusEl){
+    parentClassroomStatusEl.textContent = classroomState.enabled ? 'Active (locks social/gaming/YouTube)' : 'Off';
+  }
   if (parentOverrideStatusEl){
     const count = Array.isArray(currentOverrideLog) ? currentOverrideLog.length : 0;
     parentOverrideStatusEl.textContent = count ? `${count} recorded` : 'No overrides recorded yet';
@@ -573,6 +601,35 @@ function updateParentSummaries(){
   }
 }
 
+function renderClassroomState(){
+  if (classroomToggleEl) classroomToggleEl.checked = Boolean(classroomState.enabled);
+  if (classroomPlaylistsEl) classroomPlaylistsEl.value = (classroomState.playlists || []).join('\n');
+  if (classroomVideosEl) classroomVideosEl.value = (classroomState.videos || []).join('\n');
+  if (classroomState.enabled){
+    if (classroomState.videos && classroomState.videos.length){
+      setClassroomMessage(`Classroom mode on. Only ${classroomState.videos.length} saved video${classroomState.videos.length === 1 ? '' : 's'} are allowed.`, 'success');
+    } else {
+      setClassroomMessage(classroomState.playlists.length ? 'Classroom mode on. Only saved YouTube playlists are allowed.' : 'Classroom mode on. YouTube is blocked unless on an approved playlist.', 'success');
+    }
+  } else {
+    setClassroomMessage('Classroom mode is off. Save playlist IDs before enabling.', 'muted');
+  }
+  updateParentSummaries();
+}
+
+function persistClassroomState(nextState){
+  classroomState = {
+    ...classroomState,
+    ...nextState,
+    playlists: sanitizePlaylistIds((nextState && nextState.playlists) || classroomState.playlists),
+    videos: sanitizeVideoIds((nextState && nextState.videos) || classroomState.videos)
+  };
+  return new Promise((resolve)=>chrome.storage.local.set({ classroomMode: classroomState }, ()=>{
+    renderClassroomState();
+    resolve();
+  }));
+}
+
 function collapseParentSections(activeKey){
   const keys = Array.isArray(activeKey) ? activeKey : [activeKey];
   const set = new Set(keys.filter(Boolean));
@@ -583,7 +640,8 @@ function collapseParentSections(activeKey){
     ['blocklist', parentBlocklistSectionEl],
     ['alerts', parentAlertsSectionEl],
     ['digest', parentDigestSectionEl],
-    ['focus', parentFocusSectionEl]
+    ['focus', parentFocusSectionEl],
+    ['classroom', parentClassroomSectionEl]
   ];
   sections.forEach(([key, el])=>{
     if (!el) return;
@@ -688,17 +746,57 @@ function expandParentFocusSection(){
   scrollToCard(parentFocusSectionEl);
 }
 
+function expandParentClassroomSection(){
+  if (!parentClassroomSectionEl) return;
+  collapseParentSections('classroom');
+  parentClassroomSectionEl.dataset.expanded = '1';
+  parentClassroomSectionEl.hidden = false;
+  parentClassroomSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentClassroomSectionEl);
+}
+
 function scrollToCard(el){
   if (!el) return;
   el.scrollIntoView({ behavior: 'instant', block: 'start' });
+}
+
+function setParentToggleState(mode){
+  if (parentModeBtn) parentModeBtn.classList.toggle('parent-toggle__button--active', mode === 'parent');
+  if (classroomModeBtn) classroomModeBtn.classList.toggle('parent-toggle__button--active', mode === 'classroom');
+}
+
+function setParentCardMode(mode){
+  parentCardMode = mode === 'classroom' ? 'classroom' : 'parent';
+  setParentToggleState(parentCardMode);
+  if (parentTitleEl){
+    parentTitleEl.textContent = parentCardMode === 'classroom' ? 'Classroom mode' : 'Parent mode';
+  }
+  if (parentSubtitleEl){
+    parentSubtitleEl.textContent = parentCardMode === 'classroom'
+      ? 'Teacher controls for quick classroom lockdown.'
+      : 'Quick access to safeguarding controls for guardians and DSLs.';
+  }
+  if (parentCardMode === 'classroom'){
+    collapseParentSections('classroom');
+    if (parentPanelEl) parentPanelEl.hidden = true;
+    document.body.classList.add('parent-section-active');
+    expandParentClassroomSection();
+  } else {
+    showParentOverview();
+  }
+  ensureParentCardVisible();
 }
 
 function ensureParentCardVisible(){
   if (!parentCardEl) return;
   if (parentCardEl.hidden){
     parentCardEl.hidden = false;
-    if (parentModeBtn) parentModeBtn.classList.add('parent-toggle__button--active');
+    setParentToggleState(parentCardMode);
   }
+  if (parentBackBtn) parentBackBtn.hidden = false;
   const protectionCard = document.getElementById('cardProtection');
   if (protectionCard) protectionCard.hidden = true;
 }
@@ -708,7 +806,8 @@ function hideParentCard(){
   parentCardEl.hidden = true;
   const protectionCard = document.getElementById('cardProtection');
   if (protectionCard) protectionCard.hidden = false;
-  if (parentModeBtn) parentModeBtn.classList.remove('parent-toggle__button--active');
+  if (parentBackBtn) parentBackBtn.hidden = true;
+  setParentToggleState('');
 }
 
 function ensureApproverCardVisible(){
@@ -720,21 +819,23 @@ function ensureApproverCardVisible(){
 
 if (parentModeBtn){
   parentModeBtn.addEventListener('click', ()=>{
-    if (!parentCardEl) return;
-    const willShow = parentCardEl.hidden;
-    if (willShow){
-      ensureParentCardVisible();
-      scrollToCard(parentCardEl);
-    } else {
-      hideParentCard();
-    }
-    document.body.classList.remove('parent-section-active');
+    setParentCardMode('parent');
+  });
+}
+
+if (classroomModeBtn){
+  classroomModeBtn.addEventListener('click', ()=>{
+    setParentCardMode('classroom');
   });
 }
 
 if (parentBackBtn){
   parentBackBtn.addEventListener('click', ()=>{
-    showParentOverview();
+    if (parentCardMode === 'classroom'){
+      setParentCardMode('parent');
+    } else {
+      hideParentCard();
+    }
   });
 }
 
@@ -742,6 +843,13 @@ if (parentFocusBtn){
   parentFocusBtn.addEventListener('click', ()=>{
     expandParentFocusSection();
     scrollToCard(parentFocusSectionEl);
+  });
+}
+
+if (parentClassroomBtn){
+  parentClassroomBtn.addEventListener('click', ()=>{
+    expandParentClassroomSection();
+    scrollToCard(parentClassroomSectionEl);
   });
 }
 
@@ -1468,7 +1576,8 @@ chrome.storage.local.get({
   approverPromptEnabled: false,
   tamperAlertEnabled: false,
   focusPinPreference: false,
-  focusDurationMinutes: 45
+  focusDurationMinutes: 45,
+  classroomMode: CLASSROOM_DEFAULT
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
   currentBlocklist = [...list];
@@ -1515,6 +1624,10 @@ chrome.storage.local.get({
   focusDurationChoice = clampFocusDuration(cfg.focusDurationMinutes || focusDurationChoice);
   renderFocusState();
   refreshFocusState();
+  classroomState = { ...CLASSROOM_DEFAULT, ...(cfg.classroomMode || {}) };
+  classroomState.playlists = sanitizePlaylistIds(classroomState.playlists);
+  classroomState.videos = sanitizeVideoIds(classroomState.videos);
+  renderClassroomState();
   updateAlertAvailability();
   updateParentSummaries();
 });
@@ -1595,6 +1708,34 @@ if (focusPinEl){
     }
     chrome.storage.local.set({ focusPinPreference });
     renderFocusState();
+  });
+}
+
+if (classroomToggleEl){
+  classroomToggleEl.addEventListener('change', async ()=>{
+    const enabled = classroomToggleEl.checked;
+    await persistClassroomState({ enabled });
+    if (enabled && requirePinEl){
+      requirePinEl.checked = false;
+      chrome.storage.local.set({ requirePin: false });
+      setPinMessage('Overrides disabled while Classroom mode is on.', 'muted');
+      syncPinControls();
+    }
+  });
+}
+
+if (classroomSaveBtn){
+  classroomSaveBtn.addEventListener('click', async ()=>{
+    const ids = sanitizePlaylistIds(classroomPlaylistsEl ? classroomPlaylistsEl.value.split(/\r?\n/) : []);
+    const vids = sanitizeVideoIds(classroomVideosEl ? classroomVideosEl.value.split(/\r?\n/) : []);
+    await persistClassroomState({ playlists: ids, videos: vids });
+    if (vids.length){
+      setClassroomMessage(`Saved ${vids.length} video${vids.length === 1 ? '' : 's'}.`, 'success');
+    } else if (!ids.length){
+      setClassroomMessage('Saved. YouTube stays blocked in Classroom mode until you add playlist or video IDs.', 'muted');
+    } else {
+      setClassroomMessage(`Saved ${ids.length} playlist${ids.length === 1 ? '' : 's'}.`, 'success');
+    }
   });
 }
 
@@ -1765,6 +1906,45 @@ function parseDomainJson(text, key){
   } catch(_e){
     return null;
   }
+}
+
+function extractPlaylistId(value){
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  // Accept direct IDs or URLs with list= param
+  const urlMatch = raw.match(/list=([A-Za-z0-9_-]+)/);
+  if (urlMatch && urlMatch[1]) return urlMatch[1];
+  if (/^[A-Za-z0-9_-]{10,}$/.test(raw)) return raw;
+  return null;
+}
+
+function sanitizePlaylistIds(list){
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(list) ? list : String(list || '').split(/\r?\n/)).forEach((item)=>{
+    const id = extractPlaylistId(item);
+    if (!id) return;
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push(id);
+  });
+  return out;
+}
+
+function sanitizeVideoIds(list){
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(list) ? list : String(list || '').split(/\r?\n/)).forEach((item)=>{
+    const id = String(item || '').trim();
+    if (!id) return;
+    const match = id.match(/v=([A-Za-z0-9_-]{6,})/);
+    const clean = match && match[1] ? match[1] : (/^[A-Za-z0-9_-]{6,}$/.test(id) ? id : null);
+    if (!clean) return;
+    if (seen.has(clean)) return;
+    seen.add(clean);
+    out.push(clean);
+  });
+  return out;
 }
 
 function downloadJson(filename, payload){

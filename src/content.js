@@ -61,6 +61,24 @@
   const NUDGE_SOCIAL_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes
   const NUDGE_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
   const NUDGE_DAILY_CAP = 3;
+  const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
+  const CLASSROOM_YT_GUARD_FLAG = '__sgClassroomYoutubeGuard';
+  const EDUCATIONAL_RESOURCES = [
+    'Khan Academy','BBC Bitesize','Crash Course','Coursera','edX','MIT OpenCourseWare','Stanford Online','Harvard Online',
+    'Yale Open Courses','OpenStax','CK-12','National Geographic Kids','NASA Kids','Smithsonian Learning Lab','Code.org','FreeCodeCamp',
+    'W3Schools','MDN Web Docs','Codecademy','DataCamp','Brilliant','Desmos','GeoGebra','PhET Simulations',
+    'Duolingo','Memrise','Quizlet','AnkiWeb','Project Gutenberg','LibriVox','TED-Ed','Academic Earth',
+    'FutureLearn','Open University OpenLearn','Alison','Udacity','Khan Academy Kids','Exploratorium','HowStuffWorks','National Gallery of Art',
+    'Google Arts & Culture','Smithsonian Kids','PBS LearningMedia','PBS Kids','Scholastic Learn at Home','BrainPOP','IXL Learning','Mathigon',
+    'Purplemath','Math Is Fun','Wolfram Alpha','Wolfram MathWorld','SparkNotes','CliffsNotes','Purdue OWL','Grammarly Handbook',
+    'Stack Overflow','Stack Exchange','GitHub Learning Lab','CS Unplugged','MIT Scratch','Tynker','Saylor Academy','GCF Global',
+    'BBC Learning English','British Council LearnEnglish','Oxford Owl','ReadWriteThink','CommonLit','Newsela','National Geographic Education','NOAA Education',
+    'Big History Project','Crash Course Kids','Veritasium','Smarter Every Day','Numberphile','MinutePhysics','Kurzgesagt','SciShow',
+    'Practical Engineering','MIT Blossoms','Stanford CS106A','Berkeley CS61A','NPTEL','Open Yale Courses','Harvard CS50','MIT 6.0001',
+    'AWS Skill Builder','Google Cloud Skills Boost','Microsoft Learn','IBM SkillsBuild','Khan Academy SAT','ACT Academy','Khan Academy LSAT','Crash Course World History',
+    'Crash Course Chemistry','Crash Course Biology','Crash Course Literature','OpenLearn Science','OpenLearn History','OpenLearn Math','OpenLearn Computing','OpenLearn Languages',
+    'National Science Digital Library','Smithsonian Science Education','FutureLearn Cyber Security','FutureLearn Data Analytics','edX High School Courses','edX AP Courses','Coursera Math for Everyone','Coursera Writing in English'
+  ];
   const PROFILE_TONE_COPY = {
     kids: {
       heading: 'Hold on - we are keeping kid-safe pages only.',
@@ -213,6 +231,7 @@
   let nudgeCooldownUntil = 0;
   let nudgeDailyDate = null;
   let socialNudgeTimer = null;
+  let overrideLocked = false;
 
   chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     if (message && message.type === 'sg-open-approver-prompt'){
@@ -308,6 +327,102 @@
     };
   }
 
+  function normalizeClassroomMode(raw){
+    const mode = raw && typeof raw === 'object' ? raw : {};
+    return {
+      enabled: Boolean(mode.enabled),
+      playlists: Array.isArray(mode.playlists) ? mode.playlists.filter(Boolean) : [],
+      videos: Array.isArray(mode.videos) ? mode.videos.filter(Boolean) : []
+    };
+  }
+
+  function extractYoutubePlaylistId(urlString){
+    try {
+      const url = new URL(urlString);
+      const list = url.searchParams.get('list');
+      if (list) return list;
+      // support playlist URLs without query param (rare)
+      if (url.pathname && url.pathname.startsWith('/playlist')){
+        const params = new URLSearchParams(url.search);
+        if (params.get('list')) return params.get('list');
+      }
+      return null;
+    } catch(_e){
+      return null;
+    }
+  }
+
+  function isYoutubeHost(hostname){
+    return /(?:^|\.)youtube\.com$/.test(hostname) || /(?:^|\.)youtu\.be$/.test(hostname);
+  }
+
+  function startClassroomYoutubeGuard(mode, profileContext){
+    if (!mode || !mode.enabled) return;
+    if (window[CLASSROOM_YT_GUARD_FLAG]) return;
+    const allowedPlaylists = new Set((mode.playlists || []).filter(Boolean));
+    const allowedVideos = new Set((mode.videos || []).filter(Boolean));
+    const requireVideoMatch = allowedVideos.size > 0;
+    const isAllowedUrl = (href)=>{
+      try {
+        const url = new URL(href);
+        if (!isYoutubeHost(url.hostname.toLowerCase())) return true; // only guard YouTube
+        const pid = extractYoutubePlaylistId(href);
+        const vid = url.searchParams.get('v') || (url.hostname === 'youtu.be' ? url.pathname.slice(1) : null);
+        if (requireVideoMatch){
+          if (!vid || !allowedVideos.has(vid)) return false;
+          if (allowedPlaylists.size === 0) return true;
+          return pid ? allowedPlaylists.has(pid) : true;
+        }
+        if (!allowedPlaylists.size) return false;
+        if (!pid) return false;
+        return allowedPlaylists.has(pid);
+      } catch(_e){
+        return false;
+      }
+    };
+    const blockNav = ()=>{
+      lockInteractionShield();
+      showInterstitial('Classroom mode', {
+        pillText: 'Classroom lock',
+        profileTone: profileContext.profileTone || 'work',
+        profileLabel: profileContext.profileLabel || 'Classroom profile',
+        profileSuggestions: profileContext.profileSuggestions,
+        riskSummary: 'YouTube is limited to teacher-approved playlists in classroom mode.',
+        disableOverride: true
+      });
+    };
+    const enforce = ()=>{
+      if (!isAllowedUrl(location.href)){
+        blockNav();
+      }
+    };
+    // hook history to catch SPA navigation
+    const origPush = history.pushState;
+    const origReplace = history.replaceState;
+    history.pushState = function(...args){
+      const ret = origPush.apply(history, args);
+      enforce();
+      return ret;
+    };
+    history.replaceState = function(...args){
+      const ret = origReplace.apply(history, args);
+      enforce();
+      return ret;
+    };
+    window.addEventListener('popstate', enforce, true);
+    window.addEventListener('hashchange', enforce, true);
+    const interval = setInterval(enforce, 1000);
+    window[CLASSROOM_YT_GUARD_FLAG] = ()=>{ // cleanup
+      window.removeEventListener('popstate', enforce, true);
+      window.removeEventListener('hashchange', enforce, true);
+      clearInterval(interval);
+      history.pushState = origPush;
+      history.replaceState = origReplace;
+      window[CLASSROOM_YT_GUARD_FLAG] = null;
+    };
+    enforce();
+  }
+
   async function recordOverrideEvent(reasonText, options = {}){
     try {
       let approver = '';
@@ -381,6 +496,10 @@
         font-size: 13px;
         opacity: 0.92;
       }
+      .sg-nudge__suggestions {
+        font-size: 12px;
+        opacity: 0.9;
+      }
       .sg-nudge__actions {
         display: flex;
         gap: 8px;
@@ -403,6 +522,20 @@
       }
     `;
     document.documentElement.appendChild(st);
+  }
+
+  function getEducationalSuggestions(count = 3){
+    if (!Array.isArray(EDUCATIONAL_RESOURCES) || !EDUCATIONAL_RESOURCES.length) return [];
+    const max = Math.min(count, EDUCATIONAL_RESOURCES.length);
+    const picks = [];
+    const used = new Set();
+    while (picks.length < max){
+      const idx = Math.floor(Math.random() * EDUCATIONAL_RESOURCES.length);
+      if (used.has(idx)) continue;
+      used.add(idx);
+      picks.push(EDUCATIONAL_RESOURCES[idx]);
+    }
+    return picks;
   }
 
   function showNudgeToast(body, options = {}){
@@ -430,6 +563,13 @@
     const copy = document.createElement('div');
     copy.className = 'sg-nudge__body';
     copy.textContent = body;
+    const suggestions = Array.isArray(options.suggestions) ? options.suggestions.filter(Boolean).slice(0, 3) : [];
+    let suggestionsEl = null;
+    if (suggestions.length){
+      suggestionsEl = document.createElement('div');
+      suggestionsEl.className = 'sg-nudge__suggestions';
+      suggestionsEl.textContent = `Try: ${suggestions.join(' · ')}`;
+    }
     const actions = document.createElement('div');
     actions.className = 'sg-nudge__actions';
     const dismiss = document.createElement('button');
@@ -464,6 +604,7 @@
     }
     wrap.appendChild(title);
     wrap.appendChild(copy);
+    if (suggestionsEl) wrap.appendChild(suggestionsEl);
     wrap.appendChild(actions);
     document.body.appendChild(wrap);
     if (!force){
@@ -480,7 +621,8 @@
       if (!nudgeConfig.enabled) return;
       showNudgeToast('You have been here a while — want a quick break?', {
         primaryLabel: 'Take a break',
-        snoozeLabel: 'Snooze 1h'
+        snoozeLabel: 'Snooze 1h',
+        suggestions: getEducationalSuggestions(3)
       });
       startSocialNudgeTimer(); // re-arm for the next interval
     }, NUDGE_SOCIAL_THRESHOLD_MS);
@@ -654,7 +796,8 @@
             }
             if (det.label === 'nsfw'){
               const conf = det.confidence || 0;
-              if (conf >= 0.9 || (ratio >= 0.6 && conf >= 0.7)){
+              // Blur only on high confidence or strong skin density to avoid overblocking
+              if (conf >= 0.9 || (ratio >= 0.7 && conf >= 0.8)){
                 try{ mask(img); }catch(_e){}
               }
             }
@@ -728,22 +871,8 @@
     const key = img && (img.currentSrc || img.src || '');
     if (key && visionCache.has(key)) return visionCache.get(key);
     const features = sampleImageFeatures(img);
-    const host = getHost();
     if (features && features.tainted){
-      if (isRiskyMediaHost(host)){
-        try{ mask(img); }catch(_e){}
-        const taintDetection = {
-          detections: [{
-            label: 'nsfw',
-            confidence: 0.55,
-            meta: 'Cross-origin media on social host',
-            tainted: true
-          }],
-          features
-        };
-        if (key) visionCache.set(key, taintDetection);
-        return taintDetection;
-      }
+      // Skip masking purely due to taint; avoid overblocking on social feeds
       if (key) visionCache.set(key, null);
       return null;
     }
@@ -753,7 +882,7 @@
     }
     const detections = [...(classifyWithTf(img) || [])];
     const nsfwConfidence = clamp01((features.skinRatio - 0.18) / 0.28);
-    if (nsfwConfidence > 0.2){
+    if (nsfwConfidence > 0.35){
       detections.push({
         label: 'nsfw',
         confidence: nsfwConfidence,
@@ -1624,7 +1753,8 @@
       profileTone: audienceContext.profileTone,
       profileLabel: audienceContext.profileLabel,
       profileSuggestions: sanitizeSuggestionList(audienceContext.profileSuggestions),
-      ...phishingEval
+      ...phishingEval,
+      disableOverride: overrideLocked
     });
     try {
       chrome.runtime.sendMessage({
@@ -2006,6 +2136,7 @@
       .sg-tag { position: absolute; top: 6px; left: 6px; background: rgba(185,28,28,0.9); color: #fff;
                 padding: 2px 6px; font: 12px/1 system-ui,sans-serif; border-radius: 3px; z-index: 2147483647; }
       .sg-wrap { position: relative !important; display: inline-block; }
+      .sg-cover { position: absolute; inset: 0; background: rgba(255,255,255,0.2); backdrop-filter: blur(50px) saturate(0.3); -webkit-backdrop-filter: blur(50px) saturate(0.3); z-index: 2147483646; pointer-events: none; }
     `;
     document.documentElement.appendChild(st);
   }
@@ -2038,10 +2169,16 @@
         wrap.appendChild(el);
       }
       el.classList.add('sg-blur');
+      // add a solid cover so background images/thumbnails cannot leak through blur
+      const wrap2 = el.parentElement;
+      if (wrap2 && wrap2.classList.contains('sg-wrap') && !wrap2.querySelector('.sg-cover')){
+        const cover = document.createElement('span');
+        cover.className = 'sg-cover';
+        wrap2.appendChild(cover);
+      }
       const tag = document.createElement('span');
       tag.className = 'sg-tag';
       tag.textContent = 'Blocked by Safeguard';
-      const wrap2 = el.parentElement;
       if (wrap2 && wrap2.classList.contains('sg-wrap')) wrap2.appendChild(tag);
     } catch(_e) {}
   }
@@ -3042,25 +3179,31 @@
     });
     actions.appendChild(backBtn);
 
-    const continueBtn = doc.createElement('button');
-    continueBtn.className = 'sg-button sg-button--primary';
-    continueBtn.type = 'button';
-    let remaining = 5;
-    continueBtn.disabled = true;
-    const updateContinue = ()=>{
-      continueBtn.textContent = remaining > 0 ? `Continue anyway (${remaining})` : 'Continue anyway';
-    };
-    updateContinue();
-    const timer = setInterval(()=>{
-      remaining -= 1;
+    const overrideDisabled = opts.disableOverride === true || overrideLocked;
+    let continueBtn = null;
+    let updateContinue = ()=>{};
+    let timer = null;
+    if (!overrideDisabled){
+      continueBtn = doc.createElement('button');
+      continueBtn.className = 'sg-button sg-button--primary';
+      continueBtn.type = 'button';
+      let remaining = 5;
+      continueBtn.disabled = true;
+      updateContinue = ()=>{
+        continueBtn.textContent = remaining > 0 ? `Continue anyway (${remaining})` : 'Continue anyway';
+      };
       updateContinue();
-      if (remaining <= 0){
-        clearInterval(timer);
-        continueBtn.disabled = false;
-      }
-    }, 1000);
+      timer = setInterval(()=>{
+        remaining -= 1;
+        updateContinue();
+        if (remaining <= 0){
+          clearInterval(timer);
+          continueBtn.disabled = false;
+        }
+      }, 1000);
+    }
 
-    const completeOverride = async (overrideReason)=>{
+    const completeOverride = !overrideDisabled ? async (overrideReason)=>{
       let host = '';
       try {
         host = getHost();
@@ -3087,7 +3230,7 @@
         });
       }
       location.reload();
-    };
+    } : null;
 
     let pinBlock = null;
     let pinInput = null;
@@ -3096,7 +3239,7 @@
     let pinCancel = null;
     let pinReasonInput = null;
 
-    if (pinRequired){
+    if (pinRequired && !overrideDisabled){
       pinBlock = doc.createElement('div');
       pinBlock.className = 'sg-pin';
 
@@ -3178,8 +3321,10 @@
         if (pinSubmit) pinSubmit.disabled = true;
         if (pinError) pinError.textContent = '';
         if (pinReasonInput) pinReasonInput.value = '';
-        continueBtn.disabled = false;
-        updateContinue();
+        if (continueBtn){
+          continueBtn.disabled = false;
+          updateContinue();
+        }
       });
       pinSubmit.addEventListener('click', async ()=>{
         if (!pinInput) return;
@@ -3207,26 +3352,28 @@
           return;
         }
         if (pinError) pinError.textContent = '';
-        await completeOverride(reasonValue);
+        if (completeOverride) await completeOverride(reasonValue);
       });
     }
 
-    continueBtn.addEventListener('click', ()=>{
-      if (!pinRequired){
-        completeOverride();
-        return;
-      }
-      if (!pinBlock) return;
-      if (!pinBlock.classList.contains('sg-pin--visible')){
-        pinBlock.classList.add('sg-pin--visible');
-        continueBtn.disabled = true;
-        setTimeout(()=>{
-          if (pinInput) pinInput.focus();
-        }, 50);
-        return;
-      }
-    });
-    actions.appendChild(continueBtn);
+    if (continueBtn && completeOverride){
+      continueBtn.addEventListener('click', ()=>{
+        if (!pinRequired){
+          completeOverride();
+          return;
+        }
+        if (!pinBlock) return;
+        if (!pinBlock.classList.contains('sg-pin--visible')){
+          pinBlock.classList.add('sg-pin--visible');
+          continueBtn.disabled = true;
+          setTimeout(()=>{
+            if (pinInput) pinInput.focus();
+          }, 50);
+          return;
+        }
+      });
+      actions.appendChild(continueBtn);
+    }
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;
       try {
@@ -3293,14 +3440,15 @@
   }
 
   async function scan(){
-    const [cfg, localOverrides] = await Promise.all([
+    const [cfg, localOverrides, classroomPayload] = await Promise.all([
       new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, profileTone: null, profileLabel: null, profileSafeSuggestions: []}, resolve)),
       new Promise((resolve)=>chrome.storage.local.get({
         requirePin: false,
         overridePinHash: null,
         overridePinSalt: null,
         overridePinIterations: 0
-      }, resolve))
+      }, resolve)),
+      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT }, resolve))
     ]);
     if(!cfg.enabled) return;
     const pinConfig = {
@@ -3313,7 +3461,12 @@
     const profileLabel = typeof cfg.profileLabel === 'string' && cfg.profileLabel.trim() ? cfg.profileLabel.trim() : null;
     const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
     const profileContext = { profileTone, profileLabel, profileSuggestions };
+    const classroomMode = normalizeClassroomMode(classroomPayload.classroomMode);
+    overrideLocked = Boolean(classroomMode.enabled);
     const host = getHost();
+    if (classroomMode.enabled && host && isYoutubeHost(host)){
+      startClassroomYoutubeGuard(classroomMode, profileContext);
+    }
     setupNudges(host);
     try {
       if (host && sessionStorage.getItem('sg-ov:' + host) === '1'){
@@ -3327,7 +3480,7 @@
     if(BL.domains && BL.domains.includes(host)) {
       lockInteractionShield();
       const blockPayload = createBlocklistInsights({ host });
-      showInterstitial("domain blocklist", { pinConfig, ...profileContext, ...blockPayload });
+      showInterstitial("domain blocklist", { pinConfig, ...profileContext, ...blockPayload, disableOverride: overrideLocked });
       return;
     }
 
@@ -3363,7 +3516,7 @@
         total,
         threshold
       });
-      showInterstitial("Heuristic risk score", { pinConfig, ...profileContext, ...heuristicPayload });
+      showInterstitial("Heuristic risk score", { pinConfig, ...profileContext, ...heuristicPayload, disableOverride: overrideLocked });
       return;
     }
 

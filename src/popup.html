@@ -13,10 +13,11 @@
       <p class="header__subtitle">On-device protection for safer browsing</p>
     </div>
     <span id="statusBadge" class="status-badge">Active</span>
-  </header>
+</header>
 
 <div class="parent-toggle">
   <button id="parentModeBtn" class="button button--secondary parent-toggle__button" type="button">Parent mode</button>
+  <button id="classroomModeBtn" class="button button--secondary parent-toggle__button" type="button">Classroom mode</button>
 </div>
 <button id="parentBackBtn" class="button button--secondary parent-back" type="button" hidden>← Back</button>
 
@@ -252,6 +253,34 @@
           Social media, gaming, and streaming are blocked. Wikipedia, Khan Academy, .edu/.org domains, and your allowlist stay open.
         </p>
         <small id="focusMessage" class="message">Pick a duration and start homework mode.</small>
+      </div>
+      <div class="parent-section" id="parentClassroomSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Classroom mode</h3>
+            <p class="parent-section__status">One click to lock social/gaming, strict SafeSearch, and YouTube only via classroom playlists.</p>
+          </div>
+        </div>
+        <label class="toggle">
+          <input id="classroomToggle" type="checkbox">
+          <span>
+            <span class="toggle__label">Enable Classroom mode</span>
+            <span class="toggle__hint">Blocks social/gaming, pauses YouTube unless on an approved playlist, and disables overrides.</span>
+          </span>
+        </label>
+        <div class="field">
+          <label class="field__label" for="classroomPlaylists">Allowed YouTube playlist IDs or URLs (one per line)</label>
+          <textarea id="classroomPlaylists" placeholder="PL1234567890abcdef..."></textarea>
+        </div>
+        <div class="field">
+          <label class="field__label" for="classroomVideos">Allowed YouTube video IDs (one per line)</label>
+          <textarea id="classroomVideos" placeholder="dQw4w9WgXcQ"></textarea>
+          <small class="field__hint">When video IDs are set, only those videos play even inside approved playlists.</small>
+        </div>
+        <div class="actions actions--wrap">
+          <button id="classroomSave" class="button button--secondary" type="button">Save allowlist</button>
+        </div>
+        <small id="classroomMessage" class="message">No playlists saved yet; YouTube will stay blocked in Classroom mode.</small>
       </div>
     </section>
 

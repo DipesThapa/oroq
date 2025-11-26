@@ -6,6 +6,7 @@ const HEARTBEAT_PERIOD_MIN = 2;
 const HEARTBEAT_THRESHOLD_MIN = 6;
 const HEARTBEAT_SNOOZE_MIN = 5;
 const FOCUS_ALARM = 'sg-focus-timer';
+const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
 
 const FOCUS_DEFAULT_STATE = {
   active: false,
@@ -73,6 +74,58 @@ const FOCUS_BLOCK_DOMAINS = {
     'soundcloud.com'
   ]
 };
+
+function sanitizePlaylistIds(list){
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(list) ? list : []).forEach((item)=>{
+    const id = String(item || '').trim();
+    if (!id) return;
+    const match = id.match(/list=([A-Za-z0-9_-]+)/);
+    const clean = match && match[1] ? match[1] : (/^[A-Za-z0-9_-]{10,}$/.test(id) ? id : null);
+    if (!clean) return;
+    if (seen.has(clean)) return;
+    seen.add(clean);
+    out.push(clean);
+  });
+  return out;
+}
+
+function youtubePlaylistRegex(id){
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `^https?://([a-z0-9-]+\\.)?youtube\\.com/(watch\\?[^#]*\\blist=${esc}(&|$)|playlist\\?[^#]*\\blist=${esc}(&|$))`;
+}
+
+function youtubeShortRegex(id){
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `^https?://([a-z0-9-]+\\.)?youtu\\.be/[^?#]+\\?[^#]*\\blist=${esc}(&|$)`;
+}
+
+function sanitizeVideoIds(list){
+  const out = [];
+  const seen = new Set();
+  (Array.isArray(list) ? list : []).forEach((item)=>{
+    const id = String(item || '').trim();
+    if (!id) return;
+    const match = id.match(/v=([A-Za-z0-9_-]{6,})/);
+    const clean = match && match[1] ? match[1] : (/^[A-Za-z0-9_-]{6,}$/.test(id) ? id : null);
+    if (!clean) return;
+    if (seen.has(clean)) return;
+    seen.add(clean);
+    out.push(clean);
+  });
+  return out;
+}
+
+function youtubeWatchRegexForVideo(id){
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `^https?://([a-z0-9-]+\\.)?youtube\\.com/watch\\?[^#]*\\bv=${esc}(&|$)`;
+}
+
+function youtubeShortIdRegex(id){
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `^https?://([a-z0-9-]+\\.)?youtu\\.be/${esc}([/?#]|$)`;
+}
 
 // Focus-mode helpers keep timers resilient across restarts by persisting storage + alarms.
 function scheduleHeartbeat(){
@@ -225,6 +278,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     if (Object.prototype.hasOwnProperty.call(changes, 'userBlocklist')){
       rebuildDynamicRules();
     }
+    if (Object.prototype.hasOwnProperty.call(changes, 'classroomMode')){
+      rebuildDynamicRules();
+    }
     if (Object.prototype.hasOwnProperty.call(changes, 'focusMode')){
       rebuildDynamicRules();
       recoverFocusSession();
@@ -277,15 +333,23 @@ async function rebuildDynamicRules(){
     try{
       const cfg = await new Promise(r => chrome.storage.sync.get({ allowlist: [] }, r));
       const allowlist = Array.isArray(cfg.allowlist) ? cfg.allowlist : [];
-      const local = await new Promise(r => chrome.storage.local.get({ userBlocklist: [] }, r));
+      const local = await new Promise(r => chrome.storage.local.get({ userBlocklist: [], classroomMode: CLASSROOM_DEFAULT }, r));
       const userBlocklist = Array.isArray(local.userBlocklist) ? local.userBlocklist : [];
+      const classroomMode = { ...CLASSROOM_DEFAULT, ...(local.classroomMode || {}) };
+      classroomMode.playlists = sanitizePlaylistIds(classroomMode.playlists);
+      classroomMode.videos = sanitizeVideoIds(classroomMode.videos);
+      const classroomActive = Boolean(classroomMode.enabled);
       const focus = await getFocusState();
       const focusActive = focus.active && focus.endsAt > Date.now();
       const block = await loadJsonResource('data/blocklist.json');
       const blockDomains = (block && Array.isArray(block.domains)) ? block.domains : [];
 
       const normalizeDomain = (value)=>String(value || '').trim().toLowerCase();
-      const allowDomains = Array.from(new Set(allowlist.map(normalizeDomain).filter(Boolean)));
+      let allowDomains = Array.from(new Set(allowlist.map(normalizeDomain).filter(Boolean)));
+      if (classroomActive){
+        // Prevent broad YouTube allowlisting from bypassing classroom restrictions
+        allowDomains = allowDomains.filter((d)=>!/^((www\.)?youtube\.com|youtu\.be)$/i.test(d));
+      }
       const userDomains = Array.from(new Set(userBlocklist.map(normalizeDomain).filter(Boolean)));
 
       let id = 20000; // dynamic IDs start here
@@ -295,7 +359,7 @@ async function rebuildDynamicRules(){
       const focusAllowDomains = focusActive
         ? Array.from(new Set([ ...allowDomains, ...FOCUS_DEFAULT_ALLOWLIST.map(normalizeDomain) ]))
         : allowDomains;
-      const allowPriority = focusActive ? 11000 : 10000;
+      const allowPriority = (focusActive || classroomActive) ? 11000 : 10000;
       for(const d of focusAllowDomains){
         const rx = domainToRegex(d);
         rules.push({
@@ -314,6 +378,40 @@ async function rebuildDynamicRules(){
             condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
           });
         }
+      }
+      const hasVideoIds = classroomActive && classroomMode.videos.length > 0;
+      if (classroomActive && hasVideoIds){
+        const videoPriority = allowPriority + 1000;
+        classroomMode.videos.forEach((vid)=>{
+          rules.push({
+            id: id++,
+            priority: videoPriority,
+            action: { type: 'allow' },
+            condition: { regexFilter: youtubeWatchRegexForVideo(vid), resourceTypes: ['main_frame'] }
+          });
+          rules.push({
+            id: id++,
+            priority: videoPriority,
+            action: { type: 'allow' },
+            condition: { regexFilter: youtubeShortIdRegex(vid), resourceTypes: ['main_frame'] }
+          });
+        });
+      } else if (classroomActive && classroomMode.playlists.length){
+        const playlistPriority = allowPriority + 1000;
+        classroomMode.playlists.forEach((pid)=>{
+          rules.push({
+            id: id++,
+            priority: playlistPriority,
+            action: { type: 'allow' },
+            condition: { regexFilter: youtubePlaylistRegex(pid), resourceTypes: ['main_frame'] }
+          });
+          rules.push({
+            id: id++,
+            priority: playlistPriority,
+            action: { type: 'allow' },
+            condition: { regexFilter: youtubeShortRegex(pid), resourceTypes: ['main_frame'] }
+          });
+        });
       }
 
       // Block rules for domains: packaged + user list (truncated to fit DNR limits)
@@ -350,6 +448,32 @@ async function rebuildDynamicRules(){
           priority: 1,
           action: { type: 'block' },
           condition: { regexFilter: '^https?://.*', resourceTypes: ['main_frame'] }
+        });
+      } else if (classroomActive){
+        const classroomBlocks = Array.from(new Set([
+          ...FOCUS_BLOCK_DOMAINS.social,
+          ...FOCUS_BLOCK_DOMAINS.gaming
+        ].map(normalizeDomain).filter(Boolean)));
+        for (const d of classroomBlocks){
+          const rx = domainToRegex(d);
+          rules.push({
+            id: id++,
+            priority: 600,
+            action: { type: 'block' },
+            condition: { regexFilter: rx, resourceTypes: ['main_frame'] }
+          });
+        }
+        rules.push({
+          id: id++,
+          priority: 600,
+          action: { type: 'block' },
+          condition: { regexFilter: '^https?://([a-z0-9-]+\\.)?youtube\\.com/.*', resourceTypes: ['main_frame'] }
+        });
+        rules.push({
+          id: id++,
+          priority: 600,
+          action: { type: 'block' },
+          condition: { regexFilter: '^https?://([a-z0-9-]+\\.)?youtu\\.be/.*', resourceTypes: ['main_frame'] }
         });
       }
       if (uniq.length > take.length){
