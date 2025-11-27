@@ -273,17 +273,20 @@
             <span class="toggle__hint">Blocks social/gaming, pauses YouTube unless on an approved playlist, and disables overrides.</span>
           </span>
         </label>
-        <div class="field">
+        <div class="field field--stack">
           <label class="field__label" for="classroomPlaylists">Allowed YouTube playlist IDs or URLs (one per line)</label>
           <textarea id="classroomPlaylists" placeholder="PL1234567890abcdef..."></textarea>
         </div>
-        <div class="field">
-          <label class="field__label" for="classroomVideos">Allowed YouTube video IDs (one per line)</label>
-          <textarea id="classroomVideos" placeholder="dQw4w9WgXcQ"></textarea>
-          <small class="field__hint">When video IDs are set, only those videos play even inside approved playlists.</small>
-        </div>
         <div class="actions actions--wrap">
           <button id="classroomSave" class="button button--secondary" type="button">Save allowlist</button>
+        </div>
+        <div class="pill-wrap">
+          <div class="pill-wrap__header">
+            <span class="pill-wrap__title">Saved playlists</span>
+            <span class="pill-wrap__hint">Remove to block again.</span>
+          </div>
+          <ul id="classroomPlaylistList" class="pill-list"></ul>
+          <small id="classroomPlaylistEmpty" class="message">No playlists saved yet.</small>
         </div>
         <small id="classroomMessage" class="message">No playlists saved yet; YouTube will stay blocked in Classroom mode.</small>
       </div>

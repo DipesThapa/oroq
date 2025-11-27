@@ -361,6 +361,7 @@
     if (window[CLASSROOM_YT_GUARD_FLAG]) return;
     const allowedPlaylists = new Set((mode.playlists || []).filter(Boolean));
     const allowedVideos = new Set((mode.videos || []).filter(Boolean));
+    let blocked = false;
     const requireVideoMatch = allowedVideos.size > 0;
     const isAllowedUrl = (href)=>{
       try {
@@ -381,6 +382,8 @@
       }
     };
     const blockNav = ()=>{
+      if (blocked) return;
+      blocked = true;
       lockInteractionShield();
       showInterstitial('Classroom mode', {
         pillText: 'Classroom lock',
@@ -392,6 +395,7 @@
       });
     };
     const enforce = ()=>{
+      if (blocked) return;
       if (!isAllowedUrl(location.href)){
         blockNav();
       }

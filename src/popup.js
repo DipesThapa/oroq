@@ -116,7 +116,8 @@ const focusEndBtn = document.getElementById('focusEnd');
 const focusPinEl = document.getElementById('focusPin');
 const classroomToggleEl = document.getElementById('classroomToggle');
 const classroomPlaylistsEl = document.getElementById('classroomPlaylists');
-const classroomVideosEl = document.getElementById('classroomVideos');
+const classroomPlaylistListEl = document.getElementById('classroomPlaylistList');
+const classroomPlaylistEmptyEl = document.getElementById('classroomPlaylistEmpty');
 const classroomSaveBtn = document.getElementById('classroomSave');
 const classroomMessageEl = document.getElementById('classroomMessage');
 const themeToggleBtn = document.getElementById('themeToggle');
@@ -680,16 +681,46 @@ function updateParentSummaries(){
   }
 }
 
+function renderClassroomList(items, listEl, emptyEl, kind){
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  const values = Array.isArray(items) ? items.filter(Boolean) : [];
+  if (!values.length){
+    listEl.hidden = true;
+    if (emptyEl) emptyEl.hidden = false;
+    return;
+  }
+  listEl.hidden = false;
+  if (emptyEl) emptyEl.hidden = true;
+  values.forEach((val)=>{
+    const li = document.createElement('li');
+    li.className = 'pill pill--wide';
+    const text = document.createElement('span');
+    text.className = 'pill__text';
+    text.textContent = val;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'pill__remove';
+    remove.dataset.kind = kind;
+    remove.dataset.id = val;
+    remove.setAttribute('aria-label', `Remove ${kind} ${val}`);
+    remove.textContent = '×';
+    li.appendChild(text);
+    li.appendChild(remove);
+    listEl.appendChild(li);
+  });
+}
+
+function renderClassroomLists(){
+  renderClassroomList(classroomState.playlists, classroomPlaylistListEl, classroomPlaylistEmptyEl, 'playlist');
+}
+
 function renderClassroomState(){
   if (classroomToggleEl) classroomToggleEl.checked = Boolean(classroomState.enabled);
   if (classroomPlaylistsEl) classroomPlaylistsEl.value = (classroomState.playlists || []).join('\n');
-  if (classroomVideosEl) classroomVideosEl.value = (classroomState.videos || []).join('\n');
+  renderClassroomLists();
   if (classroomState.enabled){
-    if (classroomState.videos && classroomState.videos.length){
-      setClassroomMessage(`Classroom mode on. Only ${classroomState.videos.length} saved video${classroomState.videos.length === 1 ? '' : 's'} are allowed.`, 'success');
-    } else {
-      setClassroomMessage(classroomState.playlists.length ? 'Classroom mode on. Only saved YouTube playlists are allowed.' : 'Classroom mode on. YouTube is blocked unless on an approved playlist.', 'success');
-    }
+    setClassroomMessage(classroomState.playlists.length ? 'Classroom mode on. Only saved YouTube playlists are allowed.' : 'Classroom mode on. YouTube is blocked unless on an approved playlist.', 'success');
   } else {
     setClassroomMessage('Classroom mode is off. Save playlist IDs before enabling.', 'muted');
   }
@@ -1822,17 +1853,33 @@ if (classroomToggleEl){
 if (classroomSaveBtn){
   classroomSaveBtn.addEventListener('click', async ()=>{
     const ids = sanitizePlaylistIds(classroomPlaylistsEl ? classroomPlaylistsEl.value.split(/\r?\n/) : []);
-    const vids = sanitizeVideoIds(classroomVideosEl ? classroomVideosEl.value.split(/\r?\n/) : []);
-    await persistClassroomState({ playlists: ids, videos: vids });
-    if (vids.length){
-      setClassroomMessage(`Saved ${vids.length} video${vids.length === 1 ? '' : 's'}.`, 'success');
-    } else if (!ids.length){
-      setClassroomMessage('Saved. YouTube stays blocked in Classroom mode until you add playlist or video IDs.', 'muted');
+    await persistClassroomState({ playlists: ids, videos: [] });
+    if (!ids.length){
+      setClassroomMessage('Saved. YouTube stays blocked in Classroom mode until you add playlist IDs.', 'muted');
     } else {
       setClassroomMessage(`Saved ${ids.length} playlist${ids.length === 1 ? '' : 's'}.`, 'success');
     }
   });
 }
+
+const handleClassroomRemoval = async (kind, id)=>{
+  if (!id) return;
+  if (kind === 'playlist'){
+    const next = (classroomState.playlists || []).filter((item)=>item !== id);
+    await persistClassroomState({ playlists: next });
+  }
+};
+
+[classroomPlaylistListEl].forEach((listEl)=>{
+  if (!listEl) return;
+  listEl.addEventListener('click', async (event)=>{
+    const btn = event.target.closest('.pill__remove');
+    if (!btn || !listEl.contains(btn)) return;
+    const kind = btn.dataset.kind;
+    const id = btn.dataset.id;
+    await handleClassroomRemoval(kind, id);
+  });
+});
 
 if (requirePinEl){
   requirePinEl.addEventListener('change', async ()=>{
