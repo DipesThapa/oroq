@@ -30,8 +30,9 @@ In your repository Settings → Secrets and variables → Actions, add:
 - Long description: Use README highlights (privacy‑on‑device, features, usage).
 - Category: Productivity or Family
 - Screenshots: 1280×800 or 640×400 (popup, interstitial, allowlist, aggressive mode). Place files under `assets/store/`.
-- Privacy policy: Link to `PRIVACY.md` in GitHub (public URL)
+- Privacy policy: Link to `site/privacy.html` hosted at cyberheroez.co.uk (or GitHub Pages) and ensure the URL is public.
 - Data disclosure: “No data is collected” (no telemetry; override logs encrypted locally and exclude full URLs)
+- Publisher name: CyberHeroez CIC
 
 ## 6) Listing Content Template
 See `docs/STORE_LISTING.md` for a ready‑to‑paste title, descriptions, and screenshot list.

@@ -3,10 +3,10 @@
 Use this content for the Chrome Web Store listing. Replace screenshots with real PNGs before submission.
 
 ## Title
-Safeguard (SafeBrowse AI)
+Safeguard (SafeBrowse AI) — CyberHeroez CIC
 
 ## Short Description
-Privacy-first web safety. Block adult sites, blur risky media, lock overrides behind a PIN, and send HTTPS-only alerts — all on-device.
+Privacy-first web safety from CyberHeroez CIC. Block adult sites, blur risky media, lock overrides behind a PIN, and send HTTPS-only alerts — all on-device.
 
 ## Full Description
 Safeguard helps families and schools reduce exposure to harmful content. It blocks adult sites, enforces SafeSearch on Google/Bing, and can blur images/videos on the page using on‑device heuristics. No data leaves your device.
@@ -33,7 +33,7 @@ What’s new in 0.3.2:
 Privacy:
 - No telemetry or external requests for detection
 - Uses only `storage` and `declarativeNetRequest` permissions
-- See the full policy: https://github.com/DipesThapa/safebrowse-ai/blob/main/PRIVACY.md
+- See the full policy: https://cyberheroez.co.uk/privacy or bundled `site/privacy.html`
 
 How to use:
 1) Install and open the popup; toggle Enable (badge shows ON)

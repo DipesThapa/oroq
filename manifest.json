@@ -3,7 +3,7 @@
   "name": "Safeguard (SafeBrowse AI)",
   "version": "0.3.2",
   "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
-  "homepage_url": "https://github.com/DipesThapa/safebrowse-ai",
+  "homepage_url": "https://cyberheroez.co.uk/",
   "minimum_chrome_version": "100",
   "permissions": [
     "storage",

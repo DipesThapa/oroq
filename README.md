@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml) [![CodeQL](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml) [![Release](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Safeguard is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy.
+Safeguard is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy. Built and maintained by CyberHeroez CIC.
 
 ## Features
 - **Advanced heuristics**: weighted URL/title/meta/body scoring with sensitivity control
@@ -31,7 +31,7 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 
 Hosted resources
 - Bundled static pages (packaged inside the extension): `site/index.html`, `site/privacy.html`, `site/support.html`
-- Optional public hosting: enable GitHub Pages (Settings → Pages → build from `/site`) or deploy the same folder to Netlify/Vercel. Update the Chrome Web Store listing with the published URLs once live.
+- Optional public hosting: host `site/` on cyberheroez.co.uk (or enable GitHub Pages) and point the Chrome Web Store listing + homepage to those URLs.
 
 ## Dev Setup
 1. Chrome → `chrome://extensions` → enable **Developer mode**
@@ -77,6 +77,7 @@ Limitations
 - Contributing guide: see `CONTRIBUTING.md`
 - Security policy: see `SECURITY.md` (report via GitHub advisories)
 - Support: see `SUPPORT.md`
+- Publisher: CyberHeroez CIC — https://cyberheroez.co.uk/
 - Maintainer: dipesthapa (dipesh@cyberheroez.co.uk)
 
 ## Chrome Web Store
