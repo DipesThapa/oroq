@@ -77,6 +77,7 @@ Limitations
 - Contributing guide: see `CONTRIBUTING.md`
 - Security policy: see `SECURITY.md` (report via GitHub advisories)
 - Support: see `SUPPORT.md`
+- Maintainer: dipesthapa (dipesh@cyberheroez.co.uk)
 
 ## Chrome Web Store
 - Publishing workflow: see `.github/workflows/publish-webstore.yml`
