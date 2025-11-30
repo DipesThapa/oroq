@@ -7,8 +7,8 @@ Safeguard is maintained publicly on GitHub. The table below outlines how to reac
 | General questions, onboarding help | [GitHub Discussions](https://github.com/DipesThapa/safebrowse-ai/discussions) | Community response, maintainer follow-up within 5 business days |
 | Feature suggestion | Feature Request issue template | Reviewed during roadmap planning (quarterly cadence) |
 | Bug report | Bug Report issue template with reproduction steps & screenshots | Triage within 3 business days; patch scheduled based on severity |
-| Incident impacting production rollout | Create a bug report and mark as **priority**; optionally email `operations@safebrowse-ai.test` | Acknowledgement within 1 business day, status updates until resolved |
-| Security vulnerability | [GitHub Security Advisory](https://docs.github.com/code-security/security-advisories) or email `security@safebrowse-ai.test` | Initial response within 48 hours, coordinated disclosure process |
+| Incident impacting production rollout | Create a bug report and mark as **priority**; optionally email `operations@cyberheroez.co.uk` | Acknowledgement within 1 business day, status updates until resolved |
+| Security vulnerability | [GitHub Security Advisory](https://docs.github.com/code-security/security-advisories) or email `dipesh@cyberheroez.co.uk` | Initial response within 48 hours, coordinated disclosure process |
 
 ## Operational commitments (best-effort)
 
