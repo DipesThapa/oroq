@@ -31,12 +31,12 @@ In your repository Settings → Secrets and variables → Actions, add:
 - Category: Productivity or Family
 - Screenshots: 1280×800 or 640×400 (popup, interstitial, allowlist, aggressive mode). Place files under `assets/store/`.
 - Privacy policy: Link to `PRIVACY.md` in GitHub (public URL)
-- Data disclosure: “No data is collected” (no telemetry)
+- Data disclosure: “No data is collected” (no telemetry; override logs encrypted locally and exclude full URLs)
 
 ## 6) Listing Content Template
 See `docs/STORE_LISTING.md` for a ready‑to‑paste title, descriptions, and screenshot list.
 
 ## Notes
-- Manifest version is `0.2.0` (bump for each submission).
-- The workflow zips only required files; dev/backup files are excluded.
+- Manifest version is `0.3.2` (bump for each submission).
+- The workflow zips only required files; dev/backup files are excluded. For manual uploads, run `npm run zip:webstore` and upload `dist/extension.zip`.
 - Large blocklists are supported via import; dynamic DNR limits apply.

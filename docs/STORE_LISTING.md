@@ -6,7 +6,7 @@ Use this content for the Chrome Web Store listing. Replace screenshots with real
 Safeguard (SafeBrowse AI)
 
 ## Short Description
-Privacy-first web safety. Block adult sites, blur risky media, and lock overrides or allowlist edits behind a private PIN — all on-device.
+Privacy-first web safety. Block adult sites, blur risky media, lock overrides behind a PIN, and send HTTPS-only alerts — all on-device.
 
 ## Full Description
 Safeguard helps families and schools reduce exposure to harmful content. It blocks adult sites, enforces SafeSearch on Google/Bing, and can blur images/videos on the page using on‑device heuristics. No data leaves your device.
@@ -17,17 +17,18 @@ Features:
 - Visual detection: on-device image heuristics boost scores when explicit imagery appears even without text
 - Safeguarding digest: download weekly CSV summaries for DSLs, governors, and audit trails
 - Override alerts: send webhook notifications (Slack/Teams/etc.) whenever a PIN override is approved, including approver name
+- Secure alerts: HTTPS-only (no localhost/LAN/creds) override/tamper webhooks with PIN-gated setup
 - Domain blocklist: packaged defaults plus user-importable lists; allowlist trusted domains in seconds
 - SafeSearch enforcement (Google/Bing) via Declarative Net Request (DNR)
 - Static ad/marketing rules that trim common trackers and adult portals
 - Manual overrides and allowlist edits locked behind a private PIN with an on-device reason log
+- Override log is encrypted at rest and stores host/reason/approver only (no full URLs) for privacy
 - Age-based profiles for EYFS through post-16 so schools can apply presets with one click
 
-What’s new in 0.3.1:
-- Capture an override reason for each unblock and store it in a local safeguarding log
-- Add age-based profiles (EYFS–post-16) that configure sensitivity, blocklists, and PIN defaults automatically
-- Change, remove, or reset the PIN entirely on-device (no cloud storage)
-- Updated popup layout with clearer override messaging and status hints
+What’s new in 0.3.2:
+- Hardened alerts: HTTPS-only webhooks; localhost/private-network/credentialed URLs are rejected
+- PIN protection defaults on after setup; override/allowlist edits stay locked unless you explicitly disable them
+- Reduced fingerprinting: web-accessible resources limited to HTTPS contexts
 
 Privacy:
 - No telemetry or external requests for detection

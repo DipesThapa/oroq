@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Safeguard (SafeBrowse AI)",
-  "version": "0.3.1",
-  "description": "Privacy-first web safety extension (MVP) — domain blocklist + simple heuristics.",
+  "version": "0.3.2",
+  "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
   "homepage_url": "https://github.com/DipesThapa/safebrowse-ai",
   "minimum_chrome_version": "100",
   "permissions": [
@@ -32,7 +32,7 @@
         "model/nsfw/*"
       ],
       "matches": [
-        "<all_urls>"
+        "https://*/*"
       ]
     }
   ],

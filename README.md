@@ -16,8 +16,10 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 - **First-run tour**: onboarding highlights key controls and policy workflows for new admins
 - **Static ad rules**: common ad/marketing domains blocked via DNR
 - **PIN protection**: require a PIN before overrides or allowlist edits, capturing on-device reason & approver logs
+- **Secure alerts**: HTTPS-only override/tamper webhooks (no localhost/LAN/creds) with PIN-locked setup
 - **Safeguarding digest**: export a weekly CSV summary of settings and override activity for DSL reviews
 - **Override alerts**: optional PIN-protected webhooks (Slack/Teams/email) with approver names for instant oversight
+- **Encrypted override log**: AES-GCM at rest; stores timestamp, host, reason, and approver only (no full URLs)
 - **Interstitial**: blocked page with timed “Show anyway” override (per tab/session)
 
 ## Business-ready capabilities
@@ -43,6 +45,7 @@ Hosted resources
 Notes:
 - Content script is `src/content.js` (manifest aligned). The legacy `content.js` remains in repo but is not loaded.
 - Permissions: `storage`, `declarativeNetRequest`, `tabs`; scripts run on `http/https` pages only (tabs permission is used to show the active site toggle).
+- Web-accessible resources limited to `https://*/*` (no localhost/LAN) to reduce fingerprinting.
 - DNR rules are rebuilt on install/startup and when allowlist/blocklist change.
 - Interstitial uses safe DOM APIs; “Show anyway” temporarily allows the current host for this tab/session.
 
@@ -77,5 +80,6 @@ Limitations
 
 ## Chrome Web Store
 - Publishing workflow: see `.github/workflows/publish-webstore.yml`
-- Setup + credentials: `docs/WEBSTORE.md`
+- Setup + credentials + manual upload steps: `docs/WEBSTORE.md`
 - Listing content template: `docs/STORE_LISTING.md`
+- Build zip for upload: `npm run zip:webstore` (outputs `dist/extension.zip`; ensures only required files are packaged)

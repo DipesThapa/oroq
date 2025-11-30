@@ -75,6 +75,31 @@ const FOCUS_BLOCK_DOMAINS = {
   ]
 };
 
+function isPrivateHost(host){
+  if (!host) return false;
+  const lower = host.toLowerCase();
+  return /^localhost$/.test(lower)
+    || /^127\./.test(lower)
+    || /^10\./.test(lower)
+    || /^192\.168\./.test(lower)
+    || /^169\.254\./.test(lower)
+    || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(lower)
+    || /^::1$/.test(lower)
+    || /^fc00:/.test(lower)
+    || /^fd00:/.test(lower);
+}
+
+function normalizeWebhook(url){
+  if (!url || typeof url !== 'string') return '';
+  try{
+    const parsed = new URL(url.trim());
+    if (parsed.protocol !== 'https:') return '';
+    if (parsed.username || parsed.password) return '';
+    if (isPrivateHost(parsed.hostname)) return '';
+    return parsed.toString();
+  }catch(_e){ return ''; }
+}
+
 function sanitizePlaylistIds(list){
   const out = [];
   const seen = new Set();
@@ -587,7 +612,7 @@ async function handleHeartbeat(options = {}){
     });
     await chrome.storage.local.set({ lastHeartbeatAt: now });
     if (!tamperAlertEnabled) return;
-    const webhook = typeof overrideAlertWebhook === 'string' ? overrideAlertWebhook.trim() : '';
+    const webhook = normalizeWebhook(overrideAlertWebhook);
     if (!webhook) return;
     const last = Number(lastHeartbeatAt) || 0;
     if (!last) return;
@@ -634,7 +659,7 @@ async function handleProtectionToggle(enabled){
 async function sendTamperAlert(payload, cfg, timestamp, options = {}){
   const now = timestamp || Date.now();
   if (!cfg || !cfg.tamperAlertEnabled) return;
-  const webhook = typeof cfg.overrideAlertWebhook === 'string' ? cfg.overrideAlertWebhook.trim() : '';
+  const webhook = normalizeWebhook(cfg.overrideAlertWebhook);
   if (!webhook) return;
   const lastAlert = Number(cfg.lastTamperAlertAt) || 0;
   if (!options.force && lastAlert && (now - lastAlert) < HEARTBEAT_SNOOZE_MIN * 60000) return;
@@ -655,7 +680,7 @@ async function handleOverrideAlert(entry){
   try {
     const cfg = await chrome.storage.local.get({ overrideAlertEnabled: false, overrideAlertWebhook: '' });
     if (!cfg.overrideAlertEnabled) return;
-    const webhook = typeof cfg.overrideAlertWebhook === 'string' ? cfg.overrideAlertWebhook.trim() : '';
+    const webhook = normalizeWebhook(cfg.overrideAlertWebhook);
     if (!webhook) return;
     const ts = entry.timestamp ? new Date(entry.timestamp).toISOString() : new Date().toISOString();
     const lines = [];

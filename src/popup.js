@@ -198,6 +198,7 @@ let appliedTheme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 
 let syncTourComplete = null;
 let localTourPending = null;
 let tourDecisionMade = false;
+const LOG_KEY_BYTES = 32;
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
@@ -355,6 +356,33 @@ function setFocusMessage(text, tone = 'muted'){
   focusMessageEl.classList.remove('message--success', 'message--error');
   if (tone === 'success') focusMessageEl.classList.add('message--success');
   else if (tone === 'error') focusMessageEl.classList.add('message--error');
+}
+
+function isPrivateHost(host){
+  if (!host) return false;
+  const lower = host.toLowerCase();
+  return /^localhost$/.test(lower)
+    || /^127\./.test(lower)
+    || /^10\./.test(lower)
+    || /^192\.168\./.test(lower)
+    || /^169\.254\./.test(lower)
+    || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(lower)
+    || /^::1$/.test(lower)
+    || /^fc00:/.test(lower)
+    || /^fd00:/.test(lower);
+}
+
+function normalizeWebhookInput(value){
+  if (!value || typeof value !== 'string') return '';
+  try {
+    const parsed = new URL(value.trim());
+    if (parsed.protocol !== 'https:') return '';
+    if (parsed.username || parsed.password) return '';
+    if (isPrivateHost(parsed.hostname)) return '';
+    return parsed.toString();
+  } catch(_e){
+    return '';
+  }
 }
 
 function clampFocusDuration(minutes){
@@ -606,8 +634,9 @@ function updateAlertAvailability(){
     const wrap = tamperAlertEnabledEl.closest('.toggle');
     if (wrap) wrap.classList.toggle('toggle--disabled', false);
   }
-  setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts stay on-device until you enable them.', overrideAlertsEnabled ? 'success' : 'muted');
-  setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+  const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
+  setAlertMessage(overrideAlertsEnabled ? (hasWebhook ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts enabled. Add a HTTPS webhook to deliver notifications.') : 'Alerts stay on-device until you enable them.', overrideAlertsEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
+  setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
   updateParentSummaries();
 }
 
@@ -639,10 +668,11 @@ function updateParentSummaries(){
   }
   if (parentAlertsStatusEl){
     let text = 'Disabled';
+    const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
     if (profileDependentControlsLocked){
       text = 'Locked (apply profile first)';
     } else if (overrideAlertsEnabled){
-      text = overrideAlertWebhook ? 'Enabled (webhook saved)' : 'Enabled (add webhook)';
+      text = hasWebhook ? 'Enabled (webhook saved)' : 'Enabled (add HTTPS webhook)';
     }
     parentAlertsStatusEl.textContent = text;
   }
@@ -984,6 +1014,90 @@ function base64ToUint8Array(base64){
   } catch(_e){
     return null;
   }
+}
+
+async function getLogKey(){
+  const stored = await chrome.storage.local.get({ overrideLogKey: '' });
+  const existing = typeof stored.overrideLogKey === 'string' ? stored.overrideLogKey : '';
+  if (existing) return existing;
+  const keyBytes = new Uint8Array(LOG_KEY_BYTES);
+  crypto.getRandomValues(keyBytes);
+  const b64 = bufferToBase64(keyBytes.buffer);
+  await chrome.storage.local.set({ overrideLogKey: b64 });
+  return b64;
+}
+
+async function importAesKey(b64){
+  const bytes = base64ToUint8Array(b64);
+  if (!bytes) return null;
+  try {
+    return await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
+  } catch(_e){ return null; }
+}
+
+async function decryptOverrideEntries(records){
+  try{
+    const keyB64 = await getLogKey();
+    const key = await importAesKey(keyB64);
+    if (!key) return [];
+    const decoder = new TextDecoder();
+    const out = [];
+    for (const rec of Array.isArray(records) ? records : []){
+      if (!rec || !rec.iv || !rec.data) continue;
+      const iv = base64ToUint8Array(rec.iv);
+      const cipher = base64ToUint8Array(rec.data);
+      if (!iv || !cipher) continue;
+      try{
+        const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+        const text = decoder.decode(plain);
+        const parsed = JSON.parse(text);
+        if (parsed && typeof parsed === 'object') out.push(parsed);
+      }catch(_e){ /* skip corrupt */ }
+    }
+    return out;
+  }catch(_e){
+    return [];
+  }
+}
+
+async function encryptOverrideEntries(entries){
+  try{
+    const keyB64 = await getLogKey();
+    const key = await importAesKey(keyB64);
+    if (!key) return [];
+    const encoder = new TextEncoder();
+    const encrypted = [];
+    for (const entry of entries){
+      const iv = new Uint8Array(12);
+      crypto.getRandomValues(iv);
+      const data = encoder.encode(JSON.stringify(entry));
+      const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+      encrypted.push({ iv: bufferToBase64(iv.buffer), data: bufferToBase64(cipher) });
+    }
+    return encrypted;
+  } catch(_e){
+    return [];
+  }
+}
+
+async function loadOverrideLog(){
+  const payload = await chrome.storage.local.get({ overrideLogEncrypted: [], overrideLog: [] });
+  const enc = Array.isArray(payload.overrideLogEncrypted) ? payload.overrideLogEncrypted : [];
+  if (enc.length){
+    const decoded = await decryptOverrideEntries(enc);
+    if (decoded.length) return decoded;
+  }
+  const legacy = Array.isArray(payload.overrideLog) ? payload.overrideLog.filter((item)=>item && typeof item === 'object') : [];
+  if (legacy.length){
+    const encrypted = await encryptOverrideEntries(legacy);
+    await chrome.storage.local.set({ overrideLogEncrypted: encrypted, overrideLog: [] });
+  }
+  return legacy;
+}
+
+async function saveOverrideLog(entries){
+  const encrypted = await encryptOverrideEntries(entries);
+  await chrome.storage.local.set({ overrideLogEncrypted: encrypted, overrideLog: [] });
 }
 
 async function derivePinHash(pin, reuse = {}){
@@ -1689,7 +1803,7 @@ chrome.storage.sync.get({
 });
 chrome.storage.local.get({
   userBlocklist: [],
-  requirePin: false,
+  requirePin: true,
   overridePinHash: null,
   overridePinSalt: null,
   overridePinIterations: 0,
@@ -1715,26 +1829,27 @@ chrome.storage.local.get({
  } : null;
 
   if (requirePinEl){
-    const shouldEnable = Boolean(cfg.requirePin && storedPin);
+    const shouldEnable = Boolean(cfg.requirePin);
     requirePinEl.checked = shouldEnable;
-    if (cfg.requirePin && !storedPin){
-      chrome.storage.local.set({ requirePin: false });
-    }
   }
   syncPinControls();
   if (storedPin){
-    setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN required for overrides and allowlist edits.' : 'PIN saved. Toggle on PIN protection when you need it.');
+    setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN required for overrides and allowlist edits.' : 'PIN saved. PIN protection defaults on; disable only if you must.', 'muted');
   } else {
-    setPinMessage('Set a PIN to guard overrides and allowlist edits. Nothing leaves this device.', 'muted');
+    setPinMessage((requirePinEl && requirePinEl.checked) ? 'Set a PIN to enforce protection for overrides and allowlist edits.' : 'Set a PIN to guard overrides and allowlist edits. Nothing leaves this device.', (requirePinEl && requirePinEl.checked) ? 'error' : 'muted');
   }
   if (pinControls) pinControls.classList.add('pin-controls--visible');
-  renderOverrideLog(Array.isArray(cfg.overrideLog) ? cfg.overrideLog : []);
+  loadOverrideLog().then((log)=>renderOverrideLog(log));
   overrideAlertsEnabled = Boolean(cfg.overrideAlertEnabled);
-  overrideAlertWebhook = typeof cfg.overrideAlertWebhook === 'string' ? cfg.overrideAlertWebhook : '';
+  overrideAlertWebhook = normalizeWebhookInput(cfg.overrideAlertWebhook);
+  const rawWebhook = typeof cfg.overrideAlertWebhook === 'string' ? cfg.overrideAlertWebhook.trim() : '';
+  if (overrideAlertWebhook !== rawWebhook){
+    chrome.storage.local.set({ overrideAlertWebhook });
+  }
   if (alertEnabledEl) alertEnabledEl.checked = overrideAlertsEnabled;
   if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
   if (overrideAlertsEnabled){
-    setAlertMessage('Alerts enabled. Overrides will notify your webhook.', 'success');
+    setAlertMessage(overrideAlertWebhook ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts enabled. Add a HTTPS webhook to deliver notifications.', overrideAlertWebhook ? 'success' : 'error');
   } else {
     setAlertMessage('Alerts stay on-device until you enable them.', 'muted');
   }
@@ -1938,14 +2053,13 @@ if (pinUpdateBtn){
     const payload = {
       overridePinHash: newPin.hash,
       overridePinSalt: newPin.salt,
-      overridePinIterations: newPin.iterations
+      overridePinIterations: newPin.iterations,
+      requirePin: true
     };
-    if (requirePinEl && requirePinEl.checked){
-      payload.requirePin = true;
-    }
+    if (requirePinEl) requirePinEl.checked = true;
     chrome.storage.local.set(payload, ()=>{
       syncPinControls();
-      setPinMessage((requirePinEl && requirePinEl.checked) ? 'PIN updated.' : 'PIN updated. Toggle on PIN protection when you need it.', 'success');
+      setPinMessage('PIN updated. Override and allowlist protection is on.', 'success');
     });
   });
 }
@@ -2323,9 +2437,21 @@ if (alertEnabledEl){
       alertEnabledEl.checked = overrideAlertsEnabled;
       return;
     }
+    const candidateWebhook = normalizeWebhookInput(overrideAlertWebhook || (alertWebhookInput && alertWebhookInput.value));
+    if (wantsEnable && !candidateWebhook){
+      alertEnabledEl.checked = false;
+      overrideAlertsEnabled = false;
+      setAlertMessage('Add a HTTPS webhook before enabling alerts.', 'error');
+      updateParentSummaries();
+      return;
+    }
+    if (candidateWebhook && !overrideAlertWebhook){
+      overrideAlertWebhook = candidateWebhook;
+      if (alertWebhookInput) alertWebhookInput.value = candidateWebhook;
+      chrome.storage.local.set({ overrideAlertWebhook: candidateWebhook });
+    }
     overrideAlertsEnabled = wantsEnable;
     chrome.storage.local.set({ overrideAlertEnabled: overrideAlertsEnabled }, ()=>{
-      setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
       updateAlertAvailability();
     });
   });
@@ -2334,12 +2460,12 @@ if (alertEnabledEl){
 if (alertSaveBtn){
   alertSaveBtn.addEventListener('click', async ()=>{
     if (!(await ensureAlertPinAuthorization('update the alert webhook'))) return;
-    const url = (alertWebhookInput && alertWebhookInput.value ? alertWebhookInput.value.trim() : '');
-    if (!/^https?:\/\//i.test(url)){
-      setAlertMessage('Webhook must start with http:// or https://', 'error');
+    const normalized = normalizeWebhookInput(alertWebhookInput && alertWebhookInput.value);
+    if (!normalized){
+      setAlertMessage('Webhook must be HTTPS and not use private or localhost addresses.', 'error');
       return;
     }
-    overrideAlertWebhook = url;
+    overrideAlertWebhook = normalized;
     chrome.storage.local.set({ overrideAlertWebhook: overrideAlertWebhook }, ()=>{
       setAlertMessage('Webhook saved.', 'success');
       updateParentSummaries();
@@ -2355,9 +2481,16 @@ if (tamperAlertEnabledEl){
       tamperAlertEnabledEl.checked = tamperAlertEnabled;
       return;
     }
+    const candidateWebhook = normalizeWebhookInput(overrideAlertWebhook || (alertWebhookInput && alertWebhookInput.value));
+    if (wantsEnable && !candidateWebhook){
+      tamperAlertEnabledEl.checked = false;
+      tamperAlertEnabled = false;
+      setTamperMessage('Add a HTTPS webhook before enabling tamper alerts.', 'error');
+      updateParentSummaries();
+      return;
+    }
     tamperAlertEnabled = wantsEnable;
     chrome.storage.local.set({ tamperAlertEnabled }, ()=>{
-      setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
       updateAlertAvailability();
     });
   });
@@ -2470,15 +2603,16 @@ if (tourNext){
 
 if (overrideExportBtn){
   overrideExportBtn.addEventListener('click', async ()=>{
-    if (!currentOverrideLog.length){
+    const log = await loadOverrideLog();
+    if (!log.length){
       setOverrideMessage('No overrides recorded yet.', 'muted');
       return;
     }
     if (!(await ensureLogPin('download the override log'))) return;
     downloadJson(`safeguard-overrides-${new Date().toISOString().slice(0,10)}.json`, {
       exportedAt: new Date().toISOString(),
-      count: currentOverrideLog.length,
-      entries: currentOverrideLog
+      count: log.length,
+      entries: log
     });
     setOverrideMessage('Override log downloaded.', 'success');
   });
@@ -2486,22 +2620,21 @@ if (overrideExportBtn){
 
 if (overrideClearBtn){
   overrideClearBtn.addEventListener('click', async ()=>{
-    if (!currentOverrideLog.length){
+    const log = await loadOverrideLog();
+    if (!log.length){
       setOverrideMessage('Override log is already empty.', 'muted');
       return;
     }
     if (!(await ensureLogPin('clear the override log'))) return;
-    chrome.storage.local.set({ overrideLog: [] }, ()=>{
-      renderOverrideLog([]);
-      setOverrideMessage('Override log cleared.', 'success');
-    });
+    await saveOverrideLog([]);
+    renderOverrideLog([]);
+    setOverrideMessage('Override log cleared.', 'success');
   });
 }
 
 chrome.storage.onChanged.addListener((changes, area)=>{
-  if (area === 'local' && changes.overrideLog){
-    const value = changes.overrideLog.newValue;
-    renderOverrideLog(Array.isArray(value) ? value : []);
+  if (area === 'local' && (changes.overrideLog || changes.overrideLogEncrypted)){
+    loadOverrideLog().then((log)=>renderOverrideLog(log));
   }
   if (area === 'sync' && changes[THEME_KEY]){
     applyThemePreference(changes[THEME_KEY].newValue || 'system');
@@ -2531,11 +2664,12 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.overrideAlertEnabled){
     overrideAlertsEnabled = Boolean(changes.overrideAlertEnabled.newValue);
     if (alertEnabledEl) alertEnabledEl.checked = overrideAlertsEnabled;
-    setAlertMessage(overrideAlertsEnabled ? 'Alerts enabled. Save a webhook to deliver notifications.' : 'Alerts disabled.', overrideAlertsEnabled ? 'success' : 'muted');
+    const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
+    setAlertMessage(overrideAlertsEnabled ? (hasWebhook ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts enabled. Add a HTTPS webhook to deliver notifications.') : 'Alerts disabled.', overrideAlertsEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
     updateAlertAvailability();
   }
   if (area === 'local' && changes.overrideAlertWebhook){
-    overrideAlertWebhook = typeof changes.overrideAlertWebhook.newValue === 'string' ? changes.overrideAlertWebhook.newValue : '';
+    overrideAlertWebhook = normalizeWebhookInput(changes.overrideAlertWebhook.newValue);
     if (alertWebhookInput) alertWebhookInput.value = overrideAlertWebhook;
     updateParentSummaries();
   }
@@ -2553,7 +2687,8 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.tamperAlertEnabled){
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
     if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
-    setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+    const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
+    setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. Safeguard will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
     updateAlertAvailability();
   }
   if (area === 'local' && changes.approverPromptEnabled){

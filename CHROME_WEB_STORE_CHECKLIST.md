@@ -29,6 +29,8 @@
 - Manifest & permissions
   - `storage` and `declarativeNetRequest` only
   - Content scripts restricted to `http/https` matches
+  - Web-accessible resources limited to HTTPS contexts; no localhost/LAN
+- Privacy: override logs encrypted at rest (AES-GCM) and exclude full URLs; HTTPS-only alerts
 - QA scenarios
   - Toggle enabled ON/OFF from popup
   - Add/remove allowlist entries; confirm DNR rules update

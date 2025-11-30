@@ -5,16 +5,14 @@ Safeguard is a privacy‑first browser extension. It processes content locally a
 ## Data collection
 - No telemetry, analytics, or third-party tracking is integrated. The extension never transmits browsing history, URLs, or content back to our infrastructure.
 - Network access is limited to the active tab and Chrome Declarative Net Request (DNR) redirects required for SafeSearch/ad blocking.
+- Optional: if you enable override/tamper alerts, the extension sends a small JSON payload (reason, approver initials/name, host/URL, policy verdict) to **your** HTTPS webhook only. Localhost and private-network addresses are rejected.
 
 ## Data stored locally
 - `chrome.storage.sync`
-  - `enabled`: on/off state of core protection
-  - `allowlist`: hostnames trusted by the user/administrator
-  - `aggressive`: whether visual blurring is enabled
-  - `sensitivity`: slider value for the heuristic threshold
+  - Protection state (`enabled`), allowlist, aggressive mode, sensitivity, selected profile metadata, nudge settings
 - `chrome.storage.local`
-  - `userBlocklist`: administrator-imported domains to block
-- No user identity, account, or credential data is persisted.
+  - User blocklist, override log (AES-GCM encrypted; reason/approver, host, timestamps — no full URLs), optional webhook URL (HTTPS only), tamper/override alert toggles, classroom/focus mode settings, and PIN hash/salt/iterations
+- No user identity, account, or credential data is persisted. PINs are hashed (PBKDF2 with salt/iterations) and never transmitted.
 
 ## Content scanning
 - Heuristic text and DOM analysis runs within the user’s browser process. Images/videos stay on device; we do not upload pixels for remote classification.

@@ -227,6 +227,7 @@
   let tfLib = null;
   let nsfwModel = null;
   const tfDetectionCache = new Map();
+  const LOG_KEY_BYTES = 32;
   let nudgeConfig = { enabled: NUDGE_DEFAULT_ENABLED, snoozeUntil: 0, dailyCount: 0, lastNudgeAt: 0 };
   let nudgeCooldownUntil = 0;
   let nudgeDailyDate = null;
@@ -437,7 +438,7 @@
       const entry = {
         timestamp: Date.now(),
         host: getHost(),
-        url: (()=>{ try { return location.href; } catch(_e){ return null; } })(),
+        url: null, // do not persist full URLs to reduce sensitive data stored
         reason: (reasonText || '').trim(),
         pinRequired: Boolean(options.pinRequired),
         source: options.source || 'interstitial',
@@ -445,12 +446,11 @@
         policyReview: sanitizePolicyReview(options.policyReview),
         heuristics: sanitizeHeuristicsSnapshot(options.heuristics)
       };
-      const payload = await new Promise((resolve)=>chrome.storage.local.get({ overrideLog: [] }, resolve));
-      const existing = Array.isArray(payload.overrideLog) ? payload.overrideLog.filter((item)=>item && typeof item === 'object') : [];
+      const existing = await loadEncryptedOverrideLog();
       const maxEntries = 100;
       const next = existing.slice(Math.max(0, existing.length - (maxEntries - 1)));
       next.push(entry);
-      await new Promise((resolve)=>chrome.storage.local.set({ overrideLog: next }, resolve));
+      await saveEncryptedOverrideLog(next);
       try {
         chrome.runtime.sendMessage({ type: 'sg-override-alert', entry });
       } catch(_err){
@@ -463,6 +463,91 @@
 
   function getHost(){
     try { return location.hostname.replace(/^www\./,'').toLowerCase(); } catch{ return ''; }
+  }
+
+  async function getLogKey(){
+    const stored = await chrome.storage.local.get({ overrideLogKey: '' });
+    const existing = typeof stored.overrideLogKey === 'string' ? stored.overrideLogKey : '';
+    if (existing){
+      return existing;
+    }
+    const keyBytes = new Uint8Array(LOG_KEY_BYTES);
+    crypto.getRandomValues(keyBytes);
+    const b64 = bufferToBase64(keyBytes.buffer);
+    await chrome.storage.local.set({ overrideLogKey: b64 });
+    return b64;
+  }
+
+  async function importAesKey(b64){
+    const bytes = base64ToUint8Array(b64);
+    if (!bytes) return null;
+    try {
+      return await crypto.subtle.importKey('raw', bytes, 'AES-GCM', false, ['encrypt', 'decrypt']);
+    } catch(_e){ return null; }
+  }
+
+  async function encryptOverrideEntries(entries){
+    try{
+      const keyB64 = await getLogKey();
+      const key = await importAesKey(keyB64);
+      if (!key) return [];
+      const encoder = new TextEncoder();
+      const encrypted = [];
+      for (const entry of entries){
+        const iv = new Uint8Array(12);
+        crypto.getRandomValues(iv);
+        const data = encoder.encode(JSON.stringify(entry));
+        const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+        encrypted.push({ iv: bufferToBase64(iv.buffer), data: bufferToBase64(cipher) });
+      }
+      return encrypted;
+    } catch(_e){
+      return [];
+    }
+  }
+
+  async function decryptOverrideEntries(records){
+    try{
+      const keyB64 = await getLogKey();
+      const key = await importAesKey(keyB64);
+      if (!key) return [];
+      const decoder = new TextDecoder();
+      const out = [];
+      for (const rec of Array.isArray(records) ? records : []){
+        if (!rec || !rec.iv || !rec.data) continue;
+        const iv = base64ToUint8Array(rec.iv);
+        const cipher = base64ToUint8Array(rec.data);
+        if (!iv || !cipher) continue;
+        try{
+          const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+          const text = decoder.decode(plain);
+          const parsed = JSON.parse(text);
+          if (parsed && typeof parsed === 'object') out.push(parsed);
+        }catch(_e){ /* skip corrupt entries */ }
+      }
+      return out;
+    }catch(_e){
+      return [];
+    }
+  }
+
+  async function loadEncryptedOverrideLog(){
+    const payload = await chrome.storage.local.get({ overrideLogEncrypted: [], overrideLog: [] });
+    const enc = Array.isArray(payload.overrideLogEncrypted) ? payload.overrideLogEncrypted : [];
+    if (enc.length){
+      const decoded = await decryptOverrideEntries(enc);
+      if (decoded.length) return decoded;
+    }
+    const legacy = Array.isArray(payload.overrideLog) ? payload.overrideLog.filter((item)=>item && typeof item === 'object') : [];
+    if (legacy.length){
+      await saveEncryptedOverrideLog(legacy);
+    }
+    return legacy;
+  }
+
+  async function saveEncryptedOverrideLog(entries){
+    const encrypted = await encryptOverrideEntries(entries);
+    await chrome.storage.local.set({ overrideLogEncrypted: encrypted });
   }
 
   function ensureNudgeStyles(){
@@ -3216,9 +3301,8 @@
       if (pinRequired){
         let overrideCountForHost = 0;
         try {
-          const snapshot = await new Promise((resolve)=>chrome.storage.local.get({ overrideLog: [] }, resolve));
-          const existingLog = Array.isArray(snapshot.overrideLog) ? snapshot.overrideLog : [];
-          overrideCountForHost = existingLog.filter((entry)=>entry && entry.host === host).length;
+          const snapshot = await loadEncryptedOverrideLog();
+          overrideCountForHost = snapshot.filter((entry)=>entry && entry.host === host).length;
         } catch(_e){}
         const policyReview = evaluateOverridePolicy({
           host,

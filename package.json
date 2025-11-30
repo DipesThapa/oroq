@@ -1,6 +1,7 @@
 {
   "name": "safebrowse-ai",
-  "version": "0.1.0",
+  "version": "0.3.2",
+  "description": "Privacy-first web safety extension with on-device heuristics, PIN-locked overrides, HTTPS alerts, and encrypted logs.",
   "private": true,
   "scripts": {
     "lint": "eslint src --max-warnings=0",
