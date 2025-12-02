@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Safeguard (SafeBrowse AI)",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
   "homepage_url": "https://cyberheroez.co.uk/",
   "minimum_chrome_version": "100",
