@@ -267,7 +267,6 @@ const CONVERSATION_SCRIPTS = {
   wellbeing: 'Something looked unsafe, so we paused it. How were you feeling when it popped up? Let\'s pick a trusted site instead.',
   general: 'Safeguard blocked a page to keep things safe. Show me what you needed, and we\'ll find a safer option.'
 };
-const KID_REPORT_SCRIPT = 'Thanks for letting me know something felt unsafe. Can you describe what bothered you? We can block similar pages together.';
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
