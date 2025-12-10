@@ -6,7 +6,18 @@ const HEARTBEAT_PERIOD_MIN = 2;
 const HEARTBEAT_THRESHOLD_MIN = 6;
 const HEARTBEAT_SNOOZE_MIN = 5;
 const FOCUS_ALARM = 'sg-focus-timer';
+const WEEKLY_TIP_ALARM = 'sg-weekly-tip';
 const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
+const CONVERSATION_EVENT_LIMIT = 12;
+const TIP_POOL = [
+  'If a headline sounds shocking, open a trusted news site to verify before sharing.',
+  'AI images can fake events. Look for odd hands, lighting, or text to spot fakes.',
+  'Never share one-time passcodes — real services and friends should not ask for them.',
+  'Take a 5-minute break every 30 minutes to keep your judgement sharp online.',
+  'If a page demands age verification or gifts for info, close it and ask an adult.',
+  'Hover over links in emails to check the real destination before clicking.',
+  'Use strong, unique passwords — and never reuse school or work passwords elsewhere.'
+];
 
 const FOCUS_DEFAULT_STATE = {
   active: false,
@@ -169,6 +180,12 @@ function scheduleFocusAlarm(active){
   chrome.alarms.clear(FOCUS_ALARM);
 }
 
+function scheduleWeeklyTipAlarm(){
+  try {
+    chrome.alarms.create(WEEKLY_TIP_ALARM, { periodInMinutes: 7 * 24 * 60 });
+  } catch(_e){}
+}
+
 function clampFocusDuration(value){
   const minutes = Number(value);
   if (FOCUS_ALLOWED_DURATIONS.includes(minutes)) return minutes;
@@ -254,6 +271,11 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
   if (alarm && alarm.name === FOCUS_ALARM){
     handleFocusTick();
   }
+  if (alarm && alarm.name === WEEKLY_TIP_ALARM){
+    rotateWeeklyTip().catch((err)=>{
+      console.error('[Safeguard] Weekly tip rotation failed', err);
+    });
+  }
 });
 
 const TOUR_KEY = 'onboardingComplete';
@@ -269,6 +291,8 @@ chrome.runtime.onInstalled.addListener((details)=>{
   rebuildDynamicRules();
   scheduleHeartbeat();
   recoverFocusSession();
+  scheduleWeeklyTipAlarm();
+  rotateWeeklyTip().catch((_e)=>{});
 });
 
 function formatFocusBadge(remainingMs){
@@ -324,10 +348,12 @@ chrome.storage.onChanged.addListener((changes, area)=>{
 updateBadge();
 scheduleHeartbeat();
 recoverFocusSession();
+scheduleWeeklyTipAlarm();
 // Rebuild dynamic rules on service worker start to ensure rules are present
 rebuildDynamicRules().catch((err)=>{
   console.error('[Safeguard] Initial DNR rebuild failed', err);
 });
+rotateWeeklyTip().catch((_e)=>{});
 handleHeartbeat({ startup: true }).catch((err)=>{
   console.error('[Safeguard] Heartbeat startup check failed', err);
 });
@@ -527,6 +553,53 @@ async function rebuildDynamicRules(){
   }
 }
 
+async function recordConversationTopic(topic){
+  const safeTopic = typeof topic === 'string' && topic.trim() ? topic.trim().toLowerCase() : 'general';
+  const [{ conversationTipsEnabled = true }, { conversationEvents = [] }] = await Promise.all([
+    new Promise((resolve)=>chrome.storage.sync.get({ conversationTipsEnabled: true }, resolve)),
+    new Promise((resolve)=>chrome.storage.local.get({ conversationEvents: [] }, resolve))
+  ]);
+  if (!conversationTipsEnabled) return;
+  const events = Array.isArray(conversationEvents) ? conversationEvents.slice(0, CONVERSATION_EVENT_LIMIT) : [];
+  const existingToday = events.find((ev)=>ev && ev.topic === safeTopic && new Date(ev.ts || 0).toDateString() === new Date().toDateString());
+  if (existingToday) return;
+  events.unshift({ topic: safeTopic, ts: Date.now() });
+  const trimmed = events.slice(0, CONVERSATION_EVENT_LIMIT);
+  await chrome.storage.local.set({ conversationEvents: trimmed });
+}
+
+async function recordKidReport(payload = {}){
+  const [{ kidReportEvents = [] }] = await Promise.all([
+    new Promise((resolve)=>chrome.storage.local.get({ kidReportEvents: [] }, resolve))
+  ]);
+  const events = Array.isArray(kidReportEvents) ? kidReportEvents.slice(0, CONVERSATION_EVENT_LIMIT) : [];
+  events.unshift({
+    ts: Date.now(),
+    tone: typeof payload.tone === 'string' ? payload.tone : null,
+    host: typeof payload.host === 'string' ? payload.host : null,
+    note: typeof payload.note === 'string' ? payload.note : null
+  });
+  await chrome.storage.local.set({ kidReportEvents: events.slice(0, CONVERSATION_EVENT_LIMIT) });
+}
+
+async function rotateWeeklyTip(){
+  try {
+    const [{ weeklyTipsEnabled = true, weeklyTipIndex = 0 }, { pendingTip = null }] = await Promise.all([
+      new Promise((resolve)=>chrome.storage.sync.get({ weeklyTipsEnabled: true, weeklyTipIndex: 0 }, resolve)),
+      new Promise((resolve)=>chrome.storage.local.get({ pendingTip: null }, resolve))
+    ]);
+    if (!weeklyTipsEnabled || !Array.isArray(TIP_POOL) || !TIP_POOL.length) return;
+    const nextIndex = Number.isInteger(weeklyTipIndex) ? weeklyTipIndex % TIP_POOL.length : 0;
+    const tip = TIP_POOL[nextIndex] || TIP_POOL[0];
+    const newPending = { id: Date.now(), tip, ts: Date.now() };
+    if (!pendingTip || pendingTip.tip !== newPending.tip){
+      await chrome.storage.local.set({ pendingTip: newPending });
+    }
+    const followingIndex = (nextIndex + 1) % TIP_POOL.length;
+    await chrome.storage.sync.set({ weeklyTipIndex: followingIndex });
+  } catch(_e){}
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
   if (message && message.type === 'sg-override-alert' && message.entry){
     handleOverrideAlert(message.entry);
@@ -590,6 +663,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     }).catch((err)=>{
       console.error('[Safeguard] Focus stop failed', err);
       sendResponse({ ok: false, error: 'failed-focus-stop' });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-log-conversation-topic'){
+    recordConversationTopic(message.topic).then(()=>sendResponse({ ok: true })).catch((err)=>{
+      console.error('[Safeguard] conversation topic log failed', err);
+      sendResponse({ ok: false });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-kid-report'){
+    recordKidReport({ tone: message.tone, host: message.host, note: message.note }).then(()=>sendResponse({ ok: true })).catch((err)=>{
+      console.error('[Safeguard] kid report log failed', err);
+      sendResponse({ ok: false });
     });
     return true;
   }

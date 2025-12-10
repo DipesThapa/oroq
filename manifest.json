@@ -29,7 +29,8 @@
         "site/privacy.html",
         "site/support.html",
         "site/*.html",
-        "model/nsfw/*"
+        "model/nsfw/*",
+        "assets/icons/*"
       ],
       "matches": [
         "https://*/*"

@@ -81,6 +81,10 @@ const parentApproverStatusEl = document.getElementById('parentApproverStatus');
 const parentDigestStatusEl = document.getElementById('parentDigestStatus');
 const parentFocusStatusEl = document.getElementById('parentFocusStatus');
 const parentClassroomStatusEl = document.getElementById('parentClassroomStatus');
+const parentFamilyStatusEl = document.getElementById('parentFamilyStatus');
+const parentConversationStatusEl = document.getElementById('parentConversationStatus');
+const parentReportStatusEl = document.getElementById('parentReportStatus');
+const parentTipStatusEl = document.getElementById('parentTipStatus');
 const parentModeBtn = document.getElementById('parentModeBtn');
 const classroomModeBtn = document.getElementById('classroomModeBtn');
 const parentTitleEl = document.querySelector('#cardParent .card__title');
@@ -95,6 +99,10 @@ const parentDigestBtn = document.getElementById('parentDigestBtn');
 const parentFocusBtn = document.getElementById('parentFocusBtn');
 const parentApproverBtn = document.getElementById('parentApproverBtn');
 const parentClassroomBtn = document.getElementById('parentClassroomBtn');
+const parentFamilyBtn = document.getElementById('parentFamilyBtn');
+const parentConversationBtn = document.getElementById('parentConversationBtn');
+const parentReportBtn = document.getElementById('parentReportBtn');
+const parentTipBtn = document.getElementById('parentTipBtn');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
 const parentProfilesSectionEl = document.getElementById('parentProfilesSection');
@@ -103,6 +111,10 @@ const parentBlocklistSectionEl = document.getElementById('parentBlocklistSection
 const parentDigestSectionEl = document.getElementById('parentDigestSection');
 const parentFocusSectionEl = document.getElementById('parentFocusSection');
 const parentClassroomSectionEl = document.getElementById('parentClassroomSection');
+const parentFamilySectionEl = document.getElementById('parentFamilySection');
+const parentConversationSectionEl = document.getElementById('parentConversationSection');
+const parentReportSectionEl = document.getElementById('parentReportSection');
+const parentTipSectionEl = document.getElementById('parentTipSection');
 const parentCardEl = document.getElementById('cardParent');
 const parentPanelEl = document.querySelector('.parent-panel');
 const parentBackBtn = document.getElementById('parentBackBtn');
@@ -122,6 +134,41 @@ const classroomSaveBtn = document.getElementById('classroomSave');
 const classroomMessageEl = document.getElementById('classroomMessage');
 const themeToggleBtn = document.getElementById('themeToggle');
 const themeToggleIcon = document.getElementById('themeToggleIcon');
+const conversationToggleEl = document.getElementById('conversationToggle');
+const conversationCardEl = document.getElementById('conversationCard');
+const conversationBodyEl = document.getElementById('conversationBody');
+const conversationDismissBtn = document.getElementById('conversationDismiss');
+const conversationStatusEl = document.getElementById('conversationStatus');
+const conversationMessageEl = document.getElementById('conversationMessage');
+const reportCardEl = document.getElementById('reportCard');
+const reportBodyEl = document.getElementById('reportBody');
+const reportDismissBtn = document.getElementById('reportDismiss');
+const reportStatusEl = document.getElementById('reportStatus');
+const reportMessageEl = document.getElementById('reportMessage');
+const tipToggleEl = document.getElementById('tipToggle');
+const tipCardEl = document.getElementById('tipCard');
+const tipBodyEl = document.getElementById('tipBody');
+const tipDismissBtn = document.getElementById('tipDismiss');
+const tipStatusEl = document.getElementById('tipStatus');
+const tipMessageEl = document.getElementById('tipMessage');
+const kidReportBtn = document.getElementById('kidReportBtn');
+const kidReportMessageEl = document.getElementById('kidReportMessage');
+const kidReportToggleEl = document.getElementById('kidReportToggle');
+const kidReportNoteInput = document.getElementById('kidReportNote');
+const wizardModalEl = document.getElementById('wizardModal');
+const wizardStartBtn = document.getElementById('wizardStart');
+const wizardReplayBtn = document.getElementById('wizardReplay');
+const wizardCloseBtn = document.getElementById('wizardClose');
+const wizardCancelBtn = document.getElementById('wizardCancel');
+const wizardSubmitBtn = document.getElementById('wizardSubmit');
+const wizardProfileOptionsEl = document.getElementById('wizardProfileOptions');
+const wizardSensitivityEl = document.getElementById('wizardSensitivity');
+const wizardSensitivityValueEl = document.getElementById('wizardSensitivityValue');
+const wizardAggressiveEl = document.getElementById('wizardAggressive');
+const wizardRequirePinEl = document.getElementById('wizardRequirePin');
+const wizardSetPinBtn = document.getElementById('wizardSetPin');
+const wizardFocusDurationEl = document.getElementById('wizardFocusDuration');
+const wizardStatusEl = document.getElementById('wizardStatus');
 
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
@@ -176,6 +223,7 @@ let currentOverrideLog = [];
 let availableProfiles = [];
 let selectedProfileId = null;
 let appliedProfileId = null;
+let profileTone = null;
 let currentSensitivity = 60;
 let currentAggressive = false;
 let overrideAlertsEnabled = false;
@@ -199,6 +247,27 @@ let syncTourComplete = null;
 let localTourPending = null;
 let tourDecisionMade = false;
 const LOG_KEY_BYTES = 32;
+let conversationEvents = [];
+let kidReportEvents = [];
+let pendingTip = null;
+let conversationTipsEnabled = true;
+let weeklyTipsEnabled = true;
+let kidReportEnabled = true;
+let kidReportNoteVisible = false;
+let wizardState = {
+  profileId: null,
+  sensitivity: 60,
+  aggressive: false,
+  requirePin: true,
+  focusDuration: 45
+};
+const CONVERSATION_SCRIPTS = {
+  mature: 'A site looked grown-up or violent, so we blocked it. Can you show me what you were trying to do? Let\'s find a safer source together.',
+  phishing: 'A page looked like it might steal passwords. If anything asks for codes or logins, stop and ask me before typing.',
+  wellbeing: 'Something looked unsafe, so we paused it. How were you feeling when it popped up? Let\'s pick a trusted site instead.',
+  general: 'Safeguard blocked a page to keep things safe. Show me what you needed, and we\'ll find a safer option.'
+};
+const KID_REPORT_SCRIPT = 'Thanks for letting me know something felt unsafe. Can you describe what bothered you? We can block similar pages together.';
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
 }
@@ -222,6 +291,18 @@ if (parentFocusSectionEl){
 }
 if (parentClassroomSectionEl){
   parentClassroomSectionEl.dataset.expanded = parentClassroomSectionEl.dataset.expanded || '0';
+}
+if (parentFamilySectionEl){
+  parentFamilySectionEl.dataset.expanded = parentFamilySectionEl.dataset.expanded || '0';
+}
+if (parentConversationSectionEl){
+  parentConversationSectionEl.dataset.expanded = parentConversationSectionEl.dataset.expanded || '0';
+}
+if (parentReportSectionEl){
+  parentReportSectionEl.dataset.expanded = parentReportSectionEl.dataset.expanded || '0';
+}
+if (parentTipSectionEl){
+  parentTipSectionEl.dataset.expanded = parentTipSectionEl.dataset.expanded || '0';
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -332,6 +413,30 @@ function setDigestMessage(text, tone = 'muted'){
   digestMessageEl.classList.remove('message--success', 'message--error');
   if (tone === 'success') digestMessageEl.classList.add('message--success');
   else if (tone === 'error') digestMessageEl.classList.add('message--error');
+}
+
+function setConversationMessage(text, tone = 'muted'){
+  if (!conversationMessageEl) return;
+  conversationMessageEl.textContent = text;
+  conversationMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') conversationMessageEl.classList.add('message--success');
+  else if (tone === 'error') conversationMessageEl.classList.add('message--error');
+}
+
+function setReportMessage(text, tone = 'muted'){
+  if (!reportMessageEl) return;
+  reportMessageEl.textContent = text;
+  reportMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') reportMessageEl.classList.add('message--success');
+  else if (tone === 'error') reportMessageEl.classList.add('message--error');
+}
+
+function setTipMessage(text, tone = 'muted'){
+  if (!tipMessageEl) return;
+  tipMessageEl.textContent = text;
+  tipMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') tipMessageEl.classList.add('message--success');
+  else if (tone === 'error') tipMessageEl.classList.add('message--error');
 }
 
 function setAlertMessage(text, tone = 'muted'){
@@ -694,6 +799,21 @@ function updateParentSummaries(){
   if (parentClassroomStatusEl){
     parentClassroomStatusEl.textContent = classroomState.enabled ? 'Active (locks social/gaming/YouTube)' : 'Off';
   }
+  if (parentFamilyStatusEl){
+    parentFamilyStatusEl.textContent = 'Guided setup ready';
+  }
+  if (parentConversationStatusEl){
+    parentConversationStatusEl.textContent = conversationTipsEnabled === false ? 'Disabled' : (conversationEvents.length ? 'Script ready' : 'Waiting');
+  }
+  if (parentReportStatusEl){
+    parentReportStatusEl.textContent = kidReportEvents.length ? 'Child reported unsafe content' : 'No reports';
+  }
+  if (parentTipStatusEl){
+    parentTipStatusEl.textContent = (weeklyTipsEnabled === false) ? 'Disabled' : (pendingTip ? 'New tip' : 'None pending');
+  }
+  if (kidReportToggleEl){
+    kidReportToggleEl.checked = kidReportEnabled !== false;
+  }
   if (parentOverrideStatusEl){
     const count = Array.isArray(currentOverrideLog) ? currentOverrideLog.length : 0;
     parentOverrideStatusEl.textContent = count ? `${count} recorded` : 'No overrides recorded yet';
@@ -781,7 +901,11 @@ function collapseParentSections(activeKey){
     ['alerts', parentAlertsSectionEl],
     ['digest', parentDigestSectionEl],
     ['focus', parentFocusSectionEl],
-    ['classroom', parentClassroomSectionEl]
+    ['classroom', parentClassroomSectionEl],
+    ['family', parentFamilySectionEl],
+    ['conversation', parentConversationSectionEl],
+    ['reports', parentReportSectionEl],
+    ['tips', parentTipSectionEl]
   ];
   sections.forEach(([key, el])=>{
     if (!el) return;
@@ -896,6 +1020,54 @@ function expandParentClassroomSection(){
   if (parentBackBtn) parentBackBtn.hidden = false;
   document.body.classList.add('parent-section-active');
   scrollToCard(parentClassroomSectionEl);
+}
+
+function expandParentFamilySection(){
+  if (!parentFamilySectionEl) return;
+  collapseParentSections('family');
+  parentFamilySectionEl.dataset.expanded = '1';
+  parentFamilySectionEl.hidden = false;
+  parentFamilySectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentFamilySectionEl);
+}
+
+function expandConversationSection(){
+  if (!parentConversationSectionEl) return;
+  collapseParentSections('conversation');
+  parentConversationSectionEl.dataset.expanded = '1';
+  parentConversationSectionEl.hidden = false;
+  parentConversationSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentConversationSectionEl);
+}
+
+function expandReportSection(){
+  if (!parentReportSectionEl) return;
+  collapseParentSections('reports');
+  parentReportSectionEl.dataset.expanded = '1';
+  parentReportSectionEl.hidden = false;
+  parentReportSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentReportSectionEl);
+}
+
+function expandTipSection(){
+  if (!parentTipSectionEl) return;
+  collapseParentSections('tips');
+  parentTipSectionEl.dataset.expanded = '1';
+  parentTipSectionEl.hidden = false;
+  parentTipSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentTipSectionEl);
 }
 
 function scrollToCard(el){
@@ -1698,15 +1870,16 @@ async function loadProfiles(){
       setProfileMessage('Failed to load profiles.', 'error');
       return;
     }
-    const data = await res.json();
-   const profiles = data && Array.isArray(data.profiles) ? data.profiles : [];
-   availableProfiles = profiles.filter((item)=>item && item.id);
-   renderProfileOptions();
-    if (appliedProfileId && findProfile(appliedProfileId)){
-      selectProfile(appliedProfileId);
-    } else {
-      clearProfileSelection();
-    }
+  const data = await res.json();
+ const profiles = data && Array.isArray(data.profiles) ? data.profiles : [];
+ availableProfiles = profiles.filter((item)=>item && item.id);
+ renderProfileOptions();
+  renderWizardProfiles();
+  if (appliedProfileId && findProfile(appliedProfileId)){
+    selectProfile(appliedProfileId);
+  } else {
+    clearProfileSelection();
+  }
   } catch(_e){
     setProfileMessage('Failed to load profiles.', 'error');
   }
@@ -1737,6 +1910,7 @@ async function applySelectedProfile(){
     profileLabel: profile.label || profile.id,
     profileSafeSuggestions: safeSuggestions
   }, resolve));
+  profileTone = profile.tone || null;
   render(allowDomains);
   setAllowMessage('Allowlisted domains updated from profile.', 'success');
   sensitivityEl.value = String(profile.sensitivity);
@@ -1780,6 +1954,9 @@ chrome.storage.sync.get({
   profileTone: null,
   profileLabel: null,
   profileSafeSuggestions: [],
+  kidReportEnabled: true,
+  conversationTipsEnabled: true,
+  weeklyTipsEnabled: true,
   [TOUR_KEY]: false
 }, (cfg)=>{
   enabledEl.checked = cfg.enabled;
@@ -1795,6 +1972,10 @@ chrome.storage.sync.get({
     updateSensitivityDisplay(currentSensitivity);
   }
   appliedProfileId = cfg.selectedProfileId || null;
+  profileTone = cfg.profileTone || null;
+  kidReportEnabled = cfg.kidReportEnabled !== false;
+  conversationTipsEnabled = cfg.conversationTipsEnabled !== false;
+  weeklyTipsEnabled = cfg.weeklyTipsEnabled !== false;
   syncTourComplete = Boolean(cfg[TOUR_KEY]);
   renderProfileOptions();
   updateAlertAvailability();
@@ -1815,6 +1996,9 @@ chrome.storage.local.get({
   focusPinPreference: false,
   focusDurationMinutes: 45,
   classroomMode: CLASSROOM_DEFAULT,
+  conversationEvents: [],
+  kidReportEvents: [],
+  pendingTip: null,
   [TOUR_PENDING_KEY]: false
 }, (cfg)=>{
   const list = Array.isArray(cfg.userBlocklist) ? cfg.userBlocklist : [];
@@ -1867,6 +2051,13 @@ chrome.storage.local.get({
   classroomState.playlists = sanitizePlaylistIds(classroomState.playlists);
   classroomState.videos = sanitizeVideoIds(classroomState.videos);
   renderClassroomState();
+  conversationEvents = Array.isArray(cfg.conversationEvents) ? cfg.conversationEvents : [];
+  kidReportEvents = Array.isArray(cfg.kidReportEvents) ? cfg.kidReportEvents : [];
+  pendingTip = cfg.pendingTip || null;
+  renderConversationCard();
+  renderReportCard();
+  renderTipCard();
+  renderKidReportButton();
   updateAlertAvailability();
   updateParentSummaries();
   localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
@@ -2587,6 +2778,154 @@ if (parentApproverBtn){
   });
 }
 
+if (parentFamilyBtn){
+  parentFamilyBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandParentFamilySection();
+  });
+}
+
+if (parentConversationBtn){
+  parentConversationBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandConversationSection();
+  });
+}
+
+if (parentReportBtn){
+  parentReportBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandReportSection();
+  });
+}
+
+if (parentTipBtn){
+  parentTipBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandTipSection();
+  });
+}
+
+if (conversationToggleEl){
+  conversationToggleEl.addEventListener('change', ()=>{
+    conversationTipsEnabled = Boolean(conversationToggleEl.checked);
+    chrome.storage.sync.set({ conversationTipsEnabled });
+    renderConversationCard();
+  });
+}
+
+if (conversationDismissBtn){
+  conversationDismissBtn.addEventListener('click', dismissConversation);
+}
+
+if (reportDismissBtn){
+  reportDismissBtn.addEventListener('click', dismissKidReport);
+}
+
+if (tipToggleEl){
+  tipToggleEl.addEventListener('change', ()=>{
+    weeklyTipsEnabled = Boolean(tipToggleEl.checked);
+    chrome.storage.sync.set({ weeklyTipsEnabled });
+    renderTipCard();
+  });
+}
+
+if (tipDismissBtn){
+  tipDismissBtn.addEventListener('click', dismissTip);
+}
+
+if (kidReportToggleEl){
+  kidReportToggleEl.addEventListener('change', ()=>{
+    kidReportEnabled = Boolean(kidReportToggleEl.checked);
+    chrome.storage.sync.set({ kidReportEnabled });
+    renderKidReportButton();
+  });
+}
+
+if (kidReportBtn){
+  kidReportBtn.addEventListener('click', ()=>{
+    if (kidReportEnabled === false){
+      if (kidReportMessageEl) kidReportMessageEl.textContent = 'Reporting is disabled by a parent.';
+      return;
+    }
+    if (!kidReportNoteVisible){
+      kidReportNoteVisible = true;
+      renderKidReportButton();
+      kidReportBtn.textContent = 'Submit report';
+      if (kidReportNoteInput) kidReportNoteInput.focus();
+      return;
+    }
+    kidReportBtn.disabled = true;
+    kidReportBtn.textContent = 'Reported';
+    const note = kidReportNoteInput ? (kidReportNoteInput.value || '').trim().slice(0, 60) : '';
+    const host = currentHost || null;
+    chrome.runtime.sendMessage({ type: 'sg-kid-report', tone: profileTone, host, note }, ()=>{
+      if (kidReportMessageEl) kidReportMessageEl.textContent = 'Thanks — we noted this on-device only.';
+      if (kidReportNoteInput) kidReportNoteInput.value = '';
+      kidReportNoteVisible = false;
+      renderKidReportButton();
+      setTimeout(()=>{
+        kidReportBtn.disabled = false;
+        kidReportBtn.textContent = 'Report unsafe page';
+      }, 2000);
+    });
+  });
+}
+
+function startWizard(){
+  if (!wizardModalEl) return;
+  renderWizardProfiles();
+  setWizardVisible(true);
+  syncWizardSelection();
+}
+
+if (wizardStartBtn){
+  wizardStartBtn.addEventListener('click', startWizard);
+}
+
+if (wizardReplayBtn){
+  wizardReplayBtn.addEventListener('click', startWizard);
+}
+
+if (wizardCloseBtn){
+  wizardCloseBtn.addEventListener('click', ()=>setWizardVisible(false));
+}
+
+if (wizardCancelBtn){
+  wizardCancelBtn.addEventListener('click', ()=>setWizardVisible(false));
+}
+
+if (wizardSubmitBtn){
+  wizardSubmitBtn.addEventListener('click', ()=>{
+    applyWizardSetup();
+  });
+}
+
+if (wizardSensitivityEl){
+  wizardSensitivityEl.addEventListener('input', ()=>{
+    updateWizardSensitivityDisplay(wizardSensitivityEl.value);
+  });
+}
+
+if (wizardSetPinBtn){
+  wizardSetPinBtn.addEventListener('click', async ()=>{
+    const newPin = await promptForNewPin();
+    if (!newPin) return;
+    storedPin = newPin;
+    await new Promise((resolve)=>chrome.storage.local.set({
+      overridePinHash: newPin.hash,
+      overridePinSalt: newPin.salt,
+      overridePinIterations: newPin.iterations
+    }, resolve));
+    syncPinControls();
+    setPinMessage('PIN saved for wizard setup.', 'success');
+  });
+}
+
 updateParentSummaries();
 
 if (tourNext){
@@ -2684,6 +3023,30 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     focusPinPreference = Boolean(changes.focusPinPreference.newValue);
     renderFocusState();
   }
+  if (area === 'local' && changes.conversationEvents){
+    conversationEvents = Array.isArray(changes.conversationEvents.newValue) ? changes.conversationEvents.newValue : [];
+    renderConversationCard();
+  }
+  if (area === 'local' && changes.kidReportEvents){
+    kidReportEvents = Array.isArray(changes.kidReportEvents.newValue) ? changes.kidReportEvents.newValue : [];
+    renderReportCard();
+  }
+  if (area === 'local' && changes.pendingTip){
+    pendingTip = changes.pendingTip.newValue || null;
+    renderTipCard();
+  }
+  if (area === 'sync' && changes.kidReportEnabled){
+    kidReportEnabled = changes.kidReportEnabled.newValue !== false;
+    renderKidReportButton();
+  }
+  if (area === 'sync' && changes.conversationTipsEnabled){
+    conversationTipsEnabled = changes.conversationTipsEnabled.newValue !== false;
+    renderConversationCard();
+  }
+  if (area === 'sync' && changes.weeklyTipsEnabled){
+    weeklyTipsEnabled = changes.weeklyTipsEnabled.newValue !== false;
+    renderTipCard();
+  }
   if (area === 'local' && changes.tamperAlertEnabled){
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
     if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
@@ -2729,6 +3092,7 @@ if (profileResetBtn){
       profileLabel: null,
       profileSafeSuggestions: []
     }, ()=>{
+      profileTone = null;
       clearProfileSelection();
       setProfileMessage('Profile selection cleared. Current settings stay as-is.', 'success');
     });
@@ -2779,6 +3143,191 @@ function buildDigestCsv(){
     ]);
   });
   return rows.map((row)=>row.map(csvEscape).join(',')).join('\r\n');
+}
+
+function renderConversationCard(){
+  const latest = Array.isArray(conversationEvents) ? conversationEvents[0] : null;
+  const topic = latest && latest.topic ? latest.topic : 'general';
+  if (conversationToggleEl) conversationToggleEl.checked = conversationTipsEnabled !== false;
+  if (!latest || conversationTipsEnabled === false){
+    if (conversationCardEl) conversationCardEl.hidden = true;
+    if (conversationStatusEl) conversationStatusEl.textContent = conversationTipsEnabled === false ? 'Conversation starters disabled.' : 'Waiting for the next blocked page.';
+    if (parentConversationStatusEl) parentConversationStatusEl.textContent = conversationTipsEnabled === false ? 'Disabled' : 'Nothing pending';
+    return;
+  }
+  const script = CONVERSATION_SCRIPTS[topic] || CONVERSATION_SCRIPTS.general;
+  if (conversationBodyEl) conversationBodyEl.textContent = script;
+  if (conversationCardEl) conversationCardEl.hidden = false;
+  const ts = latest.ts ? new Date(latest.ts).toLocaleString() : 'recently';
+  if (conversationStatusEl) conversationStatusEl.textContent = `Blocked ${topic} content ${ts}`;
+  if (parentConversationStatusEl) parentConversationStatusEl.textContent = `Blocked ${topic} content`;
+  setConversationMessage('A short script is ready.', 'success');
+}
+
+function renderReportCard(){
+  const latest = Array.isArray(kidReportEvents) ? kidReportEvents[0] : null;
+  if (!latest){
+    if (reportCardEl) reportCardEl.hidden = true;
+    if (reportStatusEl) reportStatusEl.textContent = 'No child reports yet.';
+    if (parentReportStatusEl) parentReportStatusEl.textContent = 'No reports';
+    return;
+  }
+  const ts = latest.ts ? new Date(latest.ts).toLocaleString() : 'recently';
+  const host = latest.host ? `Reported: ${latest.host}` : 'Reported an unsafe page';
+  const note = latest.note ? ` • Note: ${latest.note}` : '';
+  if (reportBodyEl) reportBodyEl.textContent = `${host}${note} (${ts})`;
+  if (reportCardEl) reportCardEl.hidden = false;
+  if (reportStatusEl) reportStatusEl.textContent = 'Report captured locally.';
+  if (parentReportStatusEl) parentReportStatusEl.textContent = 'Child flagged unsafe content';
+}
+
+function renderTipCard(){
+  if (tipToggleEl) tipToggleEl.checked = weeklyTipsEnabled !== false;
+  if (!pendingTip || weeklyTipsEnabled === false){
+    if (tipCardEl) tipCardEl.hidden = true;
+    if (tipStatusEl) tipStatusEl.textContent = weeklyTipsEnabled === false ? 'Weekly tips are disabled.' : 'No tip yet.';
+    if (parentTipStatusEl) parentTipStatusEl.textContent = weeklyTipsEnabled === false ? 'Disabled' : 'None pending';
+    return;
+  }
+  if (tipBodyEl) tipBodyEl.textContent = pendingTip.tip || '';
+  if (tipCardEl) tipCardEl.hidden = false;
+  const ts = pendingTip.ts ? new Date(pendingTip.ts).toLocaleDateString() : 'recently';
+  if (tipStatusEl) tipStatusEl.textContent = `New tip posted ${ts}`;
+  if (parentTipStatusEl) parentTipStatusEl.textContent = 'New tip ready';
+  setTipMessage('Weekly tip ready.', 'success');
+}
+
+function renderKidReportButton(){
+  if (!kidReportBtn || !kidReportMessageEl) return;
+  const visible = kidReportEnabled !== false;
+  kidReportBtn.style.display = visible ? 'inline-flex' : 'none';
+  kidReportMessageEl.style.display = visible ? 'block' : 'none';
+  if (kidReportNoteInput){
+    kidReportNoteInput.style.display = (visible && kidReportNoteVisible) ? 'block' : 'none';
+  }
+}
+
+function dismissConversation(){
+  conversationEvents = [];
+  chrome.storage.local.set({ conversationEvents: [] });
+  renderConversationCard();
+  setConversationMessage('Marked as read.', 'muted');
+}
+
+function dismissKidReport(){
+  kidReportEvents = [];
+  chrome.storage.local.set({ kidReportEvents: [] });
+  renderReportCard();
+  setReportMessage('Report dismissed.', 'muted');
+}
+
+function dismissTip(){
+  pendingTip = null;
+  chrome.storage.local.set({ pendingTip: null });
+  renderTipCard();
+  setTipMessage('Tip dismissed.', 'muted');
+}
+
+function renderWizardProfiles(){
+  if (!wizardProfileOptionsEl) return;
+  wizardProfileOptionsEl.innerHTML = '';
+  availableProfiles.forEach((profile)=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pill';
+    btn.textContent = profile.label || profile.id;
+    btn.addEventListener('click', ()=>{
+      wizardState.profileId = profile.id;
+      wizardState.sensitivity = profile.sensitivity;
+      wizardState.aggressive = Boolean(profile.aggressive);
+      wizardState.requirePin = true;
+      wizardSensitivityEl.value = String(wizardState.sensitivity);
+      updateWizardSensitivityDisplay(wizardState.sensitivity);
+      wizardAggressiveEl.checked = wizardState.aggressive;
+      wizardRequirePinEl.checked = true;
+      syncWizardSelection();
+    });
+    wizardProfileOptionsEl.appendChild(btn);
+  });
+}
+
+function setWizardVisible(visible){
+  if (!wizardModalEl) return;
+  wizardModalEl.classList.toggle('modal--hidden', !visible);
+}
+
+function updateWizardSensitivityDisplay(value){
+  if (wizardSensitivityValueEl) wizardSensitivityValueEl.textContent = String(value);
+}
+
+function syncWizardSelection(){
+  updateWizardSensitivityDisplay(wizardSensitivityEl ? wizardSensitivityEl.value : wizardState.sensitivity);
+}
+
+async function applyWizardSetup(){
+  if (!wizardState.profileId){
+    if (wizardStatusEl) wizardStatusEl.textContent = 'Select an age band first.';
+    return;
+  }
+  const profile = findProfile(wizardState.profileId);
+  if (!profile){
+    if (wizardStatusEl) wizardStatusEl.textContent = 'Profile not found.';
+    return;
+  }
+  const sensitivity = Number(wizardSensitivityEl ? wizardSensitivityEl.value : profile.sensitivity) || profile.sensitivity;
+  const aggressive = wizardAggressiveEl ? Boolean(wizardAggressiveEl.checked) : Boolean(profile.aggressive);
+  const requirePinValue = wizardRequirePinEl ? Boolean(wizardRequirePinEl.checked) : true;
+  const focusDuration = wizardFocusDurationEl ? clampFocusDuration(wizardFocusDurationEl.value) : 45;
+  if (requirePinValue && !storedPin){
+    const newPin = await promptForNewPin();
+    if (!newPin){
+      if (wizardStatusEl) wizardStatusEl.textContent = 'PIN required to enforce overrides.';
+      return;
+    }
+    storedPin = newPin;
+    await new Promise((resolve)=>chrome.storage.local.set({
+      overridePinHash: newPin.hash,
+      overridePinSalt: newPin.salt,
+      overridePinIterations: newPin.iterations
+    }, resolve));
+    syncPinControls();
+  }
+  const allowDomains = sanitizeDomains(profile.allowlist || []);
+  const blockDomains = sanitizeDomains(profile.blocklist || []);
+  const safeSuggestions = sanitizeSuggestions(profile.safeSuggestions);
+  await new Promise((resolve)=>chrome.storage.sync.set({
+    allowlist: allowDomains,
+    sensitivity,
+    aggressive,
+    selectedProfileId: profile.id,
+    profileTone: profile.tone || null,
+    profileLabel: profile.label || profile.id,
+    profileSafeSuggestions: safeSuggestions
+  }, resolve));
+  profileTone = profile.tone || null;
+  await new Promise((resolve)=>chrome.storage.local.set({
+    userBlocklist: blockDomains,
+    requirePin: requirePinValue,
+    focusDurationMinutes: focusDuration,
+    focusPinPreference: requirePinValue
+  }, resolve));
+  focusDurationChoice = focusDuration;
+  if (focusDurationSelect) focusDurationSelect.value = String(focusDuration);
+  renderFocusState();
+  currentBlocklist = [...blockDomains];
+  render(allowDomains);
+  sensitivityEl.value = String(sensitivity);
+  updateSensitivityDisplay(sensitivity);
+  aggressiveEl.checked = aggressive;
+  updateBlockCount(blockDomains.length);
+  updateMetrics();
+  appliedProfileId = profile.id;
+  updateProfileSummary(profile);
+  setProfileMessage(`Applied profile "${profile.label || profile.id}" via wizard.`, 'success');
+  setWizardVisible(false);
+  if (wizardStatusEl) wizardStatusEl.textContent = 'Family setup applied.';
+  chrome.storage.sync.set({ familyWizardComplete: true });
+  updateParentSummaries();
 }
 
 if (digestDownloadBtn){

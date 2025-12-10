@@ -1362,6 +1362,18 @@
     return result;
   }
 
+  function logConversationTopic(topic){
+    try {
+      chrome.runtime.sendMessage({ type: 'sg-log-conversation-topic', topic });
+    } catch(_e){}
+  }
+
+  function sendKidReport(tone){
+    try {
+      chrome.runtime.sendMessage({ type: 'sg-kid-report', tone });
+    } catch(_e){}
+  }
+
   function createHeuristicInsights(context){
     const host = context.host || '';
     const totalScore = Number.isFinite(context.total) ? context.total : 0;
@@ -2655,17 +2667,16 @@
         margin-bottom: 20px;
       }
       .sg-icon {
-        width: 48px;
-        height: 48px;
+        width: 64px;
+        height: 64px;
         border-radius: 16px;
-        background: linear-gradient(135deg, #2563eb, #16a34a);
+        background: #ffffff;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: #fff;
-        font-weight: 700;
-        font-size: 22px;
-        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.22);
+        overflow: hidden;
+        padding: 8px;
       }
       .sg-title {
         margin: 0;
@@ -2956,6 +2967,24 @@
       .sg-actions__support:hover {
         text-decoration: underline;
       }
+      .sg-actions__report {
+        border: none;
+        background: rgba(37, 99, 235, 0.12);
+        color: #0f172a;
+        font-weight: 700;
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+      }
+      .sg-actions__report:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 18px rgba(0,0,0,0.08);
+      }
       .sg-button {
         border: none;
         border-radius: 999px;
@@ -3064,10 +3093,20 @@
     const icon = doc.createElement('div');
     icon.className = 'sg-icon';
     const iconImg = doc.createElement('img');
-    iconImg.src = chrome.runtime.getURL('assets/icons/icon48.png');
+    iconImg.src = chrome.runtime.getURL('assets/icons/icon128.png');
     iconImg.alt = 'Safeguard';
-    iconImg.style.width = '48px';
-    iconImg.style.height = '48px';
+    iconImg.style.width = '100%';
+    iconImg.style.height = '100%';
+    iconImg.style.objectFit = 'contain';
+    iconImg.style.display = 'block';
+    iconImg.onerror = ()=>{
+      iconImg.remove();
+      icon.style.background = 'linear-gradient(135deg, #2563eb, #16a34a)';
+      icon.style.color = '#0f172a';
+      icon.style.fontWeight = '700';
+      icon.style.fontSize = '20px';
+      icon.textContent = 'Safe';
+    };
     icon.appendChild(iconImg);
     header.appendChild(icon);
 
@@ -3152,6 +3191,7 @@
     });
     const signalTopic = determineSignalTopic(topSignal);
     const microLessons = pickMicroLessons(profileTone, signalTopic, hostName || '');
+    logConversationTopic(signalTopic);
     const explain = doc.createElement('div');
     explain.className = 'sg-explain';
     const explainEyebrow = doc.createElement('span');
@@ -3462,6 +3502,16 @@
       });
       actions.appendChild(continueBtn);
     }
+    const reportBtn = doc.createElement('button');
+    reportBtn.type = 'button';
+    reportBtn.className = 'sg-actions__report';
+    reportBtn.innerHTML = '<span aria-hidden="true">🛡️</span><span>This felt unsafe</span>';
+    reportBtn.addEventListener('click', ()=>{
+      reportBtn.disabled = true;
+      reportBtn.textContent = 'Thanks for telling us';
+      sendKidReport(profileTone);
+    });
+    actions.appendChild(reportBtn);
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;
       try {

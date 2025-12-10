@@ -32,12 +32,19 @@
       <h2 class="card__title">Parent mode</h2>
       <p class="card__subtitle">Quick access to safeguarding controls for guardians and DSLs.</p>
       <div class="parent-panel">
+        <div class="parent-panel__row" id="parentFamilyRow">
+          <div>
+            <h3 class="parent-panel__title">Family setup</h3>
+            <p id="parentFamilyStatus" class="parent-panel__status">Guided presets</p>
+          </div>
+          <button id="parentFamilyBtn" class="button button--secondary" type="button">Run wizard</button>
+        </div>
         <div class="parent-panel__row" id="parentProfilesRow">
           <div>
             <h3 class="parent-panel__title">Profiles</h3>
             <p id="parentProfileStatus" class="parent-panel__status">Loading…</p>
           </div>
-            <button id="parentProfilesBtn" class="button button--secondary" type="button">Manage</button>
+          <button id="parentProfilesBtn" class="button button--secondary" type="button">Manage</button>
         </div>
         <div class="parent-panel__row" id="parentOverrideRow">
           <div>
@@ -52,6 +59,27 @@
             <p id="parentFocusStatus" class="parent-panel__status">Loading…</p>
           </div>
           <button id="parentFocusBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
+        <div class="parent-panel__row" id="parentConversationRow">
+          <div>
+            <h3 class="parent-panel__title">Conversation starters</h3>
+            <p id="parentConversationStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentConversationBtn" class="button button--secondary" type="button">Open</button>
+        </div>
+        <div class="parent-panel__row" id="parentReportRow">
+          <div>
+            <h3 class="parent-panel__title">Child reports</h3>
+            <p id="parentReportStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentReportBtn" class="button button--secondary" type="button">Open</button>
+        </div>
+        <div class="parent-panel__row" id="parentTipRow">
+          <div>
+            <h3 class="parent-panel__title">Weekly safety tip</h3>
+            <p id="parentTipStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentTipBtn" class="button button--secondary" type="button">View</button>
         </div>
         <div class="parent-panel__row" id="parentAllowlistRow">
           <div>
@@ -260,6 +288,79 @@
         </p>
         <small id="focusMessage" class="message">Pick a duration and start homework mode.</small>
       </div>
+      <div class="parent-section" id="parentFamilySection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Family setup wizard</h3>
+            <p class="parent-section__status">Guided presets for age, PIN, and focus defaults.</p>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="wizardStart" class="button button--primary" type="button">Start wizard</button>
+          <button id="wizardReplay" class="button button--link actions__end" type="button">Replay anytime</button>
+        </div>
+        <small id="wizardMessage" class="message">Runs once unless you replay it.</small>
+      </div>
+      <div class="parent-section" id="parentConversationSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Conversation starters</h3>
+            <p class="parent-section__status">Offer a short script when risky content is blocked.</p>
+          </div>
+        </div>
+        <div class="toggle">
+          <input id="conversationToggle" type="checkbox">
+          <span class="toggle__label">Enable conversation starter reminders</span>
+        </div>
+        <div id="conversationCard" class="card card--inline" hidden>
+          <p id="conversationBody" class="card__subtitle"></p>
+          <div class="actions actions--wrap">
+            <button id="conversationDismiss" class="button button--secondary" type="button">Mark as read</button>
+          </div>
+          <small id="conversationMessage" class="message">Latest blocked topic</small>
+        </div>
+        <small id="conversationStatus" class="message">Waiting for the next blocked page.</small>
+      </div>
+      <div class="parent-section" id="parentReportSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Child reports</h3>
+            <p class="parent-section__status">Show guidance when a child taps “This felt unsafe.”</p>
+          </div>
+        </div>
+        <div class="toggle">
+          <input id="kidReportToggle" type="checkbox" checked>
+          <span class="toggle__label">Allow “Report unsafe page” button in the popup</span>
+        </div>
+        <div id="reportCard" class="card card--inline" hidden>
+          <p id="reportBody" class="card__subtitle"></p>
+          <div class="actions actions--wrap">
+            <button id="reportDismiss" class="button button--secondary" type="button">Dismiss</button>
+          </div>
+          <small id="reportMessage" class="message">No URLs are stored, just the event type.</small>
+        </div>
+        <small id="reportStatus" class="message">No child reports yet.</small>
+      </div>
+      <div class="parent-section" id="parentTipSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Weekly digital safety tip</h3>
+            <p class="parent-section__status">One short reminder per week. Stays on-device.</p>
+          </div>
+        </div>
+        <div class="toggle">
+          <input id="tipToggle" type="checkbox">
+          <span class="toggle__label">Enable weekly tips</span>
+        </div>
+        <div id="tipCard" class="card card--inline" hidden>
+          <p id="tipBody" class="card__subtitle"></p>
+          <div class="actions actions--wrap">
+            <button id="tipDismiss" class="button button--secondary" type="button">Dismiss tip</button>
+          </div>
+          <small id="tipMessage" class="message">New tips rotate weekly.</small>
+        </div>
+        <small id="tipStatus" class="message">No tip yet.</small>
+      </div>
       <div class="parent-section" id="parentClassroomSection" hidden>
         <div class="parent-section__header">
           <div>
@@ -345,6 +446,15 @@
         <small id="pinMessage" class="message">Protect manual overrides with a PIN that stays on this device.</small>
       </div>
 
+      <div class="report-cta">
+        <div class="report-cta__header">
+          <button id="kidReportBtn" class="button button--secondary report-cta__button" type="button">🛡️ Report unsafe page</button>
+          <p class="report-cta__hint">Kids can flag a page that feels wrong. Only the site name is stored.</p>
+        </div>
+        <input id="kidReportNote" class="note-input" type="text" maxlength="60" placeholder="Optional: what felt unsafe? (60 chars max)">
+        <small id="kidReportMessage" class="message">No history is kept—just the report event.</small>
+      </div>
+
       <div class="slider">
         <div class="slider__label">Sensitivity <span id="sensitivityValue" class="slider__value">60</span></div>
         <input id="sensitivity" type="range" min="10" max="100" step="1" value="60">
@@ -412,6 +522,52 @@
       <div class="modal__actions">
         <button type="button" id="pinModalCancel" class="button button--secondary">Cancel</button>
         <button type="button" id="pinModalSubmit" class="button button--primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="wizardModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+    <div class="modal__panel modal__panel--wide">
+      <div class="modal__header">
+        <h3 id="wizardTitle" class="modal__title">Family setup</h3>
+        <button id="wizardClose" class="modal__close" type="button" aria-label="Close wizard">×</button>
+      </div>
+      <div class="wizard">
+        <div class="wizard__steps">
+          <div class="wizard__step">
+            <p class="wizard__label">Age band</p>
+            <div id="wizardProfileOptions" class="pill-list pill-list--grid"></div>
+          </div>
+          <div class="wizard__step">
+            <p class="wizard__label">Safety level</p>
+            <label class="field__label" for="wizardSensitivity">Sensitivity</label>
+            <input id="wizardSensitivity" type="range" min="20" max="100" value="60">
+            <p id="wizardSensitivityValue" class="wizard__value">60</p>
+            <label class="toggle">
+              <input id="wizardAggressive" type="checkbox">
+              <span class="toggle__label">Enable aggressive visual blur</span>
+            </label>
+          </div>
+          <div class="wizard__step">
+            <p class="wizard__label">PIN & Focus</p>
+            <label class="toggle">
+              <input id="wizardRequirePin" type="checkbox" checked>
+              <span class="toggle__label">Require PIN for overrides</span>
+            </label>
+            <button id="wizardSetPin" class="button button--secondary" type="button">Set PIN</button>
+            <label class="field__label" for="wizardFocusDuration">Default Focus duration</label>
+            <select id="wizardFocusDuration" class="wizard__select">
+              <option value="30">30 minutes</option>
+              <option value="45">45 minutes</option>
+              <option value="60">60 minutes</option>
+            </select>
+          </div>
+        </div>
+        <div class="wizard__actions">
+          <button id="wizardSubmit" class="button button--primary" type="button">Apply family setup</button>
+          <button id="wizardCancel" class="button button--link" type="button">Cancel</button>
+          <small id="wizardStatus" class="message">Select an age band to begin.</small>
+        </div>
       </div>
     </div>
   </div>
