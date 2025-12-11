@@ -458,6 +458,23 @@ main {
   color: var(--text-muted);
 }
 
+.pill-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-soft);
+  cursor: pointer;
+  font-weight: 600;
+}
+.pill-toggle input {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+}
+
 .report-cta {
   border: 1px solid var(--border);
   border-radius: 12px;

@@ -49,6 +49,24 @@ Hosted resources
    - or edit `data/blocklist.json` and reload the extension
 6. For private windows: open extension details → enable **Allow in Incognito**
 
+## Quick setup (parents)
+1. Enable protection in the popup.
+2. Run the Family Setup Wizard → pick age profile → set PIN (for overrides) → set Focus default.
+3. Turn on Conversation starters and Weekly tips (optional).
+4. Show your child the “Report unsafe page” button; review reports in Parent mode.
+
+## Quick setup (teachers)
+1. Enable protection; apply Classroom Mode when teaching.
+2. Add approved YouTube playlists/videos if needed; overrides stay locked.
+3. Use Focus Mode presets for study blocks; allow comms tools only if required.
+4. Review Child reports/Overrides in Parent mode (PIN-gated).
+
+## Privacy/Security at a glance
+- All analysis runs locally; no browsing history or page content is sent anywhere.
+- Kid reports store only timestamp + host + optional note; conversation starters store topic only.
+- Override logs are encrypted locally; webhooks require HTTPS and no LAN/localhost.
+- Web-accessible resources are limited; SafeSearch and DNR rules enforced; PIN hashes are salted/iterated.
+
 Notes:
 - Content script is `src/content.js` (manifest aligned). The legacy `content.js` remains in repo but is not loaded.
 - Permissions: `storage`, `declarativeNetRequest`, `tabs`; scripts run on `http/https` pages only (tabs permission is used to show the active site toggle).

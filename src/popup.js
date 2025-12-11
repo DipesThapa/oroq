@@ -1591,6 +1591,7 @@ function renderOverrideLog(list){
   });
   setOverrideMessage(`Logged ${currentOverrideLog.length} override${currentOverrideLog.length === 1 ? '' : 's'}.`, 'muted');
   updateParentSummaries();
+  renderInsights();
 }
 
 function formatTimestamp(value){
@@ -3045,6 +3046,18 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'sync' && changes.weeklyTipsEnabled){
     weeklyTipsEnabled = changes.weeklyTipsEnabled.newValue !== false;
     renderTipCard();
+  }
+  if (area === 'sync' && changes.focusAllowedComms){
+    focusAllowedComms = Array.isArray(changes.focusAllowedComms.newValue) ? changes.focusAllowedComms.newValue : [];
+    renderFocusComms();
+  }
+  if (area === 'local' && changes.blockEvents){
+    blockEvents = Array.isArray(changes.blockEvents.newValue) ? changes.blockEvents.newValue : [];
+    renderInsights();
+  }
+  if (area === 'local' && changes.focusSessionLog){
+    focusSessionLog = Array.isArray(changes.focusSessionLog.newValue) ? changes.focusSessionLog.newValue : [];
+    renderInsights();
   }
   if (area === 'local' && changes.tamperAlertEnabled){
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);

@@ -1368,6 +1368,11 @@
     } catch(_e){}
   }
 
+  function logBlockEvent(reason){
+    try {
+      chrome.runtime.sendMessage({ type: 'sg-log-block-event', reason, host: getHost() });
+    } catch(_e){}
+  }
   function sendKidReport(tone){
     try {
       chrome.runtime.sendMessage({ type: 'sg-kid-report', tone });
@@ -3192,6 +3197,7 @@
     const signalTopic = determineSignalTopic(topSignal);
     const microLessons = pickMicroLessons(profileTone, signalTopic, hostName || '');
     logConversationTopic(signalTopic);
+    logBlockEvent(reason || 'Policy enforcement');
     const explain = doc.createElement('div');
     explain.className = 'sg-explain';
     const explainEyebrow = doc.createElement('span');
@@ -3536,6 +3542,13 @@
 
     if (pinBlock){
       panel.appendChild(pinBlock);
+    }
+
+    if (overrideDisabled){
+      const lockNotice = doc.createElement('p');
+      lockNotice.className = 'sg-reason sg-explain__context';
+      lockNotice.textContent = 'Overrides are locked by your current mode (e.g., Classroom/Focus). Ask a parent/teacher to review.';
+      panel.appendChild(lockNotice);
     }
 
     const guidance = doc.createElement('div');

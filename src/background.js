@@ -9,6 +9,8 @@ const FOCUS_ALARM = 'sg-focus-timer';
 const WEEKLY_TIP_ALARM = 'sg-weekly-tip';
 const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
 const CONVERSATION_EVENT_LIMIT = 12;
+const BLOCK_EVENT_LIMIT = 200;
+const FOCUS_SESSION_LIMIT = 200;
 const TIP_POOL = [
   'If a headline sounds shocking, open a trusted news site to verify before sharing.',
   'AI images can fake events. Look for odd hands, lighting, or text to spot fakes.',
@@ -56,8 +58,7 @@ const FOCUS_BLOCK_DOMAINS = {
     'snapchat.com',
     'reddit.com',
     'discord.com',
-    'whatsapp.com',
-    'messenger.com'
+    'whatsapp.com'
   ],
   gaming: [
     'roblox.com',
@@ -218,6 +219,7 @@ async function startFocusSession(durationMinutes, options = {}){
   await chrome.storage.local.set({ focusMode });
   scheduleFocusAlarm(true);
   await updateBadge();
+  recordFocusSession().catch(()=>{});
   return focusMode;
 }
 
@@ -227,6 +229,17 @@ async function stopFocusSession(){
   scheduleFocusAlarm(false);
   await updateBadge();
   return focusMode;
+}
+
+async function recordFocusSession(){
+  try {
+    const [{ focusSessionLog = [] }] = await Promise.all([
+      new Promise((resolve)=>chrome.storage.local.get({ focusSessionLog: [] }, resolve))
+    ]);
+    const log = Array.isArray(focusSessionLog) ? focusSessionLog.slice(0, FOCUS_SESSION_LIMIT) : [];
+    log.unshift({ ts: Date.now() });
+    await chrome.storage.local.set({ focusSessionLog: log.slice(0, FOCUS_SESSION_LIMIT) });
+  } catch(_e){}
 }
 
 async function recoverFocusSession(){
@@ -389,8 +402,9 @@ async function rebuildDynamicRules(){
   await wait;
   try{
     try{
-      const cfg = await new Promise(r => chrome.storage.sync.get({ allowlist: [] }, r));
+      const cfg = await new Promise(r => chrome.storage.sync.get({ allowlist: [], focusAllowedComms: [] }, r));
       const allowlist = Array.isArray(cfg.allowlist) ? cfg.allowlist : [];
+      const focusAllowedComms = Array.isArray(cfg.focusAllowedComms) ? cfg.focusAllowedComms.map((d)=>String(d||'').trim().toLowerCase()).filter(Boolean) : [];
       const local = await new Promise(r => chrome.storage.local.get({ userBlocklist: [], classroomMode: CLASSROOM_DEFAULT }, r));
       const userBlocklist = Array.isArray(local.userBlocklist) ? local.userBlocklist : [];
       const classroomMode = { ...CLASSROOM_DEFAULT, ...(local.classroomMode || {}) };
@@ -415,7 +429,7 @@ async function rebuildDynamicRules(){
 
       // Allow rules take precedence via higher priority
       const focusAllowDomains = focusActive
-        ? Array.from(new Set([ ...allowDomains, ...FOCUS_DEFAULT_ALLOWLIST.map(normalizeDomain) ]))
+        ? Array.from(new Set([ ...allowDomains, ...FOCUS_DEFAULT_ALLOWLIST.map(normalizeDomain), ...focusAllowedComms ]))
         : allowDomains;
       const allowPriority = (focusActive || classroomActive) ? 11000 : 10000;
       for(const d of focusAllowDomains){
@@ -491,7 +505,7 @@ async function rebuildDynamicRules(){
           ...FOCUS_BLOCK_DOMAINS.social,
           ...FOCUS_BLOCK_DOMAINS.gaming,
           ...FOCUS_BLOCK_DOMAINS.streaming
-        ].map(normalizeDomain).filter(Boolean)));
+        ].map(normalizeDomain).filter(Boolean))).filter((d)=>!focusAllowedComms.includes(d));
         for(const d of focusBlockDomains){
           const rx = domainToRegex(d);
           rules.push({
@@ -580,6 +594,21 @@ async function recordKidReport(payload = {}){
     note: typeof payload.note === 'string' ? payload.note : null
   });
   await chrome.storage.local.set({ kidReportEvents: events.slice(0, CONVERSATION_EVENT_LIMIT) });
+}
+
+async function recordBlockEvent(payload = {}){
+  try {
+    const [{ blockEvents = [] }] = await Promise.all([
+      new Promise((resolve)=>chrome.storage.local.get({ blockEvents: [] }, resolve))
+    ]);
+    const events = Array.isArray(blockEvents) ? blockEvents.slice(0, BLOCK_EVENT_LIMIT) : [];
+    events.unshift({
+      ts: Date.now(),
+      host: typeof payload.host === 'string' ? payload.host : null,
+      reason: typeof payload.reason === 'string' ? payload.reason : null
+    });
+    await chrome.storage.local.set({ blockEvents: events.slice(0, BLOCK_EVENT_LIMIT) });
+  } catch(_e){}
 }
 
 async function rotateWeeklyTip(){
@@ -676,6 +705,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
   if (message && message.type === 'sg-kid-report'){
     recordKidReport({ tone: message.tone, host: message.host, note: message.note }).then(()=>sendResponse({ ok: true })).catch((err)=>{
       console.error('[Safeguard] kid report log failed', err);
+      sendResponse({ ok: false });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-log-block-event'){
+    recordBlockEvent({ host: message.host, reason: message.reason }).then(()=>sendResponse({ ok: true })).catch((_err)=>{
       sendResponse({ ok: false });
     });
     return true;
