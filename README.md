@@ -11,6 +11,13 @@ Safeguard is a lightweight, on-device browser extension that helps families, sch
 - **Domain blocklist**: packaged defaults + user-importable list; allowlist overrides
 - **Sensitivity profiles**: Kids (7-12), Teens (13-16), College, and Work presets tuned for safeguarding and productivity goals
 - **Explain why this was blocked**: interstitial gives kid-friendly reasoning, safe suggestions, and rotating AI literacy micro-lessons
+- **Family setup wizard**: 30-second onboarding for age presets, PIN, and Focus defaults
+- **Conversation starters**: parent card with topic-only scripts when content is blocked (no URLs stored)
+- **Kid reports**: “Report unsafe page” button (host + optional note, stored locally, PIN-gated view)
+- **Healthy nudges**: gentle break reminders and wellbeing prompts, all on-device
+- **Weekly tips**: local digital-safety tips delivered once per week
+- **Focus Mode**: homework/study timer that blocks social/gaming/streaming and allows edu sites
+- **Classroom Mode**: teacher lockdown (social/gaming blocked, YouTube playlists only, overrides locked)
 - **SafeSearch enforcement**: redirects Google/Bing to strict modes (DNR)
 - **Control centre**: refreshed popup with live status badge, quick toggles, and policy management in one place
 - **First-run tour**: onboarding highlights key controls and policy workflows for new admins
@@ -67,6 +74,9 @@ MIT License
 Phase 1 additions
 - Static DNR rules for common ad domains and SafeSearch (Google/Bing)
 - Dynamic DNR rules compiled from packaged + user-imported blocklist with allowlist overrides
+- Focus Mode timer with edu allowlist + social/gaming/streaming blocks
+- Classroom Mode lockdown for teachers (overrides disabled; YouTube playlists only)
+- Conversation starters, weekly tips, healthy nudges, and kid reports (host-only, optional note)
 
 Limitations
 - Chrome’s dynamic DNR rules have capacity limits (~30k). Very large custom imports are truncated.
