@@ -155,6 +155,8 @@ const kidReportBtn = document.getElementById('kidReportBtn');
 const kidReportMessageEl = document.getElementById('kidReportMessage');
 const kidReportToggleEl = document.getElementById('kidReportToggle');
 const kidReportNoteInput = document.getElementById('kidReportNote');
+const focusCommsListEl = document.getElementById('focusCommsList');
+const parentInsightsStatusEl = document.getElementById('parentInsightsStatus');
 const wizardModalEl = document.getElementById('wizardModal');
 const wizardStartBtn = document.getElementById('wizardStart');
 const wizardReplayBtn = document.getElementById('wizardReplay');
@@ -249,11 +251,14 @@ let tourDecisionMade = false;
 const LOG_KEY_BYTES = 32;
 let conversationEvents = [];
 let kidReportEvents = [];
+let blockEvents = [];
+let focusSessionLog = [];
 let pendingTip = null;
 let conversationTipsEnabled = true;
 let weeklyTipsEnabled = true;
 let kidReportEnabled = true;
 let kidReportNoteVisible = false;
+let focusAllowedComms = [];
 let wizardState = {
   profileId: null,
   sensitivity: 60,
@@ -1957,6 +1962,7 @@ chrome.storage.sync.get({
   kidReportEnabled: true,
   conversationTipsEnabled: true,
   weeklyTipsEnabled: true,
+  focusAllowedComms: [],
   [TOUR_KEY]: false
 }, (cfg)=>{
   enabledEl.checked = cfg.enabled;
@@ -1976,6 +1982,7 @@ chrome.storage.sync.get({
   kidReportEnabled = cfg.kidReportEnabled !== false;
   conversationTipsEnabled = cfg.conversationTipsEnabled !== false;
   weeklyTipsEnabled = cfg.weeklyTipsEnabled !== false;
+  focusAllowedComms = Array.isArray(cfg.focusAllowedComms) ? cfg.focusAllowedComms : [];
   syncTourComplete = Boolean(cfg[TOUR_KEY]);
   renderProfileOptions();
   updateAlertAvailability();
@@ -1998,6 +2005,8 @@ chrome.storage.local.get({
   classroomMode: CLASSROOM_DEFAULT,
   conversationEvents: [],
   kidReportEvents: [],
+  blockEvents: [],
+  focusSessionLog: [],
   pendingTip: null,
   [TOUR_PENDING_KEY]: false
 }, (cfg)=>{
@@ -2053,11 +2062,15 @@ chrome.storage.local.get({
   renderClassroomState();
   conversationEvents = Array.isArray(cfg.conversationEvents) ? cfg.conversationEvents : [];
   kidReportEvents = Array.isArray(cfg.kidReportEvents) ? cfg.kidReportEvents : [];
+  blockEvents = Array.isArray(cfg.blockEvents) ? cfg.blockEvents : [];
+  focusSessionLog = Array.isArray(cfg.focusSessionLog) ? cfg.focusSessionLog : [];
   pendingTip = cfg.pendingTip || null;
   renderConversationCard();
   renderReportCard();
   renderTipCard();
   renderKidReportButton();
+  renderFocusComms();
+  renderInsights();
   updateAlertAvailability();
   updateParentSummaries();
   localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
@@ -3023,6 +3036,14 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     focusPinPreference = Boolean(changes.focusPinPreference.newValue);
     renderFocusState();
   }
+  if (area === 'local' && changes.blockEvents){
+    blockEvents = Array.isArray(changes.blockEvents.newValue) ? changes.blockEvents.newValue : [];
+    renderInsights();
+  }
+  if (area === 'local' && changes.focusSessionLog){
+    focusSessionLog = Array.isArray(changes.focusSessionLog.newValue) ? changes.focusSessionLog.newValue : [];
+    renderInsights();
+  }
   if (area === 'local' && changes.conversationEvents){
     conversationEvents = Array.isArray(changes.conversationEvents.newValue) ? changes.conversationEvents.newValue : [];
     renderConversationCard();
@@ -3046,6 +3067,10 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'sync' && changes.weeklyTipsEnabled){
     weeklyTipsEnabled = changes.weeklyTipsEnabled.newValue !== false;
     renderTipCard();
+  }
+  if (area === 'sync' && changes.focusAllowedComms){
+    focusAllowedComms = Array.isArray(changes.focusAllowedComms.newValue) ? changes.focusAllowedComms.newValue : [];
+    renderFocusComms();
   }
   if (area === 'sync' && changes.focusAllowedComms){
     focusAllowedComms = Array.isArray(changes.focusAllowedComms.newValue) ? changes.focusAllowedComms.newValue : [];
@@ -3217,6 +3242,46 @@ function renderKidReportButton(){
   if (kidReportNoteInput){
     kidReportNoteInput.style.display = (visible && kidReportNoteVisible) ? 'block' : 'none';
   }
+}
+
+function renderFocusComms(){
+  if (!focusCommsListEl) return;
+  focusCommsListEl.innerHTML = '';
+  const options = [
+    { id: 'teams.microsoft.com', label: 'Teams' },
+    { id: 'meet.google.com', label: 'Google Meet' },
+    { id: 'zoom.us', label: 'Zoom' },
+    { id: 'webex.com', label: 'Webex' }
+  ];
+  options.forEach((opt)=>{
+    const label = document.createElement('label');
+    label.className = 'pill-toggle';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = focusAllowedComms.includes(opt.id);
+    input.addEventListener('change', ()=>{
+      if (input.checked){
+        if (!focusAllowedComms.includes(opt.id)) focusAllowedComms.push(opt.id);
+      } else {
+        focusAllowedComms = focusAllowedComms.filter((d)=>d !== opt.id);
+      }
+      chrome.storage.sync.set({ focusAllowedComms });
+    });
+    const span = document.createElement('span');
+    span.textContent = opt.label;
+    label.appendChild(input);
+    label.appendChild(span);
+    focusCommsListEl.appendChild(label);
+  });
+}
+
+function renderInsights(){
+  if (!parentInsightsStatusEl) return;
+  const weekAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+  const blockedCount = (blockEvents || []).filter((e)=>e && e.ts && e.ts >= weekAgo).length;
+  const focusCount = (focusSessionLog || []).filter((e)=>e && e.ts && e.ts >= weekAgo).length;
+  const overridesCount = (currentOverrideLog || []).filter((e)=>e && e.timestamp && e.timestamp >= weekAgo).length;
+  parentInsightsStatusEl.textContent = `Blocked ${blockedCount}, Focus ${focusCount}, Overrides ${overridesCount} (last 7 days)`;
 }
 
 function dismissConversation(){
