@@ -1,6 +1,6 @@
 {
   "name": "safebrowse-ai",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "Privacy-first web safety extension with on-device heuristics, PIN-locked overrides, HTTPS alerts, and encrypted logs.",
   "private": true,
   "scripts": {
