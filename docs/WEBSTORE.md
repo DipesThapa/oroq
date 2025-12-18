@@ -38,6 +38,6 @@ In your repository Settings → Secrets and variables → Actions, add:
 See `docs/STORE_LISTING.md` for a ready‑to‑paste title, descriptions, and screenshot list.
 
 ## Notes
-- Manifest version is `0.3.2` (bump for each submission).
+- Manifest version is `0.3.4` (bump for each submission).
 - The workflow zips only required files; dev/backup files are excluded. For manual uploads, run `npm run zip:webstore` and upload `dist/extension.zip`.
 - Large blocklists are supported via import; dynamic DNR limits apply.

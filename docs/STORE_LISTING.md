@@ -25,10 +25,8 @@ Features:
 - Override log is encrypted at rest and stores host/reason/approver only (no full URLs) for privacy
 - Age-based profiles for EYFS through post-16 so schools can apply presets with one click
 
-What’s new in 0.3.2:
-- Hardened alerts: HTTPS-only webhooks; localhost/private-network/credentialed URLs are rejected
-- PIN protection defaults on after setup; override/allowlist edits stay locked unless you explicitly disable them
-- Reduced fingerprinting: web-accessible resources limited to HTTPS contexts
+What’s new in 0.3.4:
+- Maintenance release for Chrome Web Store submission (no user-facing feature changes).
 
 Privacy:
 - No telemetry or external requests for detection
