@@ -49,9 +49,10 @@ function readJson(req) {
 }
 
 function bearer(req) {
-  const auth = req.headers.authorization || '';
-  const match = /^Bearer\s+(.+)$/.exec(auth);
-  return match ? match[1] : '';
+  const auth = String(req.headers.authorization || '');
+  if (!auth.startsWith('Bearer ')) return '';
+  const token = auth.slice('Bearer '.length).trim();
+  return token.length > 0 ? token : '';
 }
 
 function okPairingId(value) {
@@ -132,8 +133,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     return json(res, 404, { error: 'not-found' });
-  } catch (err) {
-    return json(res, 500, { error: 'server-error', detail: String(err && err.message ? err.message : err) });
+  } catch (_err) {
+    return json(res, 500, { error: 'server-error' });
   }
 });
 
