@@ -7,10 +7,14 @@ const HEARTBEAT_THRESHOLD_MIN = 6;
 const HEARTBEAT_SNOOZE_MIN = 5;
 const FOCUS_ALARM = 'sg-focus-timer';
 const WEEKLY_TIP_ALARM = 'sg-weekly-tip';
+const PAIR_POLL_ALARM = 'sg-pair-poll';
 const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
 const CONVERSATION_EVENT_LIMIT = 12;
 const BLOCK_EVENT_LIMIT = 200;
 const FOCUS_SESSION_LIMIT = 200;
+const ACCESS_REQUEST_LIMIT = 60;
+const TEMP_ALLOWLIST_LIMIT = 200;
+const PAIR_POLL_PERIOD_MIN = 1;
 const TIP_POOL = [
   'If a headline sounds shocking, open a trusted news site to verify before sharing.',
   'AI images can fake events. Look for odd hands, lighting, or text to spot fakes.',
@@ -109,6 +113,51 @@ function normalizeWebhook(url){
     if (parsed.username || parsed.password) return '';
     if (isPrivateHost(parsed.hostname)) return '';
     return parsed.toString();
+  }catch(_e){ return ''; }
+}
+
+function toBase64(bytes){
+  try {
+    let binary = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < bytes.length; i += chunk){
+      binary += String.fromCharCode(...bytes.slice(i, i + chunk));
+    }
+    return btoa(binary);
+  } catch (_e){
+    return '';
+  }
+}
+
+function fromBase64(b64){
+  try {
+    const binary = atob(String(b64 || ''));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1){
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  } catch (_e){
+    return null;
+  }
+}
+
+async function sha256Hex(text){
+  const data = new TextEncoder().encode(String(text || ''));
+  const digest = await crypto.subtle.digest('SHA-256', data);
+  const bytes = new Uint8Array(digest);
+  return Array.from(bytes).map((b)=>b.toString(16).padStart(2, '0')).join('');
+}
+
+function normalizeRelayUrl(url){
+  const normalized = normalizeWebhook(url);
+  if (!normalized) return '';
+  try{
+    const parsed = new URL(normalized);
+    // Ensure it has no query/hash (avoid accidental secret leaks)
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString().replace(/\/+$/, '');
   }catch(_e){ return ''; }
 }
 
@@ -289,6 +338,11 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
       console.error('[Safeguard] Weekly tip rotation failed', err);
     });
   }
+  if (alarm && alarm.name === PAIR_POLL_ALARM){
+    pollPairingMessages().catch((err)=>{
+      console.error('[Safeguard] Pairing poll failed', err);
+    });
+  }
 });
 
 const TOUR_KEY = 'onboardingComplete';
@@ -347,6 +401,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     if (Object.prototype.hasOwnProperty.call(changes, 'userBlocklist')){
       rebuildDynamicRules();
     }
+    if (Object.prototype.hasOwnProperty.call(changes, 'temporaryAllowlist')){
+      rebuildDynamicRules();
+    }
     if (Object.prototype.hasOwnProperty.call(changes, 'classroomMode')){
       rebuildDynamicRules();
     }
@@ -362,6 +419,12 @@ updateBadge();
 scheduleHeartbeat();
 recoverFocusSession();
 scheduleWeeklyTipAlarm();
+chrome.storage.local.get({ pairedPeers: [] }, (cfg)=>{
+  const peers = Array.isArray(cfg.pairedPeers) ? cfg.pairedPeers : [];
+  if (peers.length){
+    chrome.alarms.create(PAIR_POLL_ALARM, { periodInMinutes: PAIR_POLL_PERIOD_MIN });
+  }
+});
 // Rebuild dynamic rules on service worker start to ensure rules are present
 rebuildDynamicRules().catch((err)=>{
   console.error('[Safeguard] Initial DNR rebuild failed', err);
@@ -395,6 +458,365 @@ function domainToRegex(domain){
   return `^https?://([a-z0-9-]+\\.)*${esc}(/|$)`;
 }
 
+function generateAccessCode(){
+  try {
+    const bytes = new Uint8Array(4);
+    crypto.getRandomValues(bytes);
+    const num = (bytes[0] << 24) + (bytes[1] << 16) + (bytes[2] << 8) + bytes[3];
+    const code = Math.abs(num % 1000000);
+    return String(code).padStart(6, '0');
+  } catch (_e){
+    return String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+  }
+}
+
+function normalizeDomain(value){
+  return String(value || '').trim().toLowerCase();
+}
+
+function sanitizeTemporaryAllowlist(raw){
+  const now = Date.now();
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  const seen = new Set();
+  list.forEach((entry)=>{
+    if (!entry || typeof entry !== 'object') return;
+    const host = normalizeDomain(entry.host);
+    const expiresAt = Number(entry.expiresAt) || 0;
+    if (!host || !expiresAt || expiresAt <= now) return;
+    const key = `${host}:${expiresAt}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      host,
+      expiresAt,
+      createdAt: Number(entry.createdAt) || Number(entry.ts) || now,
+      requestId: entry.requestId || null,
+      approver: typeof entry.approver === 'string' ? entry.approver.trim() : null
+    });
+  });
+  out.sort((a, b)=>a.expiresAt - b.expiresAt);
+  return out.slice(0, TEMP_ALLOWLIST_LIMIT);
+}
+
+function randomHex(bytesLength){
+  const bytes = new Uint8Array(bytesLength);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map((b)=>b.toString(16).padStart(2, '0')).join('');
+}
+
+async function getPairingIdentity(){
+  const { pairingIdentity = null } = await chrome.storage.local.get({ pairingIdentity: null });
+  if (pairingIdentity && pairingIdentity.privateJwk && pairingIdentity.publicB64 && pairingIdentity.deviceId){
+    return pairingIdentity;
+  }
+  const keypair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits', 'deriveKey']
+  );
+  const [privJwk, pubRaw] = await Promise.all([
+    crypto.subtle.exportKey('jwk', keypair.privateKey),
+    crypto.subtle.exportKey('raw', keypair.publicKey)
+  ]);
+  const publicB64 = toBase64(new Uint8Array(pubRaw));
+  const deviceId = (await sha256Hex(publicB64)).slice(0, 12);
+  const next = { privateJwk: privJwk, publicB64, deviceId, createdAt: Date.now() };
+  await chrome.storage.local.set({ pairingIdentity: next });
+  return next;
+}
+
+async function importPairingPrivateKey(privateJwk){
+  return crypto.subtle.importKey(
+    'jwk',
+    privateJwk,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    ['deriveBits', 'deriveKey']
+  );
+}
+
+async function importPairingPublicKey(publicB64){
+  const bytes = fromBase64(publicB64);
+  if (!bytes) return null;
+  return crypto.subtle.importKey(
+    'raw',
+    bytes,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+}
+
+async function computeSafetyCode(pairingId, ourIdentity, peerPublicB64){
+  const peerPub = await importPairingPublicKey(peerPublicB64);
+  if (!peerPub) return '';
+  const ourPriv = await importPairingPrivateKey(ourIdentity.privateJwk);
+  const bits = await crypto.subtle.deriveBits({ name: 'ECDH', public: peerPub }, ourPriv, 256);
+  const digestHex = await sha256Hex(`${pairingId}:${toBase64(new Uint8Array(bits))}`);
+  return digestHex.slice(0, 12).toUpperCase().match(/.{1,4}/g).join('-');
+}
+
+async function deriveSharedAesKey(ourIdentity, peerPublicB64){
+  const peerPub = await importPairingPublicKey(peerPublicB64);
+  if (!peerPub) return null;
+  const ourPriv = await importPairingPrivateKey(ourIdentity.privateJwk);
+  return crypto.subtle.deriveKey(
+    { name: 'ECDH', public: peerPub },
+    ourPriv,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptForPeer(ourIdentity, peerPublicB64, payload){
+  const key = await deriveSharedAesKey(ourIdentity, peerPublicB64);
+  if (!key) return null;
+  const iv = new Uint8Array(12);
+  crypto.getRandomValues(iv);
+  const data = new TextEncoder().encode(JSON.stringify(payload || {}));
+  const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data);
+  return { iv: toBase64(iv), data: toBase64(new Uint8Array(cipher)) };
+}
+
+async function decryptFromPeer(ourIdentity, peerPublicB64, envelope){
+  const key = await deriveSharedAesKey(ourIdentity, peerPublicB64);
+  if (!key) return null;
+  const iv = fromBase64(envelope && envelope.iv);
+  const cipher = fromBase64(envelope && envelope.data);
+  if (!iv || !cipher) return null;
+  try {
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher);
+    const text = new TextDecoder().decode(new Uint8Array(plain));
+    return JSON.parse(text);
+  } catch(_e){
+    return null;
+  }
+}
+
+async function relayRequest(relayUrl, secret, path, options = {}){
+  const url = `${relayUrl}${path}`;
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+  if (secret) headers.Authorization = `Bearer ${secret}`;
+  const resp = await fetch(url, {
+    method: options.method || 'GET',
+    headers,
+    body: options.body ? JSON.stringify(options.body) : undefined
+  });
+  if (!resp.ok){
+    const text = await resp.text().catch(()=> '');
+    throw new Error(`relay ${options.method || 'GET'} ${path} failed: ${resp.status} ${text}`);
+  }
+  return resp.json().catch(()=> ({}));
+}
+
+async function createPairingInvite(){
+  const [{ pairingRelayUrl = '' }] = await Promise.all([
+    chrome.storage.local.get({ pairingRelayUrl: '' })
+  ]);
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  if (!relayUrl) throw new Error('relay-not-configured');
+  const identity = await getPairingIdentity();
+  const pairingId = randomHex(12);
+  const secret = randomHex(12);
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  await relayRequest(relayUrl, secret, `/pairings/${pairingId}`, {
+    method: 'PUT',
+    body: { creatorPublicB64: identity.publicB64, creatorDeviceId: identity.deviceId, expiresAt }
+  });
+  const pending = { pairingId, secret, role: 'creator', peerPublicB64: null, peerDeviceId: null, safetyCode: null, createdAt: Date.now(), expiresAt };
+  await chrome.storage.local.set({ pairingPending: pending });
+  return { code: `${pairingId}.${secret}`, pending };
+}
+
+async function joinPairingInvite(code){
+  const [{ pairingRelayUrl = '' }] = await Promise.all([
+    chrome.storage.local.get({ pairingRelayUrl: '' })
+  ]);
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  if (!relayUrl) throw new Error('relay-not-configured');
+  const raw = String(code || '').trim();
+  const parts = raw.split('.');
+  if (parts.length !== 2) throw new Error('invalid-code');
+  const pairingId = parts[0];
+  const secret = parts[1];
+  const identity = await getPairingIdentity();
+  const info = await relayRequest(relayUrl, secret, `/pairings/${pairingId}`, { method: 'GET' });
+  const peerPublicB64 = info && info.creatorPublicB64 ? info.creatorPublicB64 : null;
+  const peerDeviceId = info && info.creatorDeviceId ? info.creatorDeviceId : null;
+  if (!peerPublicB64) throw new Error('pairing-not-ready');
+  await relayRequest(relayUrl, secret, `/pairings/${pairingId}`, {
+    method: 'PUT',
+    body: { joinerPublicB64: identity.publicB64, joinerDeviceId: identity.deviceId }
+  });
+  const safetyCode = await computeSafetyCode(pairingId, identity, peerPublicB64);
+  const pending = { pairingId, secret, role: 'joiner', peerPublicB64, peerDeviceId, safetyCode, createdAt: Date.now(), expiresAt: info && info.expiresAt ? info.expiresAt : (Date.now() + 15 * 60 * 1000) };
+  await chrome.storage.local.set({ pairingPending: pending });
+  return { pending };
+}
+
+async function refreshPairingPending(){
+  const [{ pairingRelayUrl = '', pairingPending = null }] = await Promise.all([
+    chrome.storage.local.get({ pairingRelayUrl: '', pairingPending: null })
+  ]);
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  if (!relayUrl || !pairingPending || !pairingPending.pairingId || !pairingPending.secret) return null;
+  const { pairingId, secret } = pairingPending;
+  const info = await relayRequest(relayUrl, secret, `/pairings/${pairingId}`, { method: 'GET' });
+  const identity = await getPairingIdentity();
+  let peerPublicB64 = pairingPending.peerPublicB64;
+  let peerDeviceId = pairingPending.peerDeviceId;
+  if (pairingPending.role === 'creator'){
+    peerPublicB64 = info && info.joinerPublicB64 ? info.joinerPublicB64 : null;
+    peerDeviceId = info && info.joinerDeviceId ? info.joinerDeviceId : null;
+  }
+  if (!peerPublicB64) return pairingPending;
+  const safetyCode = await computeSafetyCode(pairingId, identity, peerPublicB64);
+  const next = { ...pairingPending, peerPublicB64, peerDeviceId, safetyCode };
+  await chrome.storage.local.set({ pairingPending: next });
+  return next;
+}
+
+async function confirmPairing(){
+  const [{ pairingPending = null, pairedPeers = [] }] = await Promise.all([
+    chrome.storage.local.get({ pairingPending: null, pairedPeers: [] })
+  ]);
+  if (!pairingPending || !pairingPending.peerPublicB64 || !pairingPending.pairingId) throw new Error('pairing-not-ready');
+  const identity = await getPairingIdentity();
+  const peerId = pairingPending.peerDeviceId || (await sha256Hex(pairingPending.peerPublicB64)).slice(0, 12);
+  const nextPeers = Array.isArray(pairedPeers) ? pairedPeers.slice() : [];
+  const existing = nextPeers.find((p)=>p && p.pairingId === pairingPending.pairingId && p.peerId === peerId);
+  if (!existing){
+    nextPeers.unshift({
+      pairingId: pairingPending.pairingId,
+      secret: pairingPending.secret,
+      peerId,
+      peerPublicB64: pairingPending.peerPublicB64,
+      createdAt: Date.now(),
+      ourDeviceId: identity.deviceId
+    });
+  }
+  await chrome.storage.local.set({ pairedPeers: nextPeers.slice(0, 10), pairingPending: null });
+  chrome.alarms.create(PAIR_POLL_ALARM, { periodInMinutes: PAIR_POLL_PERIOD_MIN });
+  return { ok: true };
+}
+
+async function relaySendMessage(peer, message){
+  const { pairingRelayUrl = '' } = await chrome.storage.local.get({ pairingRelayUrl: '' });
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  if (!relayUrl) throw new Error('relay-not-configured');
+  const identity = await getPairingIdentity();
+  const encrypted = await encryptForPeer(identity, peer.peerPublicB64, message);
+  if (!encrypted) throw new Error('encrypt-failed');
+  const envelope = {
+    id: `m_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    ts: Date.now(),
+    from: identity.deviceId,
+    to: peer.peerId,
+    payload: encrypted
+  };
+  await relayRequest(relayUrl, peer.secret, `/mailbox/${peer.pairingId}`, { method: 'POST', body: envelope });
+  return true;
+}
+
+async function pollPairingMessages(){
+  const [{ pairingRelayUrl = '', pairedPeers = [], pairingInboxState = {} }] = await Promise.all([
+    chrome.storage.local.get({ pairingRelayUrl: '', pairedPeers: [], pairingInboxState: {} })
+  ]);
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  if (!relayUrl) return;
+  const peers = Array.isArray(pairedPeers) ? pairedPeers.filter((p)=>p && p.pairingId && p.secret && p.peerPublicB64) : [];
+  if (!peers.length) return;
+  const identity = await getPairingIdentity();
+  const inboxState = pairingInboxState && typeof pairingInboxState === 'object' ? { ...pairingInboxState } : {};
+
+  let accessRequestsChanged = false;
+  let tempAllowChanged = false;
+  const storageSnapshot = await chrome.storage.local.get({ accessRequests: [], temporaryAllowlist: [] });
+  let accessRequests = Array.isArray(storageSnapshot.accessRequests) ? storageSnapshot.accessRequests.slice() : [];
+  let temporaryAllowlist = Array.isArray(storageSnapshot.temporaryAllowlist) ? sanitizeTemporaryAllowlist(storageSnapshot.temporaryAllowlist) : [];
+
+  for (const peer of peers){
+    const since = Number(inboxState[peer.pairingId] || 0) || 0;
+    let data = null;
+    try {
+      data = await relayRequest(relayUrl, peer.secret, `/mailbox/${peer.pairingId}?since=${since}`, { method: 'GET' });
+    } catch(_e){
+      continue;
+    }
+    const items = Array.isArray(data && data.items) ? data.items : [];
+    if (!items.length) continue;
+    let maxTs = since;
+    for (const item of items){
+      if (!item || item.from === identity.deviceId) continue;
+      const ts = Number(item.ts) || 0;
+      if (ts > maxTs) maxTs = ts;
+      const payload = await decryptFromPeer(identity, peer.peerPublicB64, item.payload);
+      if (!payload || typeof payload !== 'object') continue;
+      if (payload.type === 'access-request'){
+        const existing = accessRequests.find((r)=>r && r.id === payload.requestId);
+        if (!existing){
+          accessRequests.unshift({
+            id: payload.requestId,
+            code: payload.code || '',
+            ts: payload.ts || ts,
+            host: payload.host || null,
+            url: payload.url || null,
+            note: payload.note || null,
+            status: 'pending',
+            source: 'paired',
+            pairingId: peer.pairingId,
+            fromDeviceId: item.from
+          });
+          accessRequestsChanged = true;
+        }
+      }
+      if (payload.type === 'access-approval'){
+        const reqId = payload.requestId;
+        if (reqId){
+          const idx = accessRequests.findIndex((r)=>r && r.id === reqId);
+          if (idx >= 0){
+            accessRequests[idx] = { ...accessRequests[idx], status: payload.approved ? 'approved' : 'denied', resolvedAt: ts, approver: payload.approver || null, expiresAt: payload.expiresAt || null, permanent: Boolean(payload.permanent) };
+            accessRequestsChanged = true;
+          }
+        }
+        if (payload.approved && payload.host){
+          const host = normalizeDomain(payload.host);
+          if (payload.permanent){
+            // permanent allow is handled on the child device via sync allowlist update from popup; keep here for completeness
+            chrome.storage.sync.get({ allowlist: [] }, (cfg)=>{
+              const set = new Set(Array.isArray(cfg.allowlist) ? cfg.allowlist : []);
+              set.add(host);
+              chrome.storage.sync.set({ allowlist: Array.from(set) });
+            });
+          } else if (payload.expiresAt){
+            temporaryAllowlist = sanitizeTemporaryAllowlist([
+              ...temporaryAllowlist,
+              { host, expiresAt: payload.expiresAt, createdAt: Date.now(), requestId: payload.requestId || null, approver: payload.approver || null }
+            ]);
+            tempAllowChanged = true;
+          }
+        }
+      }
+    }
+    inboxState[peer.pairingId] = maxTs;
+  }
+
+  if (accessRequestsChanged){
+    accessRequests = accessRequests.slice(0, ACCESS_REQUEST_LIMIT);
+    await chrome.storage.local.set({ accessRequests });
+  }
+  if (tempAllowChanged){
+    await chrome.storage.local.set({ temporaryAllowlist });
+  }
+  await chrome.storage.local.set({ pairingInboxState: inboxState });
+}
+
 async function rebuildDynamicRules(){
   let release = ()=>{};
   const wait = dnrRebuildMutex;
@@ -405,19 +827,30 @@ async function rebuildDynamicRules(){
       const cfg = await new Promise(r => chrome.storage.sync.get({ allowlist: [], focusAllowedComms: [] }, r));
       const allowlist = Array.isArray(cfg.allowlist) ? cfg.allowlist : [];
       const focusAllowedComms = Array.isArray(cfg.focusAllowedComms) ? cfg.focusAllowedComms.map((d)=>String(d||'').trim().toLowerCase()).filter(Boolean) : [];
-      const local = await new Promise(r => chrome.storage.local.get({ userBlocklist: [], classroomMode: CLASSROOM_DEFAULT }, r));
+      const local = await new Promise(r => chrome.storage.local.get({
+        userBlocklist: [],
+        classroomMode: CLASSROOM_DEFAULT,
+        temporaryAllowlist: []
+      }, r));
       const userBlocklist = Array.isArray(local.userBlocklist) ? local.userBlocklist : [];
       const classroomMode = { ...CLASSROOM_DEFAULT, ...(local.classroomMode || {}) };
       classroomMode.playlists = sanitizePlaylistIds(classroomMode.playlists);
       classroomMode.videos = sanitizeVideoIds(classroomMode.videos);
       const classroomActive = Boolean(classroomMode.enabled);
+      const rawTempAllowlist = Array.isArray(local.temporaryAllowlist) ? local.temporaryAllowlist : [];
+      const temporaryAllowlist = sanitizeTemporaryAllowlist(rawTempAllowlist);
+      if (rawTempAllowlist.length !== temporaryAllowlist.length){
+        chrome.storage.local.set({ temporaryAllowlist }).catch((_e)=>{});
+      }
       const focus = await getFocusState();
       const focusActive = focus.active && focus.endsAt > Date.now();
       const block = await loadJsonResource('data/blocklist.json');
       const blockDomains = (block && Array.isArray(block.domains)) ? block.domains : [];
 
-      const normalizeDomain = (value)=>String(value || '').trim().toLowerCase();
-      let allowDomains = Array.from(new Set(allowlist.map(normalizeDomain).filter(Boolean)));
+      let allowDomains = Array.from(new Set([
+        ...allowlist.map(normalizeDomain).filter(Boolean),
+        ...temporaryAllowlist.map((entry)=>entry.host).filter(Boolean)
+      ]));
       if (classroomActive){
         // Prevent broad YouTube allowlisting from bypassing classroom restrictions
         allowDomains = allowDomains.filter((d)=>!/^((www\.)?youtube\.com|youtu\.be)$/i.test(d));
@@ -596,6 +1029,44 @@ async function recordKidReport(payload = {}){
   await chrome.storage.local.set({ kidReportEvents: events.slice(0, CONVERSATION_EVENT_LIMIT) });
 }
 
+async function recordAccessRequest(payload = {}){
+  const [{ accessRequests = [] }, { pairedPeers = [], pairingRelayUrl = '' }] = await Promise.all([
+    new Promise((resolve)=>chrome.storage.local.get({ accessRequests: [] }, resolve)),
+    new Promise((resolve)=>chrome.storage.local.get({ pairedPeers: [], pairingRelayUrl: '' }, resolve))
+  ]);
+  const list = Array.isArray(accessRequests) ? accessRequests.slice(0, ACCESS_REQUEST_LIMIT) : [];
+  const host = normalizeDomain(payload.host);
+  if (!host) return null;
+  const entry = {
+    id: `req_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    code: generateAccessCode(),
+    ts: Date.now(),
+    host,
+    url: typeof payload.url === 'string' ? payload.url : null,
+    note: typeof payload.note === 'string' ? payload.note.trim().slice(0, 240) : null,
+    status: 'pending',
+    source: 'local'
+  };
+  list.unshift(entry);
+  await chrome.storage.local.set({ accessRequests: list.slice(0, ACCESS_REQUEST_LIMIT) });
+  const relayUrl = normalizeRelayUrl(pairingRelayUrl);
+  const peers = Array.isArray(pairedPeers) ? pairedPeers.filter((p)=>p && p.pairingId && p.secret && p.peerPublicB64) : [];
+  if (relayUrl && peers.length){
+    peers.forEach((peer)=>{
+      relaySendMessage(peer, {
+        type: 'access-request',
+        requestId: entry.id,
+        code: entry.code,
+        ts: entry.ts,
+        host: entry.host,
+        url: entry.url,
+        note: entry.note
+      }).catch((_e)=>{});
+    });
+  }
+  return entry;
+}
+
 async function recordBlockEvent(payload = {}){
   try {
     const [{ blockEvents = [] }] = await Promise.all([
@@ -706,6 +1177,155 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     recordKidReport({ tone: message.tone, host: message.host, note: message.note }).then(()=>sendResponse({ ok: true })).catch((err)=>{
       console.error('[Safeguard] kid report log failed', err);
       sendResponse({ ok: false });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-access-request'){
+    recordAccessRequest({ host: message.host, url: message.url, note: message.note }).then((entry)=>{
+      if (!entry){
+        sendResponse({ ok: false });
+        return;
+      }
+      sendResponse({ ok: true, request: entry });
+    }).catch((err)=>{
+      console.error('[Safeguard] access request log failed', err);
+      sendResponse({ ok: false });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-set-relay'){
+    const relayUrl = normalizeRelayUrl(message.url);
+    chrome.storage.local.set({ pairingRelayUrl: relayUrl }, ()=>{
+      sendResponse({ ok: true, relayUrl });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-get-state'){
+    Promise.all([
+      chrome.storage.local.get({ pairingRelayUrl: '', pairingPending: null, pairedPeers: [] }),
+      getPairingIdentity()
+    ]).then(([local, identity])=>{
+      sendResponse({
+        ok: true,
+        state: {
+          relayUrl: local.pairingRelayUrl || '',
+          identity: { publicB64: identity.publicB64, deviceId: identity.deviceId },
+          pending: local.pairingPending || null,
+          peers: Array.isArray(local.pairedPeers) ? local.pairedPeers : []
+        }
+      });
+    }).catch((_e)=>{
+      sendResponse({ ok: false });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-create-invite'){
+    createPairingInvite().then((result)=>{
+      sendResponse({ ok: true, code: result.code, pending: result.pending });
+    }).catch((err)=>{
+      console.error('[Safeguard] pairing invite failed', err);
+      sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-join'){
+    joinPairingInvite(message.code).then((result)=>{
+      sendResponse({ ok: true, pending: result.pending });
+    }).catch((err)=>{
+      console.error('[Safeguard] pairing join failed', err);
+      sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-refresh'){
+    refreshPairingPending().then((pending)=>{
+      sendResponse({ ok: true, pending });
+    }).catch((err)=>{
+      console.error('[Safeguard] pairing refresh failed', err);
+      sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-confirm'){
+    confirmPairing().then(()=>sendResponse({ ok: true })).catch((err)=>{
+      console.error('[Safeguard] pairing confirm failed', err);
+      sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-remove'){
+    chrome.storage.local.get({ pairedPeers: [] }, (cfg)=>{
+      const peers = Array.isArray(cfg.pairedPeers) ? cfg.pairedPeers : [];
+      const next = peers.filter((p)=>{
+        if (!p || typeof p !== 'object') return false;
+        if (message.pairingId && p.pairingId !== message.pairingId) return true;
+        if (message.peerId && p.peerId !== message.peerId) return true;
+        return false;
+      });
+      chrome.storage.local.set({ pairedPeers: next }, ()=>{
+        sendResponse({ ok: true, peers: next });
+      });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-approve-access'){
+    chrome.storage.local.get({ pairedPeers: [] }, (cfg)=>{
+      const peers = Array.isArray(cfg.pairedPeers) ? cfg.pairedPeers : [];
+      const peer = peers.find((p)=>p && p.pairingId === message.pairingId);
+      if (!peer){
+        sendResponse({ ok: false, error: 'peer-not-found' });
+        return;
+      }
+      const now = Date.now();
+      const durationMinutes = Number(message.durationMinutes) || 0;
+      const permanent = Boolean(message.permanent) || durationMinutes <= 0;
+      const expiresAt = permanent ? null : (now + durationMinutes * 60000);
+      relaySendMessage(peer, {
+        type: 'access-approval',
+        requestId: message.requestId,
+        approved: true,
+        permanent,
+        expiresAt,
+        host: message.host || null,
+        approver: typeof message.approver === 'string' ? message.approver.trim().slice(0, 48) : null
+      }).then(()=>{
+        sendResponse({ ok: true });
+      }).catch((err)=>{
+        console.error('[Safeguard] pairing approve send failed', err);
+        sendResponse({ ok: false, error: 'send-failed' });
+      });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-deny-access'){
+    chrome.storage.local.get({ pairedPeers: [] }, (cfg)=>{
+      const peers = Array.isArray(cfg.pairedPeers) ? cfg.pairedPeers : [];
+      const peer = peers.find((p)=>p && p.pairingId === message.pairingId);
+      if (!peer){
+        sendResponse({ ok: false, error: 'peer-not-found' });
+        return;
+      }
+      relaySendMessage(peer, {
+        type: 'access-approval',
+        requestId: message.requestId,
+        approved: false,
+        permanent: false,
+        expiresAt: null,
+        host: message.host || null,
+        approver: typeof message.approver === 'string' ? message.approver.trim().slice(0, 48) : null
+      }).then(()=>{
+        sendResponse({ ok: true });
+      }).catch((err)=>{
+        console.error('[Safeguard] pairing deny send failed', err);
+        sendResponse({ ok: false, error: 'send-failed' });
+      });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-pairing-poll'){
+    pollPairingMessages().then(()=>sendResponse({ ok: true })).catch((err)=>{
+      console.error('[Safeguard] pairing poll failed', err);
+      sendResponse({ ok: false, error: String(err && err.message ? err.message : err) });
     });
     return true;
   }

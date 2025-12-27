@@ -927,6 +927,19 @@ textarea {
   color: var(--text-muted);
 }
 
+.request-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.request-code {
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  font-size: 12px;
+}
+
 .report-summary {
   margin: 12px 0;
   padding: 12px;

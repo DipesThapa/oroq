@@ -84,6 +84,8 @@ const parentClassroomStatusEl = document.getElementById('parentClassroomStatus')
 const parentFamilyStatusEl = document.getElementById('parentFamilyStatus');
 const parentConversationStatusEl = document.getElementById('parentConversationStatus');
 const parentReportStatusEl = document.getElementById('parentReportStatus');
+const parentAccessStatusEl = document.getElementById('parentAccessStatus');
+const parentPairingStatusEl = document.getElementById('parentPairingStatus');
 const parentTipStatusEl = document.getElementById('parentTipStatus');
 const parentModeBtn = document.getElementById('parentModeBtn');
 const classroomModeBtn = document.getElementById('classroomModeBtn');
@@ -102,6 +104,8 @@ const parentClassroomBtn = document.getElementById('parentClassroomBtn');
 const parentFamilyBtn = document.getElementById('parentFamilyBtn');
 const parentConversationBtn = document.getElementById('parentConversationBtn');
 const parentReportBtn = document.getElementById('parentReportBtn');
+const parentAccessBtn = document.getElementById('parentAccessBtn');
+const parentPairingBtn = document.getElementById('parentPairingBtn');
 const parentTipBtn = document.getElementById('parentTipBtn');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
@@ -114,10 +118,30 @@ const parentClassroomSectionEl = document.getElementById('parentClassroomSection
 const parentFamilySectionEl = document.getElementById('parentFamilySection');
 const parentConversationSectionEl = document.getElementById('parentConversationSection');
 const parentReportSectionEl = document.getElementById('parentReportSection');
+const parentAccessSectionEl = document.getElementById('parentAccessSection');
+const parentPairingSectionEl = document.getElementById('parentPairingSection');
 const parentTipSectionEl = document.getElementById('parentTipSection');
 const parentCardEl = document.getElementById('cardParent');
 const parentPanelEl = document.querySelector('.parent-panel');
 const parentBackBtn = document.getElementById('parentBackBtn');
+const accessRequestListEl = document.getElementById('accessRequestList');
+const accessRequestMessageEl = document.getElementById('accessRequestMessage');
+const accessRequestClearBtn = document.getElementById('accessRequestClear');
+const tempAllowListEl = document.getElementById('tempAllowList');
+const tempAllowMessageEl = document.getElementById('tempAllowMessage');
+const pairRelayUrlEl = document.getElementById('pairRelayUrl');
+const pairRelaySaveBtn = document.getElementById('pairRelaySave');
+const pairPollNowBtn = document.getElementById('pairPollNow');
+const pairRelayMessageEl = document.getElementById('pairRelayMessage');
+const pairCreateBtn = document.getElementById('pairCreate');
+const pairRefreshBtn = document.getElementById('pairRefresh');
+const pairJoinBtn = document.getElementById('pairJoin');
+const pairCodeInEl = document.getElementById('pairCodeIn');
+const pairCodeOutEl = document.getElementById('pairCodeOut');
+const pairSafetyOutEl = document.getElementById('pairSafetyOut');
+const pairConfirmBtn = document.getElementById('pairConfirm');
+const pairedDeviceListEl = document.getElementById('pairedDeviceList');
+const pairedDeviceMessageEl = document.getElementById('pairedDeviceMessage');
 const approverCardEl = document.getElementById('cardApprover');
 const focusToggleEl = document.getElementById('focusToggle');
 const focusDurationSelect = document.getElementById('focusDurationSelect');
@@ -254,6 +278,9 @@ let kidReportEvents = [];
 let blockEvents = [];
 let focusSessionLog = [];
 let pendingTip = null;
+let accessRequests = [];
+let temporaryAllowlist = [];
+let pairingState = { relayUrl: '', identity: null, pending: null, peers: [] };
 let conversationTipsEnabled = true;
 let weeklyTipsEnabled = true;
 let kidReportEnabled = true;
@@ -304,6 +331,12 @@ if (parentConversationSectionEl){
 }
 if (parentReportSectionEl){
   parentReportSectionEl.dataset.expanded = parentReportSectionEl.dataset.expanded || '0';
+}
+if (parentAccessSectionEl){
+  parentAccessSectionEl.dataset.expanded = parentAccessSectionEl.dataset.expanded || '0';
+}
+if (parentPairingSectionEl){
+  parentPairingSectionEl.dataset.expanded = parentPairingSectionEl.dataset.expanded || '0';
 }
 if (parentTipSectionEl){
   parentTipSectionEl.dataset.expanded = parentTipSectionEl.dataset.expanded || '0';
@@ -812,6 +845,22 @@ function updateParentSummaries(){
   if (parentReportStatusEl){
     parentReportStatusEl.textContent = kidReportEvents.length ? 'Child reported unsafe content' : 'No reports';
   }
+  if (parentAccessStatusEl){
+    const pending = accessRequests.filter((req)=>req && req.status === 'pending').length;
+    const activeTemp = temporaryAllowlist.filter((entry)=>entry && Number(entry.expiresAt) > Date.now()).length;
+    if (pending){
+      parentAccessStatusEl.textContent = `${pending} pending`;
+    } else if (activeTemp){
+      parentAccessStatusEl.textContent = `${activeTemp} active temporary`;
+    } else {
+      parentAccessStatusEl.textContent = 'No requests';
+    }
+  }
+  if (parentPairingStatusEl){
+    const peers = Array.isArray(pairingState.peers) ? pairingState.peers : [];
+    const relay = (pairingState.relayUrl || '').trim();
+    parentPairingStatusEl.textContent = peers.length ? `${peers.length} paired` : (relay ? 'Relay saved (not paired)' : 'Not configured');
+  }
   if (parentTipStatusEl){
     parentTipStatusEl.textContent = (weeklyTipsEnabled === false) ? 'Disabled' : (pendingTip ? 'New tip' : 'None pending');
   }
@@ -909,6 +958,8 @@ function collapseParentSections(activeKey){
     ['family', parentFamilySectionEl],
     ['conversation', parentConversationSectionEl],
     ['reports', parentReportSectionEl],
+    ['access', parentAccessSectionEl],
+    ['pairing', parentPairingSectionEl],
     ['tips', parentTipSectionEl]
   ];
   sections.forEach(([key, el])=>{
@@ -1060,6 +1111,30 @@ function expandReportSection(){
   if (parentBackBtn) parentBackBtn.hidden = false;
   document.body.classList.add('parent-section-active');
   scrollToCard(parentReportSectionEl);
+}
+
+function expandAccessSection(){
+  if (!parentAccessSectionEl) return;
+  collapseParentSections('access');
+  parentAccessSectionEl.dataset.expanded = '1';
+  parentAccessSectionEl.hidden = false;
+  parentAccessSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentAccessSectionEl);
+}
+
+function expandPairingSection(){
+  if (!parentPairingSectionEl) return;
+  collapseParentSections('pairing');
+  parentPairingSectionEl.dataset.expanded = '1';
+  parentPairingSectionEl.hidden = false;
+  parentPairingSectionEl.classList.add('parent-section--active');
+  if (parentPanelEl) parentPanelEl.hidden = true;
+  if (parentBackBtn) parentBackBtn.hidden = false;
+  document.body.classList.add('parent-section-active');
+  scrollToCard(parentPairingSectionEl);
 }
 
 function expandTipSection(){
@@ -1613,6 +1688,351 @@ function formatTimestamp(value){
   }
 }
 
+function setAccessRequestMessage(text, tone = 'muted'){
+  if (!accessRequestMessageEl) return;
+  accessRequestMessageEl.textContent = text;
+  accessRequestMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') accessRequestMessageEl.classList.add('message--success');
+  else if (tone === 'error') accessRequestMessageEl.classList.add('message--error');
+}
+
+function setTempAllowMessage(text, tone = 'muted'){
+  if (!tempAllowMessageEl) return;
+  tempAllowMessageEl.textContent = text;
+  tempAllowMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') tempAllowMessageEl.classList.add('message--success');
+  else if (tone === 'error') tempAllowMessageEl.classList.add('message--error');
+}
+
+function setPairRelayMessage(text, tone = 'muted'){
+  if (!pairRelayMessageEl) return;
+  pairRelayMessageEl.textContent = text;
+  pairRelayMessageEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') pairRelayMessageEl.classList.add('message--success');
+  else if (tone === 'error') pairRelayMessageEl.classList.add('message--error');
+}
+
+function renderPairedDevices(){
+  if (!pairedDeviceListEl) return;
+  pairedDeviceListEl.innerHTML = '';
+  const peers = Array.isArray(pairingState.peers) ? pairingState.peers : [];
+  if (!peers.length){
+    if (pairedDeviceMessageEl) pairedDeviceMessageEl.textContent = 'No paired devices yet.';
+    return;
+  }
+  if (pairedDeviceMessageEl) pairedDeviceMessageEl.textContent = `${peers.length} paired device${peers.length === 1 ? '' : 's'}.`;
+  peers.forEach((peer)=>{
+    const li = document.createElement('li');
+    li.className = 'pill pill--wide';
+    const text = document.createElement('span');
+    text.className = 'pill__text';
+    text.textContent = `${peer.peerId || 'device'} (${peer.pairingId || ''})`;
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'pill__remove';
+    remove.textContent = '×';
+    remove.onclick = async ()=>{
+      if (!(await ensureAllowlistPin('remove paired device'))) return;
+      chrome.runtime.sendMessage({ type: 'sg-pairing-remove', pairingId: peer.pairingId, peerId: peer.peerId }, (resp)=>{
+        if (!resp || !resp.ok) return;
+        pairingState.peers = resp.peers || [];
+        renderPairedDevices();
+        updateParentSummaries();
+      });
+    };
+    li.appendChild(text);
+    li.appendChild(remove);
+    pairedDeviceListEl.appendChild(li);
+  });
+}
+
+function renderPairingPending(){
+  if (pairRelayUrlEl) pairRelayUrlEl.value = pairingState.relayUrl || '';
+  const pending = pairingState.pending;
+  if (pairCodeOutEl) pairCodeOutEl.value = '';
+  if (pairSafetyOutEl) pairSafetyOutEl.value = '';
+  if (pairConfirmBtn) pairConfirmBtn.disabled = true;
+  if (!pending) return;
+  if (pairCodeOutEl) pairCodeOutEl.value = pending.pairingId && pending.secret ? `${pending.pairingId}.${pending.secret}` : '';
+  if (pairSafetyOutEl) pairSafetyOutEl.value = pending.safetyCode || '';
+  if (pairConfirmBtn) pairConfirmBtn.disabled = !(pending && pending.safetyCode);
+}
+
+function refreshPairingState(){
+  return new Promise((resolve)=>{
+    chrome.runtime.sendMessage({ type: 'sg-pairing-get-state' }, (resp)=>{
+      if (!resp || !resp.ok){
+        resolve(false);
+        return;
+      }
+      pairingState = resp.state || pairingState;
+      renderPairingPending();
+      renderPairedDevices();
+      updateParentSummaries();
+      resolve(true);
+    });
+  });
+}
+
+function pruneTemporaryAllows(list){
+  const now = Date.now();
+  return (Array.isArray(list) ? list : []).filter((entry)=>{
+    if (!entry || typeof entry !== 'object') return false;
+    const host = String(entry.host || '').trim().toLowerCase();
+    const expiresAt = Number(entry.expiresAt) || 0;
+    return Boolean(host) && expiresAt > now;
+  }).sort((a, b)=>(Number(a.expiresAt) || 0) - (Number(b.expiresAt) || 0));
+}
+
+function formatRemaining(expiresAt){
+  const remaining = Math.max(0, Number(expiresAt) - Date.now());
+  const mins = Math.ceil(remaining / 60000);
+  if (mins <= 1) return 'expires soon';
+  if (mins < 60) return `${mins} min left`;
+  const hours = Math.ceil(mins / 60);
+  return `${hours} hr left`;
+}
+
+function renderTemporaryAllows(){
+  if (!tempAllowListEl) return;
+  temporaryAllowlist = pruneTemporaryAllows(temporaryAllowlist);
+  tempAllowListEl.innerHTML = '';
+  if (!temporaryAllowlist.length){
+    setTempAllowMessage('No temporary allows active.', 'muted');
+    return;
+  }
+  temporaryAllowlist.slice(0, 20).forEach((entry)=>{
+    const li = document.createElement('li');
+    li.className = 'log-item';
+    const top = document.createElement('div');
+    top.className = 'log-item__top';
+    const host = document.createElement('span');
+    host.className = 'log-item__host';
+    host.textContent = entry.host || '(unknown)';
+    const ts = document.createElement('span');
+    ts.textContent = formatRemaining(entry.expiresAt);
+    top.appendChild(host);
+    top.appendChild(ts);
+    li.appendChild(top);
+    const actions = document.createElement('div');
+    actions.className = 'request-actions';
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'button button--link';
+    remove.textContent = 'Remove';
+    remove.onclick = async ()=>{
+      if (!(await ensureAllowlistPin(`remove temporary allow for ${entry.host}`))) return;
+      temporaryAllowlist = pruneTemporaryAllows(temporaryAllowlist.filter((item)=>item !== entry));
+      chrome.storage.local.set({ temporaryAllowlist }, ()=>{
+        renderTemporaryAllows();
+        updateParentSummaries();
+      });
+    };
+    actions.appendChild(remove);
+    li.appendChild(actions);
+    tempAllowListEl.appendChild(li);
+  });
+  setTempAllowMessage(`${temporaryAllowlist.length} temporary allow${temporaryAllowlist.length === 1 ? '' : 's'} active.`, 'muted');
+}
+
+async function maybePromptApprover(){
+  if (!approverPromptEnabled) return '';
+  const value = window.prompt('Who approved this request? (initials/name)') || '';
+  return String(value).trim().slice(0, 48);
+}
+
+async function resolveAccessRequest(requestId, resolution){
+  if (!(await ensureAllowlistPin(`${resolution} access request`))) return;
+  const req = accessRequests.find((item)=>item && item.id === requestId);
+  if (!req) return;
+  const now = Date.now();
+  const approver = await maybePromptApprover();
+  if (req.source === 'paired' && req.pairingId){
+    chrome.runtime.sendMessage({
+      type: 'sg-pairing-deny-access',
+      pairingId: req.pairingId,
+      requestId,
+      host: req.host,
+      approver
+    }, (resp)=>{
+      if (!resp || !resp.ok){
+        setAccessRequestMessage('Failed to send denial to paired device. Check relay settings.', 'error');
+        return;
+      }
+      accessRequests = accessRequests.map((item)=>{
+        if (!item || item.id !== requestId) return item;
+        return { ...item, status: resolution, resolvedAt: now, approver: approver || null };
+      });
+      chrome.storage.local.set({ accessRequests }, ()=>{
+        renderAccessRequests();
+        updateParentSummaries();
+      });
+    });
+    return;
+  }
+  const updated = accessRequests.map((item)=>{
+    if (!item || item.id !== requestId) return item;
+    return {
+      ...item,
+      status: resolution,
+      resolvedAt: now,
+      approver: approver || null
+    };
+  });
+  accessRequests = updated;
+  chrome.storage.local.set({ accessRequests }, ()=>{
+    renderAccessRequests();
+    updateParentSummaries();
+  });
+}
+
+async function approveAccessRequest(requestId, minutes){
+  if (!(await ensureAllowlistPin('approve access request'))) return;
+  const req = accessRequests.find((item)=>item && item.id === requestId);
+  if (!req || !req.host) return;
+  const host = String(req.host).trim().toLowerCase();
+  const now = Date.now();
+  const approver = await maybePromptApprover();
+  const duration = Number(minutes) || 0;
+  if (req.source === 'paired' && req.pairingId){
+    const permanent = duration <= 0;
+    chrome.runtime.sendMessage({
+      type: 'sg-pairing-approve-access',
+      pairingId: req.pairingId,
+      requestId,
+      durationMinutes: permanent ? 0 : duration,
+      permanent,
+      host,
+      approver
+    }, (resp)=>{
+      if (!resp || !resp.ok){
+        setAccessRequestMessage('Failed to send approval to paired device. Check relay settings.', 'error');
+        return;
+      }
+      accessRequests = accessRequests.map((item)=>{
+        if (!item || item.id !== requestId) return item;
+        return { ...item, status: 'approved', resolvedAt: now, approver: approver || null, expiresAt: permanent ? null : (now + duration * 60000), permanent };
+      });
+      chrome.storage.local.set({ accessRequests }, ()=>{
+        renderAccessRequests();
+        updateParentSummaries();
+      });
+    });
+    return;
+  }
+  if (duration <= 0){
+    // Permanent allow
+    chrome.storage.sync.get({ allowlist: [] }, (cfg)=>{
+      const set = new Set(Array.isArray(cfg.allowlist) ? cfg.allowlist : []);
+      set.add(host);
+      chrome.storage.sync.set({ allowlist: Array.from(set) }, ()=>{
+        accessRequests = accessRequests.map((item)=>{
+          if (!item || item.id !== requestId) return item;
+          return { ...item, status: 'approved', resolvedAt: now, approver: approver || null, permanent: true };
+        });
+        chrome.storage.local.set({ accessRequests }, ()=>{
+          renderAccessRequests();
+          updateParentSummaries();
+        });
+      });
+    });
+    return;
+  }
+  const expiresAt = now + duration * 60000;
+  temporaryAllowlist = pruneTemporaryAllows([
+    ...temporaryAllowlist,
+    { host, expiresAt, createdAt: now, requestId, approver: approver || null }
+  ]);
+  accessRequests = accessRequests.map((item)=>{
+    if (!item || item.id !== requestId) return item;
+    return { ...item, status: 'approved', resolvedAt: now, approver: approver || null, expiresAt };
+  });
+  chrome.storage.local.set({ accessRequests, temporaryAllowlist }, ()=>{
+    renderAccessRequests();
+    renderTemporaryAllows();
+    updateParentSummaries();
+  });
+}
+
+function renderAccessRequests(){
+  if (!accessRequestListEl) return;
+  accessRequestListEl.innerHTML = '';
+  const list = Array.isArray(accessRequests) ? accessRequests : [];
+  const pending = list.filter((req)=>req && req.status === 'pending');
+  if (!pending.length){
+    setAccessRequestMessage(list.length ? 'No pending requests.' : 'No access requests yet.', 'muted');
+    return;
+  }
+  pending.slice(0, 20).forEach((req)=>{
+    const li = document.createElement('li');
+    li.className = 'log-item';
+    const top = document.createElement('div');
+    top.className = 'log-item__top';
+    const host = document.createElement('span');
+    host.className = 'log-item__host';
+    host.textContent = req.host || '(unknown)';
+    if (req.code){
+      host.appendChild(document.createTextNode(' · '));
+      const code = document.createElement('span');
+      code.className = 'request-code';
+      code.textContent = req.code;
+      host.appendChild(code);
+    }
+    const ts = document.createElement('span');
+    ts.textContent = formatTimestamp(req.ts);
+    top.appendChild(host);
+    top.appendChild(ts);
+    li.appendChild(top);
+    if (req.note){
+      const note = document.createElement('p');
+      note.className = 'log-item__reason';
+      note.textContent = req.note;
+      li.appendChild(note);
+    }
+    if (req.url){
+      const url = document.createElement('span');
+      url.className = 'log-item__url';
+      url.textContent = req.url;
+      li.appendChild(url);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'request-actions';
+    const approve15 = document.createElement('button');
+    approve15.type = 'button';
+    approve15.className = 'button button--secondary';
+    approve15.textContent = 'Allow 15m';
+    approve15.onclick = ()=>approveAccessRequest(req.id, 15);
+    const approve60 = document.createElement('button');
+    approve60.type = 'button';
+    approve60.className = 'button button--secondary';
+    approve60.textContent = 'Allow 1h';
+    approve60.onclick = ()=>approveAccessRequest(req.id, 60);
+    const approveDay = document.createElement('button');
+    approveDay.type = 'button';
+    approveDay.className = 'button button--secondary';
+    approveDay.textContent = 'Allow 24h';
+    approveDay.onclick = ()=>approveAccessRequest(req.id, 24 * 60);
+    const approveAlways = document.createElement('button');
+    approveAlways.type = 'button';
+    approveAlways.className = 'button button--secondary';
+    approveAlways.textContent = 'Always allow';
+    approveAlways.onclick = ()=>approveAccessRequest(req.id, 0);
+    const deny = document.createElement('button');
+    deny.type = 'button';
+    deny.className = 'button button--link';
+    deny.textContent = 'Deny';
+    deny.onclick = ()=>resolveAccessRequest(req.id, 'denied');
+    actions.appendChild(approve15);
+    actions.appendChild(approve60);
+    actions.appendChild(approveDay);
+    actions.appendChild(approveAlways);
+    actions.appendChild(deny);
+    li.appendChild(actions);
+    accessRequestListEl.appendChild(li);
+  });
+  setAccessRequestMessage(`${pending.length} pending request${pending.length === 1 ? '' : 's'}.`, 'muted');
+}
+
 function normalizeHost(raw){
   let s = (raw||'').trim().toLowerCase();
   s = s.replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/.*$/,'');
@@ -2006,6 +2426,8 @@ chrome.storage.local.get({
   conversationEvents: [],
   kidReportEvents: [],
   blockEvents: [],
+  accessRequests: [],
+  temporaryAllowlist: [],
   focusSessionLog: [],
   pendingTip: null,
   [TOUR_PENDING_KEY]: false
@@ -2063,16 +2485,21 @@ chrome.storage.local.get({
   conversationEvents = Array.isArray(cfg.conversationEvents) ? cfg.conversationEvents : [];
   kidReportEvents = Array.isArray(cfg.kidReportEvents) ? cfg.kidReportEvents : [];
   blockEvents = Array.isArray(cfg.blockEvents) ? cfg.blockEvents : [];
+  accessRequests = Array.isArray(cfg.accessRequests) ? cfg.accessRequests : [];
+  temporaryAllowlist = Array.isArray(cfg.temporaryAllowlist) ? cfg.temporaryAllowlist : [];
   focusSessionLog = Array.isArray(cfg.focusSessionLog) ? cfg.focusSessionLog : [];
   pendingTip = cfg.pendingTip || null;
   renderConversationCard();
   renderReportCard();
+  renderAccessRequests();
+  renderTemporaryAllows();
   renderTipCard();
   renderKidReportButton();
   renderFocusComms();
   renderInsights();
   updateAlertAvailability();
   updateParentSummaries();
+  refreshPairingState().catch(()=>{});
   localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
   maybeStartTour();
 });
@@ -2815,6 +3242,23 @@ if (parentReportBtn){
   });
 }
 
+if (parentAccessBtn){
+  parentAccessBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandAccessSection();
+  });
+}
+
+if (parentPairingBtn){
+  parentPairingBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandPairingSection();
+    refreshPairingState();
+  });
+}
+
 if (parentTipBtn){
   parentTipBtn.addEventListener('click', ()=>{
     ensureParentCardVisible();
@@ -2856,6 +3300,125 @@ if (kidReportToggleEl){
     kidReportEnabled = Boolean(kidReportToggleEl.checked);
     chrome.storage.sync.set({ kidReportEnabled });
     renderKidReportButton();
+  });
+}
+
+if (accessRequestClearBtn){
+  accessRequestClearBtn.addEventListener('click', async ()=>{
+    if (!(await ensureAllowlistPin('clear access request history'))) return;
+    accessRequests = [];
+    chrome.storage.local.set({ accessRequests: [] }, ()=>{
+      renderAccessRequests();
+      updateParentSummaries();
+    });
+  });
+}
+
+if (pairRelaySaveBtn){
+  pairRelaySaveBtn.addEventListener('click', async ()=>{
+    if (!(await ensureAllowlistPin('save pairing relay'))) return;
+    const url = pairRelayUrlEl ? pairRelayUrlEl.value : '';
+    chrome.runtime.sendMessage({ type: 'sg-pairing-set-relay', url }, (resp)=>{
+      if (!resp || !resp.ok){
+        setPairRelayMessage('Relay URL must be HTTPS and not localhost/LAN.', 'error');
+        return;
+      }
+      pairingState.relayUrl = resp.relayUrl || '';
+      setPairRelayMessage(pairingState.relayUrl ? 'Relay saved.' : 'Relay cleared.', pairingState.relayUrl ? 'success' : 'muted');
+      refreshPairingState();
+    });
+  });
+}
+
+if (pairCreateBtn){
+  pairCreateBtn.addEventListener('click', async ()=>{
+    if (!(await ensureAllowlistPin('generate pairing code'))) return;
+    setPairRelayMessage('Generating pairing code…', 'muted');
+    chrome.runtime.sendMessage({ type: 'sg-pairing-create-invite' }, (resp)=>{
+      if (!resp || !resp.ok){
+        setPairRelayMessage(resp && resp.error ? `Pairing failed: ${resp.error}` : 'Pairing failed. Check relay URL.', 'error');
+        return;
+      }
+      pairingState.pending = resp.pending || null;
+      if (pairCodeOutEl) pairCodeOutEl.value = resp.code || '';
+      renderPairingPending();
+      setPairRelayMessage('Share the pairing code with the parent device, then check for a safety code.', 'success');
+    });
+  });
+}
+
+if (pairJoinBtn){
+  pairJoinBtn.addEventListener('click', async ()=>{
+    if (!(await ensureAllowlistPin('join pairing'))) return;
+    const code = pairCodeInEl ? pairCodeInEl.value : '';
+    setPairRelayMessage('Joining pairing…', 'muted');
+    chrome.runtime.sendMessage({ type: 'sg-pairing-join', code }, (resp)=>{
+      if (!resp || !resp.ok){
+        setPairRelayMessage(resp && resp.error ? `Join failed: ${resp.error}` : 'Join failed. Check the code and relay.', 'error');
+        return;
+      }
+      pairingState.pending = resp.pending || null;
+      renderPairingPending();
+      if (pairSafetyOutEl && pairingState.pending && pairingState.pending.safetyCode){
+        setPairRelayMessage('Compare safety codes on both devices, then confirm pairing.', 'success');
+      } else {
+        setPairRelayMessage('Joined. If safety code is missing, press Refresh.', 'muted');
+      }
+    });
+  });
+}
+
+if (pairRefreshBtn){
+  pairRefreshBtn.addEventListener('click', ()=>{
+    chrome.runtime.sendMessage({ type: 'sg-pairing-refresh' }, (resp)=>{
+      if (!resp || !resp.ok){
+        setPairRelayMessage('Refresh failed. Check relay.', 'error');
+        return;
+      }
+      pairingState.pending = resp.pending || pairingState.pending;
+      renderPairingPending();
+      if (pairingState.pending && pairingState.pending.safetyCode){
+        setPairRelayMessage('Safety code ready. Confirm on both devices.', 'success');
+      } else {
+        setPairRelayMessage('Waiting for the other device to join…', 'muted');
+      }
+    });
+  });
+}
+
+if (pairConfirmBtn){
+  pairConfirmBtn.addEventListener('click', async ()=>{
+    if (!(await ensureAllowlistPin('confirm pairing'))) return;
+    const safety = pairingState.pending && pairingState.pending.safetyCode ? pairingState.pending.safetyCode : '';
+    if (!safety){
+      setPairRelayMessage('Safety code not ready yet.', 'error');
+      return;
+    }
+    const ok = window.confirm(`Confirm pairing only if BOTH devices show the same safety code:\n\n${safety}`);
+    if (!ok) return;
+    chrome.runtime.sendMessage({ type: 'sg-pairing-confirm' }, (resp)=>{
+      if (!resp || !resp.ok){
+        setPairRelayMessage('Confirm failed. Try again.', 'error');
+        return;
+      }
+      setPairRelayMessage('Paired. Remote access requests can now be approved from this device.', 'success');
+      refreshPairingState();
+    });
+  });
+}
+
+if (pairPollNowBtn){
+  pairPollNowBtn.addEventListener('click', ()=>{
+    chrome.runtime.sendMessage({ type: 'sg-pairing-poll' }, ()=>{
+      refreshPairingState();
+      chrome.storage.local.get({ accessRequests: [], temporaryAllowlist: [] }, (cfg)=>{
+        accessRequests = Array.isArray(cfg.accessRequests) ? cfg.accessRequests : [];
+        temporaryAllowlist = Array.isArray(cfg.temporaryAllowlist) ? cfg.temporaryAllowlist : [];
+        renderAccessRequests();
+        renderTemporaryAllows();
+        updateParentSummaries();
+      });
+    });
   });
 }
 
@@ -3051,6 +3614,19 @@ chrome.storage.onChanged.addListener((changes, area)=>{
   if (area === 'local' && changes.kidReportEvents){
     kidReportEvents = Array.isArray(changes.kidReportEvents.newValue) ? changes.kidReportEvents.newValue : [];
     renderReportCard();
+  }
+  if (area === 'local' && changes.accessRequests){
+    accessRequests = Array.isArray(changes.accessRequests.newValue) ? changes.accessRequests.newValue : [];
+    renderAccessRequests();
+    updateParentSummaries();
+  }
+  if (area === 'local' && changes.temporaryAllowlist){
+    temporaryAllowlist = Array.isArray(changes.temporaryAllowlist.newValue) ? changes.temporaryAllowlist.newValue : [];
+    renderTemporaryAllows();
+    updateParentSummaries();
+  }
+  if (area === 'local' && (changes.pairingRelayUrl || changes.pairingPending || changes.pairedPeers)){
+    refreshPairingState().catch(()=>{});
   }
   if (area === 'local' && changes.pendingTip){
     pendingTip = changes.pendingTip.newValue || null;

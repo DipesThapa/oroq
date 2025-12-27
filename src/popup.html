@@ -74,6 +74,20 @@
           </div>
           <button id="parentReportBtn" class="button button--secondary" type="button">Open</button>
         </div>
+        <div class="parent-panel__row" id="parentAccessRow">
+          <div>
+            <h3 class="parent-panel__title">Access requests</h3>
+            <p id="parentAccessStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentAccessBtn" class="button button--secondary" type="button">Review</button>
+        </div>
+        <div class="parent-panel__row" id="parentPairingRow">
+          <div>
+            <h3 class="parent-panel__title">Device pairing</h3>
+            <p id="parentPairingStatus" class="parent-panel__status">Loading…</p>
+          </div>
+          <button id="parentPairingBtn" class="button button--secondary" type="button">Manage</button>
+        </div>
         <div class="parent-panel__row" id="parentTipRow">
           <div>
             <h3 class="parent-panel__title">Weekly safety tip</h3>
@@ -340,6 +354,78 @@
           <small id="reportMessage" class="message">No URLs are stored, just the event type.</small>
         </div>
         <small id="reportStatus" class="message">No child reports yet.</small>
+      </div>
+      <div class="parent-section" id="parentAccessSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Access requests</h3>
+            <p class="parent-section__status">Approve time-limited access requests raised from blocked pages.</p>
+          </div>
+        </div>
+        <ul id="accessRequestList" class="log-list"></ul>
+        <small id="accessRequestMessage" class="message">No access requests yet.</small>
+        <div class="actions actions--wrap">
+          <button id="accessRequestClear" class="button button--link actions__end" type="button">Clear history</button>
+        </div>
+        <p class="message">Active temporary allows</p>
+        <ul id="tempAllowList" class="log-list"></ul>
+        <small id="tempAllowMessage" class="message">No temporary allows active.</small>
+      </div>
+      <div class="parent-section" id="parentPairingSection" hidden>
+        <div class="parent-section__header">
+          <div>
+            <h3 class="parent-section__title">Device pairing</h3>
+            <p class="parent-section__status">Pair a parent device so approvals can happen from a different computer (no shared Gmail required).</p>
+          </div>
+        </div>
+        <div class="field field--stack">
+          <label class="field__label" for="pairRelayUrl">Relay URL (HTTPS)</label>
+          <input id="pairRelayUrl" type="text" placeholder="https://your-relay.example.com">
+          <div class="actions actions--wrap">
+            <button id="pairRelaySave" class="button button--secondary" type="button">Save relay</button>
+            <button id="pairPollNow" class="button button--link actions__end" type="button">Refresh</button>
+          </div>
+          <small id="pairRelayMessage" class="message">Required for cross-device approvals. Your relay should store only encrypted messages.</small>
+        </div>
+
+        <div class="card card--inline">
+          <p class="card__subtitle">Kid device: generate a pairing code, then compare the safety code on both devices before confirming.</p>
+          <div class="actions actions--wrap">
+            <button id="pairCreate" class="button button--primary" type="button">Generate pairing code</button>
+            <button id="pairRefresh" class="button button--secondary" type="button">Check for parent</button>
+          </div>
+          <div class="field field--stack">
+            <label class="field__label" for="pairCodeOut">Pairing code</label>
+            <input id="pairCodeOut" type="text" readonly>
+          </div>
+          <div class="field field--stack">
+            <label class="field__label" for="pairSafetyOut">Safety code</label>
+            <input id="pairSafetyOut" type="text" readonly placeholder="Appears after the other device joins">
+          </div>
+          <div class="actions actions--wrap">
+            <button id="pairConfirm" class="button button--secondary" type="button" disabled>Confirm pairing</button>
+          </div>
+        </div>
+
+        <div class="card card--inline">
+          <p class="card__subtitle">Parent device: paste the pairing code from the kid’s device, then confirm the matching safety code.</p>
+          <div class="field field--stack">
+            <label class="field__label" for="pairCodeIn">Enter pairing code</label>
+            <input id="pairCodeIn" type="text" placeholder="xxxxxxxxxxxx.xxxxxxxxxxxx">
+          </div>
+          <div class="actions actions--wrap">
+            <button id="pairJoin" class="button button--secondary" type="button">Join pairing</button>
+          </div>
+        </div>
+
+        <div class="pill-wrap">
+          <div class="pill-wrap__header">
+            <span class="pill-wrap__title">Paired devices</span>
+            <span class="pill-wrap__hint">Remove to stop remote approvals.</span>
+          </div>
+          <ul id="pairedDeviceList" class="pill-list"></ul>
+          <small id="pairedDeviceMessage" class="message">No paired devices yet.</small>
+        </div>
       </div>
       <div class="parent-section" id="parentTipSection" hidden>
         <div class="parent-section__header">

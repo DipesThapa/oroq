@@ -1378,6 +1378,32 @@
       chrome.runtime.sendMessage({ type: 'sg-kid-report', tone });
     } catch(_e){}
   }
+  function sendAccessRequest(payload = {}){
+    const host = typeof payload.host === 'string' ? payload.host : '';
+    const url = typeof payload.url === 'string' ? payload.url : '';
+    const note = typeof payload.note === 'string' ? payload.note : '';
+    return new Promise((resolve)=>{
+      try {
+        chrome.runtime.sendMessage({ type: 'sg-access-request', host, url, note }, (resp)=>{
+          resolve(resp || null);
+        });
+      } catch(_e){
+        resolve(null);
+      }
+    });
+  }
+
+  function isTempAllowlisted(host, list){
+    if (!host) return false;
+    const now = Date.now();
+    const normalized = String(host).trim().toLowerCase();
+    return (Array.isArray(list) ? list : []).some((entry)=>{
+      if (!entry || typeof entry !== 'object') return false;
+      if (String(entry.host || '').trim().toLowerCase() !== normalized) return false;
+      const expiresAt = Number(entry.expiresAt) || 0;
+      return expiresAt > now;
+    });
+  }
 
   function createHeuristicInsights(context){
     const host = context.host || '';
@@ -2881,6 +2907,21 @@
         position: relative;
         z-index: 1;
       }
+      .sg-request-status {
+        flex-basis: 100%;
+        margin-top: 4px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        border: 1px solid rgba(37,99,235,0.16);
+        background: rgba(37,99,235,0.08);
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+      .sg-request-status strong {
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        color: var(--text-primary);
+      }
       .sg-pin {
         margin-top: 18px;
         padding: 16px;
@@ -3518,6 +3559,43 @@
       sendKidReport(profileTone);
     });
     actions.appendChild(reportBtn);
+    const requestStatus = doc.createElement('div');
+    requestStatus.className = 'sg-request-status';
+    requestStatus.style.display = 'none';
+    actions.appendChild(requestStatus);
+
+    const requestBtn = doc.createElement('button');
+    requestBtn.type = 'button';
+    requestBtn.className = 'sg-button sg-button--secondary';
+    requestBtn.textContent = 'Request access';
+    requestBtn.addEventListener('click', async ()=>{
+      requestBtn.disabled = true;
+      requestBtn.textContent = 'Sending request…';
+      const host = getHost();
+      const url = (()=>{ try { return location.href; } catch(_e){ return ''; } })();
+      const resp = await sendAccessRequest({ host, url });
+      const code = resp && resp.ok && resp.request && resp.request.code ? String(resp.request.code) : '';
+      if (!code){
+        requestBtn.disabled = false;
+        requestBtn.textContent = 'Request access';
+        requestStatus.style.display = 'block';
+        requestStatus.textContent = 'Could not create an access request. Ask a parent/teacher to review Safeguard settings.';
+        return;
+      }
+      requestBtn.textContent = 'Request sent';
+      requestStatus.style.display = 'block';
+      requestStatus.innerHTML = '';
+      const line1 = doc.createElement('div');
+      line1.appendChild(doc.createTextNode('Tell a parent/teacher this code: '));
+      const strong = doc.createElement('strong');
+      strong.textContent = code;
+      line1.appendChild(strong);
+      requestStatus.appendChild(line1);
+      const line2 = doc.createElement('div');
+      line2.textContent = 'They can approve it in Safeguard → Parent mode → Access requests, then reload this page.';
+      requestStatus.appendChild(line2);
+    });
+    actions.appendChild(requestBtn);
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;
       try {
@@ -3599,7 +3677,7 @@
         overridePinSalt: null,
         overridePinIterations: 0
       }, resolve)),
-      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT }, resolve))
+      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT, temporaryAllowlist: [] }, resolve))
     ]);
     if(!cfg.enabled) return;
     const pinConfig = {
@@ -3626,6 +3704,7 @@
       }
     } catch(_e) {}
     if((cfg.allowlist||[]).includes(host)) return; // allowlisted
+    if (isTempAllowlisted(host, classroomPayload.temporaryAllowlist)) return; // temporarily allowlisted
 
     const BL = await loadBlocklist();
     if(BL.domains && BL.domains.includes(host)) {
