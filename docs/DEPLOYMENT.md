@@ -21,6 +21,27 @@ This playbook is intended for IT administrators rolling out Safeguard across a b
    - `runtime_allowed_domains`: optional allowlist for managed blocklist updates
 3. (Optional) Preload administrator blocklist/allowlist by pushing JSON files to user profiles and importing through managed scripts.
 
+### Device pairing relay (recommended)
+
+Cross-device approvals (device pairing) use an HTTPS relay. To avoid end-users manually configuring the relay URL, you can preconfigure it:
+
+- **Default for all users (bundled)**: set `data/app_config.json` → `pairingRelayUrlDefault` to your relay base URL (HTTPS).
+- **Enterprise-managed (locked)**: set managed storage policy values for the extension:
+  - `pairingRelayUrl`: your relay base URL (HTTPS)
+  - `pairingRelayLocked`: `true`
+
+When `pairingRelayUrl` is provided via managed policy, the popup will treat the relay as admin-managed and disable editing.
+
+### Usage events (optional)
+
+If you want rollout metrics beyond the Chrome Web Store dashboard, you can enable optional usage events via managed storage:
+
+- `telemetryEnabled`: `true`
+- `telemetryEndpoint`: HTTPS URL to receive JSON events (POST)
+- `telemetryBearerToken` (optional): bearer token added as `Authorization: Bearer ...`
+
+Safeguard sends only event names (install/onboarding/protection/first block/weekly active), timestamps, the extension version, and a random on-device client ID — not browsing URLs or page content.
+
 ## 3. Host customer-facing pages
 
 Safeguard ships with static HTML pages in `/site` for privacy, support, and product overview.

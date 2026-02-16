@@ -6,6 +6,7 @@
 // - GET  /pairings/:pairingId
 // - POST /mailbox/:pairingId    { id, ts, from, to, payload: { iv, data } }
 // - GET  /mailbox/:pairingId?since=timestamp  -> { items: [...] }
+// - GET  /health               -> { ok: true }
 //
 // Run: node relay/server.js
 
@@ -91,6 +92,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+    if (url.pathname === '/health') return json(res, 200, { ok: true });
     const parts = url.pathname.split('/').filter(Boolean);
     if (parts.length !== 2) return json(res, 404, { error: 'not-found' });
     const [resource, pairingId] = parts;

@@ -1,0 +1,11 @@
+name = "safeguard-pairing-relay"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[durable_objects]
+bindings = [{ name = "PAIRINGS", class_name = "PairingRelay" }]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["PairingRelay"]
+

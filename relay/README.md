@@ -12,6 +12,7 @@ This folder contains a minimal development relay that stores only encrypted blob
    - Then use the generated `https://...` URL in the extension pairing settings.
 
 For real use (Chrome Web Store), deploy it behind **HTTPS** on a public domain.
+For Cloudflare Workers deployment, see `relay/cloudflare/README.md`.
 
 ## Security notes
 

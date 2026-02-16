@@ -3,9 +3,10 @@
 Safeguard is a privacy‑first browser extension. It processes content locally and does not send your browsing data to external servers. This document describes how we treat personal information when the extension is deployed for individual or organisational use.
 
 ## Data collection
-- No telemetry, analytics, or third-party tracking is integrated. The extension never transmits browsing history, URLs, or content back to our infrastructure.
+- By default, no third-party analytics or telemetry is enabled. The extension never transmits browsing history, URLs, or page content to our infrastructure.
 - Network access is limited to the active tab and Chrome Declarative Net Request (DNR) redirects required for SafeSearch/ad blocking.
 - Optional: if you enable override/tamper alerts, the extension sends a small JSON payload (reason, approver initials/name, host/URL, policy verdict) to **your** HTTPS webhook only. Localhost and private-network addresses are rejected.
+- Optional (organisation-managed): an administrator can enable a simple usage-events endpoint to measure rollout health (e.g., install, onboarding completed, protection enabled, first block, weekly active). When enabled, Safeguard sends only the event name, timestamp, extension version, and a random on-device client ID — not URLs or page content.
 
 ## Data stored locally
 - `chrome.storage.sync`
@@ -22,7 +23,7 @@ Safeguard is a privacy‑first browser extension. It processes content locally a
 - `storage`: required to store user/administrator preferences listed above.
 - `declarativeNetRequest`: allows us to ship SafeSearch and block/allow policies without inspecting full request bodies.
 - `tabs`: read the active tab’s URL to show the “Allow this site” toggle in the popup; the hostname is not persisted after the popup closes.
-- No background network calls or remote configuration fetches are performed.
+- No background network calls or remote configuration fetches are performed unless an administrator enables optional webhooks/telemetry endpoints.
 
 ## Opt-out and removal
 - Users can pause protection from the popup, or remove the extension entirely from Chrome at any time. Removing the extension deletes all local data.
