@@ -31,6 +31,10 @@
   font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 :root[data-theme="dark"] {
   color-scheme: dark;
   --brand-navy: #9ab8ff;

@@ -107,6 +107,7 @@ const parentReportBtn = document.getElementById('parentReportBtn');
 const parentAccessBtn = document.getElementById('parentAccessBtn');
 const parentPairingBtn = document.getElementById('parentPairingBtn');
 const parentTipBtn = document.getElementById('parentTipBtn');
+const parentPairingRowEl = document.getElementById('parentPairingRow');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
 const parentProfilesSectionEl = document.getElementById('parentProfilesSection');
@@ -131,6 +132,7 @@ const tempAllowListEl = document.getElementById('tempAllowList');
 const tempAllowMessageEl = document.getElementById('tempAllowMessage');
 const pairRelayUrlEl = document.getElementById('pairRelayUrl');
 const pairRelaySaveBtn = document.getElementById('pairRelaySave');
+const pairRelayTestBtn = document.getElementById('pairRelayTest');
 const pairPollNowBtn = document.getElementById('pairPollNow');
 const pairRelayMessageEl = document.getElementById('pairRelayMessage');
 const pairCreateBtn = document.getElementById('pairCreate');
@@ -228,6 +230,7 @@ const pinModalCancel = document.getElementById('pinModalCancel');
 const pinModalSubmit = document.getElementById('pinModalSubmit');
 const THEME_KEY = 'themePreference';
 const TOUR_PENDING_KEY = 'onboardingPending';
+const PAIRING_UI_ENABLED = false;
 const prefersDarkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 const cachedThemePreference = (() => {
   try {
@@ -238,6 +241,10 @@ const cachedThemePreference = (() => {
     return 'system';
   }
 })();
+
+try {
+  chrome.runtime.sendMessage({ type: 'sg-analytics-activity', source: 'popup' });
+} catch(_e){}
 
 let tourIndex = 0;
 let tourActive = false;
@@ -280,7 +287,7 @@ let focusSessionLog = [];
 let pendingTip = null;
 let accessRequests = [];
 let temporaryAllowlist = [];
-let pairingState = { relayUrl: '', identity: null, pending: null, peers: [] };
+let pairingState = { relayUrl: '', relaySource: '', relayLocked: false, identity: null, pending: null, peers: [] };
 let conversationTipsEnabled = true;
 let weeklyTipsEnabled = true;
 let kidReportEnabled = true;
@@ -340,6 +347,15 @@ if (parentPairingSectionEl){
 }
 if (parentTipSectionEl){
   parentTipSectionEl.dataset.expanded = parentTipSectionEl.dataset.expanded || '0';
+}
+
+if (!PAIRING_UI_ENABLED){
+  if (parentPairingRowEl) parentPairingRowEl.hidden = true;
+  if (parentPairingSectionEl){
+    parentPairingSectionEl.hidden = true;
+    parentPairingSectionEl.dataset.expanded = '0';
+    parentPairingSectionEl.classList.remove('parent-section--active');
+  }
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -859,7 +875,13 @@ function updateParentSummaries(){
   if (parentPairingStatusEl){
     const peers = Array.isArray(pairingState.peers) ? pairingState.peers : [];
     const relay = (pairingState.relayUrl || '').trim();
-    parentPairingStatusEl.textContent = peers.length ? `${peers.length} paired` : (relay ? 'Relay saved (not paired)' : 'Not configured');
+    const source = pairingState.relaySource || '';
+    const locked = Boolean(pairingState.relayLocked);
+    parentPairingStatusEl.textContent = peers.length
+      ? `${peers.length} paired`
+      : (relay
+        ? ((source === 'managed' && locked) ? 'Managed relay (not paired)' : (source === 'default' ? 'Default relay (not paired)' : 'Relay saved (not paired)'))
+        : 'Not configured');
   }
   if (parentTipStatusEl){
     parentTipStatusEl.textContent = (weeklyTipsEnabled === false) ? 'Disabled' : (pendingTip ? 'New tip' : 'None pending');
@@ -1126,6 +1148,7 @@ function expandAccessSection(){
 }
 
 function expandPairingSection(){
+  if (!PAIRING_UI_ENABLED) return;
   if (!parentPairingSectionEl) return;
   collapseParentSections('pairing');
   parentPairingSectionEl.dataset.expanded = '1';
@@ -1747,7 +1770,19 @@ function renderPairedDevices(){
 }
 
 function renderPairingPending(){
-  if (pairRelayUrlEl) pairRelayUrlEl.value = pairingState.relayUrl || '';
+  const relayUrl = pairingState.relayUrl || '';
+  const source = pairingState.relaySource || '';
+  const locked = Boolean(pairingState.relayLocked);
+  if (pairRelayUrlEl){
+    pairRelayUrlEl.value = relayUrl;
+    pairRelayUrlEl.disabled = locked;
+  }
+  if (pairRelaySaveBtn) pairRelaySaveBtn.disabled = locked;
+  if (source === 'managed' && locked && relayUrl){
+    setPairRelayMessage('Relay is managed by your admin.', 'muted');
+  } else if (source === 'default' && relayUrl){
+    setPairRelayMessage('Using the default relay for pairing.', 'muted');
+  }
   const pending = pairingState.pending;
   if (pairCodeOutEl) pairCodeOutEl.value = '';
   if (pairSafetyOutEl) pairSafetyOutEl.value = '';
@@ -1765,7 +1800,7 @@ function refreshPairingState(){
         resolve(false);
         return;
       }
-      pairingState = resp.state || pairingState;
+      pairingState = { ...pairingState, ...(resp.state || {}) };
       renderPairingPending();
       renderPairedDevices();
       updateParentSummaries();
@@ -2387,6 +2422,11 @@ chrome.storage.sync.get({
 }, (cfg)=>{
   enabledEl.checked = cfg.enabled;
   setStatus(Boolean(cfg.enabled));
+  if (cfg.enabled === true){
+    try {
+      chrome.runtime.sendMessage({ type: 'sg-analytics-track-once', name: 'protection_enabled', source: 'popup' });
+    } catch(_e){}
+  }
   render(cfg.allowlist||[]);
   setAllowMessage((cfg.allowlist && cfg.allowlist.length) ? 'Allowlisted domains' : 'Enter hostnames without http/https.');
   currentAggressive = Boolean(cfg.aggressive);
@@ -2499,7 +2539,9 @@ chrome.storage.local.get({
   renderInsights();
   updateAlertAvailability();
   updateParentSummaries();
-  refreshPairingState().catch(()=>{});
+  if (PAIRING_UI_ENABLED){
+    refreshPairingState().catch(()=>{});
+  }
   localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
   maybeStartTour();
 });
@@ -3251,12 +3293,14 @@ if (parentAccessBtn){
 }
 
 if (parentPairingBtn){
-  parentPairingBtn.addEventListener('click', ()=>{
-    ensureParentCardVisible();
-    scrollToCard(parentCardEl);
-    expandPairingSection();
-    refreshPairingState();
-  });
+  if (PAIRING_UI_ENABLED){
+    parentPairingBtn.addEventListener('click', ()=>{
+      ensureParentCardVisible();
+      scrollToCard(parentCardEl);
+      expandPairingSection();
+      refreshPairingState();
+    });
+  }
 }
 
 if (parentTipBtn){
@@ -3320,12 +3364,31 @@ if (pairRelaySaveBtn){
     const url = pairRelayUrlEl ? pairRelayUrlEl.value : '';
     chrome.runtime.sendMessage({ type: 'sg-pairing-set-relay', url }, (resp)=>{
       if (!resp || !resp.ok){
-        setPairRelayMessage('Relay URL must be HTTPS and not localhost/LAN.', 'error');
+        const err = resp && resp.error ? String(resp.error) : '';
+        if (err === 'relay-managed'){
+          setPairRelayMessage('Relay is managed by your admin and cannot be changed here.', 'error');
+        } else {
+          setPairRelayMessage('Relay URL must be HTTPS and not localhost/LAN.', 'error');
+        }
         return;
       }
       pairingState.relayUrl = resp.relayUrl || '';
       setPairRelayMessage(pairingState.relayUrl ? 'Relay saved.' : 'Relay cleared.', pairingState.relayUrl ? 'success' : 'muted');
       refreshPairingState();
+    });
+  });
+}
+
+if (pairRelayTestBtn){
+  pairRelayTestBtn.addEventListener('click', ()=>{
+    setPairRelayMessage('Testing relay…', 'muted');
+    chrome.runtime.sendMessage({ type: 'sg-pairing-test-relay' }, (resp)=>{
+      if (!resp || !resp.ok){
+        const msg = resp && resp.error ? String(resp.error) : 'Relay test failed.';
+        setPairRelayMessage(msg, 'error');
+        return;
+      }
+      setPairRelayMessage('Relay is reachable.', 'success');
     });
   });
 }
@@ -3626,6 +3689,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     updateParentSummaries();
   }
   if (area === 'local' && (changes.pairingRelayUrl || changes.pairingPending || changes.pairedPeers)){
+    refreshPairingState().catch(()=>{});
+  }
+  if (area === 'managed' && (changes.pairingRelayUrl || changes.pairingRelayLocked)){
     refreshPairingState().catch(()=>{});
   }
   if (area === 'local' && changes.pendingTip){

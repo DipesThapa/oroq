@@ -81,7 +81,7 @@
           </div>
           <button id="parentAccessBtn" class="button button--secondary" type="button">Review</button>
         </div>
-        <div class="parent-panel__row" id="parentPairingRow">
+        <div class="parent-panel__row" id="parentPairingRow" hidden>
           <div>
             <h3 class="parent-panel__title">Device pairing</h3>
             <p id="parentPairingStatus" class="parent-panel__status">Loading…</p>
@@ -383,6 +383,7 @@
           <input id="pairRelayUrl" type="text" placeholder="https://your-relay.example.com">
           <div class="actions actions--wrap">
             <button id="pairRelaySave" class="button button--secondary" type="button">Save relay</button>
+            <button id="pairRelayTest" class="button button--secondary" type="button">Test relay</button>
             <button id="pairPollNow" class="button button--link actions__end" type="button">Refresh</button>
           </div>
           <small id="pairRelayMessage" class="message">Required for cross-device approvals. Your relay should store only encrypted messages.</small>
