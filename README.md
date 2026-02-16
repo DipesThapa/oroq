@@ -40,6 +40,11 @@ Hosted resources
 - Bundled static pages (packaged inside the extension): `site/index.html`, `site/privacy.html`, `site/support.html`
 - Optional public hosting: host `site/` on cyberheroez.co.uk (or enable GitHub Pages) and point the Chrome Web Store listing + homepage to those URLs.
 
+## Browser support
+- Chromium browsers (Chrome/Edge/Brave/Vivaldi/Opera): load the repo folder directly (contains `manifest.json`).
+- Firefox: build and load `dist/firefox/manifest.json` (see `docs/BROWSER_SUPPORT.md`).
+- Safari: convert via Apple’s Safari Web Extension tooling (see `docs/BROWSER_SUPPORT.md`).
+
 ## Dev Setup
 1. Chrome → `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → select this folder

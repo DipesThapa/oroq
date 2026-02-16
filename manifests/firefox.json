@@ -1,0 +1,49 @@
+{
+  "manifest_version": 2,
+  "name": "Safeguard (SafeBrowse AI)",
+  "version": "0.3.4",
+  "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
+  "homepage_url": "https://cyberheroez.co.uk/",
+  "permissions": [
+    "storage",
+    "tabs",
+    "alarms",
+    "<all_urls>"
+  ],
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "browser_action": {
+    "default_popup": "src/popup.html"
+  },
+  "background": {
+    "scripts": [
+      "src/background.js"
+    ],
+    "persistent": false
+  },
+  "web_accessible_resources": [
+    "site/index.html",
+    "site/privacy.html",
+    "site/support.html",
+    "site/*.html",
+    "model/nsfw/*",
+    "assets/icons/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_end"
+    }
+  ]
+}
+
