@@ -63,6 +63,22 @@
   const NUDGE_DAILY_CAP = 3;
   const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
   const CLASSROOM_YT_GUARD_FLAG = '__sgClassroomYoutubeGuard';
+  let lastProfileContext = { profileTone: null, profileLabel: null, profileSuggestions: [] };
+  const FOCUS_DEFAULT_ALLOWLIST = [
+    'wikipedia.org',
+    'khanacademy.org',
+    'britannica.com',
+    'pbs.org',
+    'scholastic.com',
+    'nationalgeographic.com',
+    'nasa.gov',
+    'noaa.gov',
+    'ed.gov',
+    'quizlet.com',
+    'classroom.google.com',
+    'docs.google.com',
+    'drive.google.com'
+  ];
   const EDUCATIONAL_RESOURCES = [
     'Khan Academy','BBC Bitesize','Crash Course','Coursera','edX','MIT OpenCourseWare','Stanford Online','Harvard Online',
     'Yale Open Courses','OpenStax','CK-12','National Geographic Kids','NASA Kids','Smithsonian Learning Lab','Code.org','FreeCodeCamp',
@@ -3668,16 +3684,16 @@
     panel.appendChild(support);
   }
 
-  async function scan(){
+	  async function scan(){
     const [cfg, localOverrides, classroomPayload] = await Promise.all([
-      new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, profileTone: null, profileLabel: null, profileSafeSuggestions: []}, resolve)),
+      new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, profileTone: null, profileLabel: null, profileSafeSuggestions: [], focusAllowedComms: []}, resolve)),
       new Promise((resolve)=>chrome.storage.local.get({
         requirePin: false,
         overridePinHash: null,
         overridePinSalt: null,
         overridePinIterations: 0
       }, resolve)),
-      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT, temporaryAllowlist: [] }, resolve))
+      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT, temporaryAllowlist: [], focusMode: { active: false, endsAt: 0, pinProtected: false } }, resolve))
     ]);
     if(!cfg.enabled) return;
     const pinConfig = {
@@ -3686,13 +3702,38 @@
       salt: localOverrides.overridePinSalt,
       iterations: localOverrides.overridePinIterations
     };
-    const profileTone = normalizeTone(cfg.profileTone);
-    const profileLabel = typeof cfg.profileLabel === 'string' && cfg.profileLabel.trim() ? cfg.profileLabel.trim() : null;
-    const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
-    const profileContext = { profileTone, profileLabel, profileSuggestions };
-    const classroomMode = normalizeClassroomMode(classroomPayload.classroomMode);
-    overrideLocked = Boolean(classroomMode.enabled);
+	    const profileTone = normalizeTone(cfg.profileTone);
+	    const profileLabel = typeof cfg.profileLabel === 'string' && cfg.profileLabel.trim() ? cfg.profileLabel.trim() : null;
+	    const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
+	    const profileContext = { profileTone, profileLabel, profileSuggestions };
+	    lastProfileContext = profileContext;
+	    const classroomMode = normalizeClassroomMode(classroomPayload.classroomMode);
+    const focusMode = classroomPayload && classroomPayload.focusMode ? classroomPayload.focusMode : { active: false, endsAt: 0, pinProtected: false };
+    const focusActive = Boolean(focusMode.active) && Number(focusMode.endsAt) > Date.now();
+    overrideLocked = Boolean(classroomMode.enabled || (focusActive && focusMode.pinProtected));
     const host = getHost();
+
+    // Cross-browser SafeSearch enforcement (DNR exists on Chromium, but this keeps Firefox/Safari consistent)
+    try{
+      const url = new URL(location.href);
+      const isGoogleSearch = /(^|\.)google\.[a-z.]+$/i.test(url.hostname) && url.pathname === '/search';
+      const isBingSearch = /^([a-z0-9-]+\.)?bing\.com$/i.test(url.hostname) && url.pathname === '/search';
+      if (isGoogleSearch){
+        if (url.searchParams.get('safe') !== 'active'){
+          url.searchParams.set('safe', 'active');
+          location.replace(url.toString());
+          return;
+        }
+      }
+      if (isBingSearch){
+        if (url.searchParams.get('adlt') !== 'strict'){
+          url.searchParams.set('adlt', 'strict');
+          location.replace(url.toString());
+          return;
+        }
+      }
+    } catch(_e){}
+
     if (classroomMode.enabled && host && isYoutubeHost(host)){
       startClassroomYoutubeGuard(classroomMode, profileContext);
     }
@@ -3712,6 +3753,55 @@
       const blockPayload = createBlocklistInsights({ host });
       showInterstitial("domain blocklist", { pinConfig, ...profileContext, ...blockPayload, disableOverride: overrideLocked });
       return;
+    }
+
+    // Cross-browser Focus Mode enforcement (Chromium uses DNR; Firefox/Safari need a content-script fallback).
+    if (focusActive && host){
+      const normalizedFocusAllowed = Array.isArray(cfg.focusAllowedComms)
+        ? cfg.focusAllowedComms.map((d)=>String(d||'').trim().toLowerCase().replace(/^www\./,'')).filter(Boolean)
+        : [];
+      const focusAllowSet = new Set([
+        ...(Array.isArray(cfg.allowlist) ? cfg.allowlist : []).map((d)=>String(d||'').trim().toLowerCase().replace(/^www\./,'')).filter(Boolean),
+        ...FOCUS_DEFAULT_ALLOWLIST,
+        ...normalizedFocusAllowed
+      ]);
+      const focusAllowedByTld = host.endsWith('.edu') || host.endsWith('.org');
+      const focusAllowed = focusAllowSet.has(host) || focusAllowedByTld;
+      if (!focusAllowed){
+        lockInteractionShield();
+        const endsAt = Number(focusMode.endsAt) || 0;
+        const minutesLeft = endsAt > Date.now() ? Math.max(0, Math.ceil((endsAt - Date.now()) / 60000)) : 0;
+        const signals = [
+          {
+            id: 'focus',
+            icon: 'FOC',
+            label: 'Focus Mode is active',
+            detail: minutesLeft ? `${minutesLeft} minute(s) remaining.` : 'Focus session in progress.',
+            weight: 12
+          },
+          ...(host ? [{
+            id: 'host',
+            icon: 'URL',
+            label: 'Blocked host',
+            detail: host,
+            weight: 0
+          }] : [])
+        ];
+        showInterstitial("Focus Mode", {
+          pinConfig,
+          ...profileContext,
+          pillText: 'Focus block enforced',
+          riskScore: 24,
+          riskThreshold: 12,
+          riskLevel: 'Focus Mode',
+          riskSummary: 'Safeguard blocked this site during Focus Mode to help you stay on-task.',
+          riskPercent: 100,
+          riskMax: 24,
+          signals,
+          disableOverride: overrideLocked
+        });
+        return;
+      }
     }
 
     if (ENABLE_CYBER){
@@ -3800,7 +3890,35 @@
         }
       }catch(_e){} }, 2500);
     }
-  }
+	  }
 
-  scan();
-})();
+	  function stopClassroomYoutubeGuard(){
+	    try{
+	      const cleanup = window[CLASSROOM_YT_GUARD_FLAG];
+	      if (typeof cleanup === 'function') cleanup();
+	    }catch(_e){}
+	  }
+
+	  function updateClassroomYoutubeGuard(nextMode){
+	    const mode = normalizeClassroomMode(nextMode);
+	    const host = getHost();
+	    if (mode.enabled && host && isYoutubeHost(host)){
+	      startClassroomYoutubeGuard(mode, lastProfileContext || {});
+	    } else {
+	      stopClassroomYoutubeGuard();
+	    }
+	  }
+
+	  try{
+	    if (chrome && chrome.storage && chrome.storage.onChanged && typeof chrome.storage.onChanged.addListener === 'function'){
+	      chrome.storage.onChanged.addListener((changes, area)=>{
+	        if (area !== 'local' || !changes) return;
+	        if (Object.prototype.hasOwnProperty.call(changes, 'classroomMode')){
+	          updateClassroomYoutubeGuard(changes.classroomMode.newValue);
+	        }
+	      });
+	    }
+	  } catch(_e){}
+
+	  scan();
+	})();
