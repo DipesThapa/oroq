@@ -601,7 +601,8 @@ async function sendGa4Event(eventName, params = {}) {
     const engagementTime = (params && typeof params.engagement_time_msec !== 'undefined')
       ? params.engagement_time_msec
       : '1';
-    const { engagement_time_msec: _engagementTimeMsec, ...restParams } = (params && typeof params === 'object') ? params : {};
+    const restParams = { ...((params && typeof params === 'object') ? params : {}) };
+    delete restParams.engagement_time_msec;
     await fetch(GA4_ENDPOINT, {
       method: 'POST',
       body: JSON.stringify({
