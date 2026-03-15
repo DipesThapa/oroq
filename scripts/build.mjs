@@ -1,4 +1,5 @@
 import { cp, mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = process.cwd();
@@ -14,6 +15,30 @@ function usage() {
 async function readJson(filePath) {
   const text = await readFile(filePath, 'utf8');
   return JSON.parse(text);
+}
+
+function loadEnv() {
+  const envPath = path.join(ROOT, '.env');
+  if (!existsSync(envPath)) return {};
+  const vars = {};
+  const lines = readFileSync(envPath, 'utf8').split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    vars[trimmed.slice(0, eq).trim()] = trimmed.slice(eq + 1).trim();
+  }
+  return vars;
+}
+
+async function injectSecrets(targetDir, env) {
+  const bgPath = path.join(targetDir, 'src', 'background.js');
+  let src = await readFile(bgPath, 'utf8');
+  for (const [key, val] of Object.entries(env)) {
+    src = src.replaceAll(`__${key}__`, val);
+  }
+  await writeFile(bgPath, src, 'utf8');
 }
 
 async function ensureEmptyDir(dirPath) {
@@ -47,6 +72,9 @@ async function main() {
   const outDir = path.join(DIST, target);
   await ensureEmptyDir(outDir);
   await copyInto(outDir);
+
+  const env = loadEnv();
+  await injectSecrets(outDir, env);
 
   if (target === 'chromium') {
     await cp(path.join(ROOT, 'manifest.json'), path.join(outDir, 'manifest.json'));

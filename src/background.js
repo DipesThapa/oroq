@@ -32,11 +32,11 @@ const ACCESS_REQUEST_LIMIT = 60;
 const TEMP_ALLOWLIST_LIMIT = 200;
 const PARENT_POLL_ALARM = 'sg-parent-poll';
 const PARENT_POLL_PERIOD_MIN = 1;
-const FS_BASE = 'https://firestore.googleapis.com/v1/projects/safebrowse-5b028/databases/(default)/documents';
+const FS_BASE = 'https://firestore.googleapis.com/v1/projects/__FS_PROJECT_ID__/databases/(default)/documents';
 const FS_KEY = '__FS_KEY__';
 
-const GA4_MEASUREMENT_ID = 'G-MVJ6QTWP4S';
-const GA4_API_SECRET = 'dcFg56sGQASbrzKo-gnjvQ';
+const GA4_MEASUREMENT_ID = '__GA4_MEASUREMENT_ID__';
+const GA4_API_SECRET = '__GA4_API_SECRET__';
 const GA4_ENDPOINT = `https://www.google-analytics.com/mp/collect?measurement_id=${GA4_MEASUREMENT_ID}&api_secret=${GA4_API_SECRET}`;
 const TIP_POOL = [
   'If a headline sounds shocking, open a trusted news site to verify before sharing.',
