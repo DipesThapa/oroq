@@ -522,6 +522,23 @@ function randomClientId(){
   }
 }
 
+function randomCodeFromCharset(length, charset){
+  const chars = String(charset || '');
+  const size = Math.max(0, Number(length) || 0);
+  if (!chars || !size) return '';
+  const unbiasedUpperBound = Math.floor(256 / chars.length) * chars.length;
+  const out = [];
+  while (out.length < size){
+    const bytes = crypto.getRandomValues(new Uint8Array(size - out.length));
+    for (const byte of bytes){
+      if (byte >= unbiasedUpperBound) continue;
+      out.push(chars[byte % chars.length]);
+      if (out.length === size) break;
+    }
+  }
+  return out.join('');
+}
+
 async function getAnalyticsClientId(){
   const { analyticsClientId = '' } = await chrome.storage.local.get({ analyticsClientId: '' });
   if (analyticsClientId) return analyticsClientId;
@@ -1375,8 +1392,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
       const familyId = await getFamilyId();
       if (!familyId) { sendResponse({ ok: false, error: 'Set a family passphrase first.' }); return; }
       const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const arr = crypto.getRandomValues(new Uint8Array(8));
-      const code = Array.from(arr).map(b => CHARSET[b % CHARSET.length]).join('');
+      const code = randomCodeFromCharset(8, CHARSET);
       const ok = await fsPost('invites', code, {
         familyPassphrase: (await chrome.storage.local.get({ familyPassphrase: '' })).familyPassphrase,
         familyId,
