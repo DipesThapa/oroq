@@ -1,8 +1,8 @@
-# Safeguard (SafeBrowse AI) — Privacy-first Web Safety Extension
+# SafeBrowse — Privacy-first Web Safety Extension
 
 [![CI](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/ci.yml) [![CodeQL](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/codeql.yml) [![Release](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml/badge.svg)](https://github.com/DipesThapa/safebrowse-ai/actions/workflows/release.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-Safeguard is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy. Built and maintained by CyberHeroez CIC.
+SafeBrowse is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy. Built and maintained by CyberHeroez CIC.
 
 ## Features
 - **Advanced heuristics**: weighted URL/title/meta/body scoring with sensitivity control

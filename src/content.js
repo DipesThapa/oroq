@@ -1,4 +1,3 @@
-/* global browser */
 if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'undefined') {
   globalThis.chrome = globalThis.browser;
 }
@@ -136,7 +135,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   const PROFILE_TONE_COPY = {
     kids: {
       heading: 'Hold on - we are keeping kid-safe pages only.',
-      detailFallback: 'Safeguard spotted something that looks grown-up or violent, so we paused the page.',
+      detailFallback: 'SafeBrowse spotted something that looks grown-up or violent, so we paused the page.',
       suggestionPrefix: 'Try',
       suggestionFallback: 'Ask a trusted adult before opening a different site.',
       defaultSuggestions: ['BBC Bitesize','Nat Geo Kids','Duolingo'],
@@ -175,7 +174,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       defaultProfileLabel: 'Work profile'
     },
     general: {
-      heading: 'Safeguard blocked this page.',
+      heading: 'SafeBrowse blocked this page.',
       detailFallback: 'Our local rules detected risky content before the page loaded.',
       suggestionPrefix: 'Use trusted sites like',
       suggestionFallback: 'Ask a safeguarding lead or parent before overriding.',
@@ -1310,7 +1309,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     if (id === 'phish-logo'){
       return 'The page embeds brand logos in an unusual way to impersonate trusted sites.';
     }
-    return 'Safeguard spotted patterns that usually mean the page is unsafe.';
+    return 'SafeBrowse spotted patterns that usually mean the page is unsafe.';
   }
 
   function normalizeTone(value){
@@ -1521,7 +1520,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           id: 'body-context',
           icon: 'NOTE',
           label: 'Educational context noted',
-          detail: 'Safeguard reduced the score because safeguarding/educational wording is present.',
+          detail: 'SafeBrowse reduced the score because safeguarding/educational wording is present.',
           weight: -4
         });
       }
@@ -1553,7 +1552,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           id: 'meta-context',
           icon: 'NOTE',
           label: 'Educational metadata noted',
-          detail: 'Safeguard reduced the score because the metadata references education or safeguarding terms.',
+          detail: 'SafeBrowse reduced the score because the metadata references education or safeguarding terms.',
           weight: -4
         });
       }
@@ -1582,7 +1581,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const gaugeMax = Math.max(12, safeThreshold + 12);
     const riskPercent = Math.max(0, Math.min(100, Math.round((safeScore / gaugeMax) * 100)));
     const riskLevel = deriveRiskLevel(safeScore, safeThreshold);
-    const pillText = `${riskLevel} • Safeguard heuristics`;
+    const pillText = `${riskLevel} • SafeBrowse heuristics`;
     return {
       pillText,
       riskScore: safeScore,
@@ -1617,7 +1616,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       id: 'policy',
       icon: 'POL',
       label: 'Policy blocklist match',
-      detail: 'This domain is on the centrally managed Safeguard blocklist.',
+      detail: 'This domain is on the centrally managed SafeBrowse blocklist.',
       weight: 12
     }];
     if (host){
@@ -1634,7 +1633,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       riskScore: 24,
       riskThreshold: 12,
       riskLevel: 'Policy blocked',
-      riskSummary: 'Safeguard blocked this domain due to administrator policy.',
+      riskSummary: 'SafeBrowse blocked this domain due to administrator policy.',
       riskPercent: 100,
       riskMax: 24,
       signals
@@ -1872,7 +1871,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       riskScore,
       riskThreshold,
       riskLevel: 'Phishing risk',
-      riskSummary: 'Safeguard spotted suspicious login behavior.',
+      riskSummary: 'SafeBrowse spotted suspicious login behavior.',
       signals
     };
   }
@@ -1909,7 +1908,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       id: 'phish-feed',
       icon: 'TI',
       label: 'Threat intelligence hit',
-      detail: `Known phishing host (${match.brand || 'unknown brand'}) per Safeguard feed.`,
+      detail: `Known phishing host (${match.brand || 'unknown brand'}) per SafeBrowse feed.`,
       weight: match.severity === 'high' ? 18 : 12
     };
   }
@@ -2061,7 +2060,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           });
           if (phishingEval){
             handlePhishingHit(phishingEval, pinConfig, context);
-            return Promise.reject(new Error('Blocked by Safeguard phishing guard'));
+            return Promise.reject(new Error('Blocked by SafeBrowse phishing guard'));
           }
         }
       } catch(_e){}
@@ -2097,11 +2096,11 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
             });
             if (phishingEval){
               handlePhishingHit(phishingEval, pinConfig, context);
-              throw new Error('Blocked by Safeguard phishing guard');
+              throw new Error('Blocked by SafeBrowse phishing guard');
             }
           }
         } catch(err){
-          if (err && err.message === 'Blocked by Safeguard phishing guard') throw err;
+          if (err && err.message === 'Blocked by SafeBrowse phishing guard') throw err;
         }
         return send.call(this, body);
       };
@@ -2350,7 +2349,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       }
       const tag = document.createElement('span');
       tag.className = 'sg-tag';
-      tag.textContent = 'Blocked by Safeguard';
+      tag.textContent = 'Blocked by SafeBrowse';
       if (wrap2 && wrap2.classList.contains('sg-wrap')) wrap2.appendChild(tag);
     } catch(_e) {}
   }
@@ -2380,7 +2379,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       });
       const box = document.createElement('div');
       Object.assign(box.style, { textAlign: 'center', maxWidth: '560px', padding: '16px', background: 'rgba(0,0,0,0.35)', borderRadius: '8px' });
-      const h = document.createElement('h2'); h.textContent = 'Blocked by Safeguard'; h.style.margin='0 0 8px'; box.appendChild(h);
+      const h = document.createElement('h2'); h.textContent = 'Blocked by SafeBrowse'; h.style.margin='0 0 8px'; box.appendChild(h);
       const p = document.createElement('div'); p.textContent = reason || 'Video hidden on this site'; p.style.opacity='0.9'; p.style.margin='0 0 12px'; box.appendChild(p);
       const btn = document.createElement('button');
       let remaining = 5; btn.disabled = true;
@@ -2618,7 +2617,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const profileTone = normalizeTone(opts.profileTone);
     const profileLabel = typeof opts.profileLabel === 'string' && opts.profileLabel.trim() ? opts.profileLabel.trim() : null;
     const profileSuggestions = sanitizeSuggestionList(opts.profileSuggestions);
-    doc.title = 'Safeguard – Page blocked';
+    doc.title = 'SafeBrowse - Page blocked';
 
     const root = doc.documentElement;
     while (root.firstChild) root.removeChild(root.firstChild);
@@ -3182,7 +3181,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     icon.className = 'sg-icon';
     const iconImg = doc.createElement('img');
     iconImg.src = chrome.runtime.getURL('assets/icons/icon128.png');
-    iconImg.alt = 'Safeguard';
+    iconImg.alt = 'SafeBrowse';
     iconImg.style.width = '100%';
     iconImg.style.height = '100%';
     iconImg.style.objectFit = 'contain';
@@ -3201,7 +3200,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const headerText = doc.createElement('div');
     const title = doc.createElement('h1');
     title.className = 'sg-title';
-    title.textContent = 'Safeguard blocked this page';
+    title.textContent = 'SafeBrowse blocked this page';
     const subtitle = doc.createElement('p');
     subtitle.className = 'sg-subtitle';
     subtitle.textContent = 'Our local rules flagged this content before it loaded.';
@@ -3222,7 +3221,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       riskHeader.className = 'sg-risk__header';
       const riskLevelEl = doc.createElement('div');
       riskLevelEl.className = 'sg-risk__level';
-      riskLevelEl.textContent = riskLevel || 'Safeguard detection score';
+      riskLevelEl.textContent = riskLevel || 'SafeBrowse detection score';
       riskHeader.appendChild(riskLevelEl);
       const scoreEl = doc.createElement('p');
       scoreEl.className = 'sg-risk__score';
@@ -3249,7 +3248,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
         const meta = doc.createElement('div');
         meta.className = 'sg-risk__meta';
         const summaryText = doc.createElement('span');
-        summaryText.textContent = riskSummary || 'Safeguard combined signals exceeded the active threshold.';
+        summaryText.textContent = riskSummary || 'SafeBrowse combined signals exceeded the active threshold.';
         meta.appendChild(summaryText);
         if (riskThreshold !== null){
           const thresholdEl = doc.createElement('span');
@@ -3298,7 +3297,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     context.className = 'sg-reason sg-explain__context';
     const contextBits = [];
     if (friendlyBlock.profileLabel) contextBits.push(`Profile: ${friendlyBlock.profileLabel}`);
-    contextBits.push(`Safeguard rule: ${reason || 'Policy enforcement'}`);
+    contextBits.push(`SafeBrowse rule: ${reason || 'Policy enforcement'}`);
     context.textContent = contextBits.join(' • ');
     explain.appendChild(context);
     if (friendlyBlock.suggestion){
@@ -3328,7 +3327,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       const insights = doc.createElement('div');
       insights.className = 'sg-insights';
       const insightsTitle = doc.createElement('h3');
-      insightsTitle.textContent = 'What Safeguard detected';
+      insightsTitle.textContent = 'What SafeBrowse detected';
       insights.appendChild(insightsTitle);
       insightsList = doc.createElement('div');
       insightsList.className = 'sg-insights__list';
@@ -3516,7 +3515,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
 
       const pinPrivacy = doc.createElement('div');
       pinPrivacy.className = 'sg-pin__privacy';
-      pinPrivacy.textContent = 'Safeguard keeps this PIN on-device. Nothing is collected or shared.';
+      pinPrivacy.textContent = 'SafeBrowse keeps this PIN on-device. Nothing is collected or shared.';
       pinBlock.appendChild(pinPrivacy);
 
       pinInput.addEventListener('input', ()=>{
@@ -3660,13 +3659,13 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
 
       chrome.runtime.sendMessage({ type: 'sg-fb-send-request', domain: getHost() }, (resp) => {
         if (chrome.runtime.lastError || !resp) {
-          requestStatus.textContent = 'Could not reach Safeguard. Try reloading the page.';
+          requestStatus.textContent = 'Could not reach SafeBrowse. Try reloading the page.';
           requestBtn.disabled = false;
           requestBtn.textContent = 'Request access';
           return;
         }
         if (resp.error === 'no-passphrase') {
-          requestStatus.textContent = 'Your device is not linked to a family account. Ask your parent to set up Safeguard and share an invite code.';
+          requestStatus.textContent = 'Your device is not linked to a family account. Ask your parent to set up SafeBrowse and share an invite code.';
           requestBtn.disabled = false;
           requestBtn.textContent = 'Request access';
           return;
@@ -3814,7 +3813,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
 
     const support = doc.createElement('p');
     support.className = 'sg-support';
-    support.appendChild(doc.createTextNode('Need to allow this permanently? Add it to your allowlist in the Safeguard popup or '));
+    support.appendChild(doc.createTextNode('Need to allow this permanently? Add it to your allowlist in the SafeBrowse popup or '));
     const supportAnchor = doc.createElement('a');
     supportAnchor.href = computedSupportUrl;
     supportAnchor.target = '_blank';
@@ -3935,7 +3934,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           riskScore: 24,
           riskThreshold: 12,
           riskLevel: 'Focus Mode',
-          riskSummary: 'Safeguard blocked this site during Focus Mode to help you stay on-task.',
+          riskSummary: 'SafeBrowse blocked this site during Focus Mode to help you stay on-task.',
           riskPercent: 100,
           riskMax: 24,
           signals,

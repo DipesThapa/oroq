@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Safeguard (SafeBrowse AI)",
+  "name": "SafeBrowse",
   "version": "1.0.0",
   "description": "Block harmful sites, enforce SafeSearch & protect kids online. Parent dashboard with PIN controls, focus mode & family pairing.",
   "homepage_url": "https://cyberheroez.co.uk/",

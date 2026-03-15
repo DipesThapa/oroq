@@ -1,14 +1,12 @@
 // Service worker orchestrates DNR rules, badge state, heartbeat checks, and focus-mode timers.
 // Cross-browser shim: Firefox exposes `browser` (Promise-based); Chrome/Edge/Safari expose `chrome`.
 // Both also expose `chrome` as an alias, so callback-style calls work everywhere.
-/* global browser */
 if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'undefined') {
   globalThis.chrome = globalThis.browser;
 }
 
 let dnrRebuildMutex = Promise.resolve();
 const ACTION_API = chrome.action || chrome.browserAction;
-const APP_CONFIG_PATH = 'data/app_config.json';
 
 function hasDnrApi(){
   return Boolean(
@@ -137,39 +135,6 @@ function normalizeWebhook(url){
     if (isPrivateHost(parsed.hostname)) return '';
     return parsed.toString();
   }catch(_e){ return ''; }
-}
-
-function toBase64(bytes){
-  try {
-    let binary = '';
-    const chunk = 0x8000;
-    for (let i = 0; i < bytes.length; i += chunk){
-      binary += String.fromCharCode(...bytes.slice(i, i + chunk));
-    }
-    return btoa(binary);
-  } catch (_e){
-    return '';
-  }
-}
-
-function fromBase64(b64){
-  try {
-    const binary = atob(String(b64 || ''));
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1){
-      bytes[i] = binary.charCodeAt(i);
-    }
-    return bytes;
-  } catch (_e){
-    return null;
-  }
-}
-
-async function sha256Hex(text){
-  const data = new TextEncoder().encode(String(text || ''));
-  const digest = await crypto.subtle.digest('SHA-256', data);
-  const bytes = new Uint8Array(digest);
-  return Array.from(bytes).map((b)=>b.toString(16).padStart(2, '0')).join('');
 }
 
 function sanitizePlaylistIds(list){
@@ -331,7 +296,7 @@ async function handleFocusTick(){
     }
     await updateBadge();
   } catch(err){
-    console.error('[Safeguard] Focus timer error', err);
+    console.error('[SafeBrowse] Focus timer error', err);
   }
 }
 
@@ -339,7 +304,7 @@ async function handleFocusTick(){
 chrome.alarms.onAlarm.addListener((alarm)=>{
   if (alarm && alarm.name === HEARTBEAT_ALARM){
     handleHeartbeat().catch((err)=>{
-      console.error('[Safeguard] Heartbeat error', err);
+      console.error('[SafeBrowse] Heartbeat error', err);
     });
   }
   if (alarm && alarm.name === FOCUS_ALARM){
@@ -347,7 +312,7 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
   }
   if (alarm && alarm.name === WEEKLY_TIP_ALARM){
     rotateWeeklyTip().catch((err)=>{
-      console.error('[Safeguard] Weekly tip rotation failed', err);
+      console.error('[SafeBrowse] Weekly tip rotation failed', err);
     });
   }
   if (alarm && alarm.name === PARENT_POLL_ALARM){ fbPollParentRequests().catch(()=>{}); return; }
@@ -404,7 +369,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
       const nowEnabled = Boolean(changes.enabled.newValue);
       if (nowEnabled) { enableDnsFiltering(); } else { disableDnsFiltering(); }
       handleProtectionToggle(nowEnabled).catch((err)=>{
-        console.error('[Safeguard] Protection toggle alert failed', err);
+        console.error('[SafeBrowse] Protection toggle alert failed', err);
       });
       if (changes.enabled && changes.enabled.newValue === true && changes.enabled.oldValue !== true){
         trackOnceEvent('protection_enabled').catch(()=>{});
@@ -458,10 +423,7 @@ function enableDnsFiltering() {
   if (!hasDohApi()) return;
   chrome.privacy.network.secureDnsMode.set({ value: 'secure' }, () => {
     if (chrome.runtime.lastError) return;
-    chrome.privacy.network.secureDnsUri.set({ value: DOH_URL }, () => {
-      if (!chrome.runtime.lastError) {
-      }
-    });
+    chrome.privacy.network.secureDnsUri.set({ value: DOH_URL }, () => {});
   });
 }
 
@@ -480,19 +442,19 @@ recoverFocusSession().catch(()=>{});
 scheduleWeeklyTipAlarm();
 // Rebuild dynamic rules on service worker start to ensure rules are present
 rebuildDynamicRules().catch((err)=>{
-  console.error('[Safeguard] Initial DNR rebuild failed', err);
+  console.error('[SafeBrowse] Initial DNR rebuild failed', err);
 });
 rotateWeeklyTip().catch((_e)=>{});
 // Enable DNS filtering on startup if protection is on
 chrome.storage.sync.get({ enabled: true }, ({ enabled }) => { if (enabled !== false) enableDnsFiltering(); });
 handleHeartbeat({ startup: true }).catch((err)=>{
-  console.error('[Safeguard] Heartbeat startup check failed', err);
+  console.error('[SafeBrowse] Heartbeat startup check failed', err);
 });
 
 chrome.runtime.onStartup.addListener(()=>{
   scheduleHeartbeat();
   handleHeartbeat({ startup: true }).catch((err)=>{
-    console.error('[Safeguard] Heartbeat startup check failed', err);
+    console.error('[SafeBrowse] Heartbeat startup check failed', err);
   });
   recoverFocusSession().catch(()=>{});
 });
@@ -526,16 +488,6 @@ function managedGet(defaults){
       resolve({ ...(defaults || {}) });
     }
   });
-}
-
-let appConfigPromise = null;
-async function loadAppConfig(){
-  if (!appConfigPromise){
-    appConfigPromise = loadJsonResource(APP_CONFIG_PATH).then((cfg)=>{
-      return cfg && typeof cfg === 'object' ? cfg : {};
-    }).catch(()=> ({}));
-  }
-  return appConfigPromise;
 }
 
 // ---- Tracking integrity (local funnel events + optional telemetry) ----
@@ -649,7 +601,7 @@ async function sendGa4Event(eventName, params = {}) {
     const engagementTime = (params && typeof params.engagement_time_msec !== 'undefined')
       ? params.engagement_time_msec
       : '1';
-    const { engagement_time_msec: _drop, ...restParams } = (params && typeof params === 'object') ? params : {};
+    const { engagement_time_msec: _engagementTimeMsec, ...restParams } = (params && typeof params === 'object') ? params : {};
     await fetch(GA4_ENDPOINT, {
       method: 'POST',
       body: JSON.stringify({
@@ -943,19 +895,19 @@ async function rebuildDynamicRules(){
         });
       }
       if (uniq.length > take.length){
-        console.warn('[Safeguard] Blocklist truncated for DNR capacity:', take.length, '/', uniq.length);
+        console.warn('[SafeBrowse] Blocklist truncated for DNR capacity:', take.length, '/', uniq.length);
       }
 
       const existing = await chrome.declarativeNetRequest.getDynamicRules();
       const removeRuleIds = existing.map(r => r.id);
       await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules: rules });
-      console.log('[Safeguard] DNR dynamic rules updated:', rules.length);
+      console.log('[SafeBrowse] DNR dynamic rules updated:', rules.length);
     }catch(e){
-      console.error('[Safeguard] Failed to rebuild DNR rules', e);
+      console.error('[SafeBrowse] Failed to rebuild DNR rules', e);
     }
   }catch(e){
     // unexpected lock failure
-    console.error('[Safeguard] DNR rebuild mutex error', e);
+    console.error('[SafeBrowse] DNR rebuild mutex error', e);
   } finally {
     release();
   }
@@ -1027,7 +979,7 @@ async function fsPost(collection, docId, data) {
   const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: fsToFields(data) }) });
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({}));
-    console.error('[Safeguard] fsPost failed', resp.status, body?.error?.message || body);
+    console.error('[SafeBrowse] fsPost failed', resp.status, body?.error?.message || body);
   }
   return resp.ok;
 }
@@ -1241,7 +1193,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
         }
       });
     }).catch((err)=>{
-      console.error('[Safeguard] Focus state fetch failed', err);
+      console.error('[SafeBrowse] Focus state fetch failed', err);
       sendResponse({ ok: false, error: 'failed-focus-state' });
     });
     return true;
@@ -1258,7 +1210,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
         }
       });
     }).catch((err)=>{
-      console.error('[Safeguard] Focus start failed', err);
+      console.error('[SafeBrowse] Focus start failed', err);
       sendResponse({ ok: false, error: 'failed-focus-start' });
     });
     return true;
@@ -1267,21 +1219,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     stopFocusSession().then((state)=>{
       sendResponse({ ok: true, state });
     }).catch((err)=>{
-      console.error('[Safeguard] Focus stop failed', err);
+      console.error('[SafeBrowse] Focus stop failed', err);
       sendResponse({ ok: false, error: 'failed-focus-stop' });
     });
     return true;
   }
   if (message && message.type === 'sg-log-conversation-topic'){
     recordConversationTopic(message.topic).then(()=>sendResponse({ ok: true })).catch((err)=>{
-      console.error('[Safeguard] conversation topic log failed', err);
+      console.error('[SafeBrowse] conversation topic log failed', err);
       sendResponse({ ok: false });
     });
     return true;
   }
   if (message && message.type === 'sg-kid-report'){
     recordKidReport({ tone: message.tone, host: message.host, note: message.note }).then(()=>sendResponse({ ok: true })).catch((err)=>{
-      console.error('[Safeguard] kid report log failed', err);
+      console.error('[SafeBrowse] kid report log failed', err);
       sendResponse({ ok: false });
     });
     return true;
@@ -1294,7 +1246,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
       }
       sendResponse({ ok: true, request: entry });
     }).catch((err)=>{
-      console.error('[Safeguard] access request log failed', err);
+      console.error('[SafeBrowse] access request log failed', err);
       sendResponse({ ok: false });
     });
     return true;
@@ -1482,7 +1434,7 @@ async function handleHeartbeat(options = {}){
     const lastAlert = Number(lastTamperAlertAt) || 0;
     if (lastAlert && (now - lastAlert) < HEARTBEAT_SNOOZE_MIN * 60000) return;
     const payload = {
-      text: `Safeguard heartbeat gap detected. Extension was offline for ~${Math.round(gapMinutes)} minute(s).`,
+      text: `SafeBrowse heartbeat gap detected. Extension was offline for ~${Math.round(gapMinutes)} minute(s).`,
       gapMinutes: Math.round(gapMinutes),
       lastSeenAt: new Date(last).toISOString(),
       detectedAt: new Date(now).toISOString()
@@ -1493,7 +1445,7 @@ async function handleHeartbeat(options = {}){
       lastTamperAlertAt
     }, now);
   } catch(err){
-    console.error('[Safeguard] Tamper alert failed', err);
+    console.error('[SafeBrowse] Tamper alert failed', err);
   }
 }
 
@@ -1507,12 +1459,12 @@ async function handleProtectionToggle(enabled){
       lastTamperAlertAt: 0
     });
     await sendTamperAlert({
-      text: 'Safeguard protection was paused. If this was unexpected, re-enable filtering immediately.',
+      text: 'SafeBrowse protection was paused. If this was unexpected, re-enable filtering immediately.',
       trigger: 'protection-disabled',
       detectedAt: new Date(now).toISOString()
     }, cfg, now, { force: true });
   } catch(err){
-    console.error('[Safeguard] Protection toggle alert failed', err);
+    console.error('[SafeBrowse] Protection toggle alert failed', err);
   }
 }
 
@@ -1544,7 +1496,7 @@ async function handleOverrideAlert(entry){
     if (!webhook) return;
     const ts = entry.timestamp ? new Date(entry.timestamp).toISOString() : new Date().toISOString();
     const lines = [];
-    lines.push(`Safeguard override approved${entry.approver ? ` by ${entry.approver}` : ''}`);
+    lines.push(`SafeBrowse override approved${entry.approver ? ` by ${entry.approver}` : ''}`);
     if (entry.host) lines.push(`Host: ${entry.host}`);
     if (entry.reason) lines.push(`Reason: ${entry.reason}`);
     if (entry.url) lines.push(`URL: ${entry.url}`);
@@ -1579,6 +1531,6 @@ async function handleOverrideAlert(entry){
       body: JSON.stringify(payload)
     });
   } catch(err){
-    console.error('[Safeguard] Override alert failed', err);
+    console.error('[SafeBrowse] Override alert failed', err);
   }
 }
