@@ -89,6 +89,7 @@ const parentPairingStatusEl = document.getElementById('parentPairingStatus');
 const parentTipStatusEl = document.getElementById('parentTipStatus');
 const parentModeBtn = document.getElementById('parentModeBtn');
 const classroomModeBtn = document.getElementById('classroomModeBtn');
+const tabHomeBtn = document.getElementById('tabHomeBtn');
 const parentTitleEl = document.querySelector('#cardParent .card__title');
 const parentSubtitleEl = document.querySelector('#cardParent .card__subtitle');
 const parentProfilesBtn = document.getElementById('parentProfilesBtn');
@@ -121,6 +122,26 @@ const parentConversationSectionEl = document.getElementById('parentConversationS
 const parentReportSectionEl = document.getElementById('parentReportSection');
 const parentAccessSectionEl = document.getElementById('parentAccessSection');
 const parentPairingSectionEl = document.getElementById('parentPairingSection');
+const pendingApprovalsCardEl = document.getElementById('pendingApprovalsCard');
+const pendingApprovalsListEl = document.getElementById('pendingApprovalsList');
+const sgOnboardingEl = document.getElementById('sgOnboarding');
+const sgChildViewEl = document.getElementById('sgChildView');
+const inviteChildCardEl = document.getElementById('inviteChildCard');
+const tempPinCardEl = document.getElementById('tempPinCard');
+const genTempPinBtn = document.getElementById('genTempPinBtn');
+const tempPinExpiryEl = document.getElementById('tempPinExpiry');
+const tempPinCustomWrapEl = document.getElementById('tempPinCustomWrap');
+const tempPinCustomValEl = document.getElementById('tempPinCustomVal');
+const tempPinCustomUnitEl = document.getElementById('tempPinCustomUnit');
+const tempPinOutEl = document.getElementById('tempPinOut');
+const tempPinValEl = document.getElementById('tempPinVal');
+const tempPinCopyBtn = document.getElementById('tempPinCopyBtn');
+const tempPinSendBtn = document.getElementById('tempPinSendBtn');
+const tempPinSendMsgEl = document.getElementById('tempPinSendMsg');
+const tempPinListEl = document.getElementById('tempPinList');
+const tempPinItemsEl = document.getElementById('tempPinItems');
+const tempPinMsgEl = document.getElementById('tempPinMsg');
+const tabNavEl = document.querySelector('.tab-nav');
 const parentTipSectionEl = document.getElementById('parentTipSection');
 const parentCardEl = document.getElementById('cardParent');
 const parentPanelEl = document.querySelector('.parent-panel');
@@ -130,20 +151,11 @@ const accessRequestMessageEl = document.getElementById('accessRequestMessage');
 const accessRequestClearBtn = document.getElementById('accessRequestClear');
 const tempAllowListEl = document.getElementById('tempAllowList');
 const tempAllowMessageEl = document.getElementById('tempAllowMessage');
-const pairRelayUrlEl = document.getElementById('pairRelayUrl');
-const pairRelaySaveBtn = document.getElementById('pairRelaySave');
-const pairRelayTestBtn = document.getElementById('pairRelayTest');
-const pairPollNowBtn = document.getElementById('pairPollNow');
-const pairRelayMessageEl = document.getElementById('pairRelayMessage');
-const pairCreateBtn = document.getElementById('pairCreate');
-const pairRefreshBtn = document.getElementById('pairRefresh');
-const pairJoinBtn = document.getElementById('pairJoin');
-const pairCodeInEl = document.getElementById('pairCodeIn');
-const pairCodeOutEl = document.getElementById('pairCodeOut');
-const pairSafetyOutEl = document.getElementById('pairSafetyOut');
-const pairConfirmBtn = document.getElementById('pairConfirm');
-const pairedDeviceListEl = document.getElementById('pairedDeviceList');
-const pairedDeviceMessageEl = document.getElementById('pairedDeviceMessage');
+const isParentDeviceToggleEl = document.getElementById('isParentDeviceToggle');
+const familyPassphraseEl = document.getElementById('familyPassphrase');
+const savePassphraseBtn = document.getElementById('savePassphrase');
+const showPassphraseBtn = document.getElementById('showPassphrase');
+const passphraseMessageEl = document.getElementById('passphraseMessage');
 const approverCardEl = document.getElementById('cardApprover');
 const focusToggleEl = document.getElementById('focusToggle');
 const focusDurationSelect = document.getElementById('focusDurationSelect');
@@ -230,7 +242,7 @@ const pinModalCancel = document.getElementById('pinModalCancel');
 const pinModalSubmit = document.getElementById('pinModalSubmit');
 const THEME_KEY = 'themePreference';
 const TOUR_PENDING_KEY = 'onboardingPending';
-const PAIRING_UI_ENABLED = false;
+const PAIRING_UI_ENABLED = true;
 const prefersDarkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 const cachedThemePreference = (() => {
   try {
@@ -245,6 +257,28 @@ const cachedThemePreference = (() => {
 try {
   chrome.runtime.sendMessage({ type: 'sg-analytics-activity', source: 'popup' });
 } catch(_e){}
+
+// ── GA4 engagement tracking ──────────────────────────────────────────────────
+const _sgPopupOpenedAt = Date.now();
+
+function sgTrack(eventName, params = {}) {
+  try {
+    chrome.runtime.sendMessage({ type: 'sg-ga4-event', name: eventName, params });
+  } catch (_e) {}
+}
+
+// Fire popup_opened immediately
+sgTrack('popup_opened');
+
+// Fire popup_closed with real engagement time when popup loses visibility
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    sgTrack('popup_closed', { engagement_time_msec: String(Date.now() - _sgPopupOpenedAt) });
+  }
+});
+window.addEventListener('beforeunload', () => {
+  sgTrack('popup_closed', { engagement_time_msec: String(Date.now() - _sgPopupOpenedAt) });
+});
 
 let tourIndex = 0;
 let tourActive = false;
@@ -266,7 +300,7 @@ let pinSetupPrompted = false;
 let tamperAlertEnabled = false;
 let profileDependentControlsLocked = true;
 let parentCardMode = 'parent';
-const FOCUS_ALLOWED_DURATIONS = [30, 45, 60, 2]; // includes 2 minutes for testing
+const FOCUS_ALLOWED_DURATIONS = [30, 45, 60];
 let focusState = { active: false, endsAt: 0, durationMinutes: 45, pinProtected: false, remainingMs: 0 };
 let focusDurationChoice = 45;
 let focusPinPreference = false;
@@ -287,7 +321,6 @@ let focusSessionLog = [];
 let pendingTip = null;
 let accessRequests = [];
 let temporaryAllowlist = [];
-let pairingState = { relayUrl: '', relaySource: '', relayLocked: false, identity: null, pending: null, peers: [] };
 let conversationTipsEnabled = true;
 let weeklyTipsEnabled = true;
 let kidReportEnabled = true;
@@ -356,6 +389,8 @@ if (!PAIRING_UI_ENABLED){
     parentPairingSectionEl.dataset.expanded = '0';
     parentPairingSectionEl.classList.remove('parent-section--active');
   }
+} else {
+  if (parentPairingRowEl) parentPairingRowEl.hidden = false;
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -367,6 +402,13 @@ function setStatus(enabled){
   if (!statusBadge) return;
   statusBadge.textContent = enabled ? 'Active' : 'Paused';
   statusBadge.classList.toggle('status--off', !enabled);
+  // Reflect state in the status hero card
+  const hero = document.querySelector('.status-hero');
+  const heroState = document.querySelector('.status-hero__state');
+  const heroDesc  = document.querySelector('.status-hero__desc');
+  if (hero)      hero.classList.toggle('is-off', !enabled);
+  if (heroState) heroState.textContent = enabled ? 'Protected' : 'Not protected';
+  if (heroDesc)  heroDesc.textContent  = enabled ? 'Filtering active on all sites' : 'Protection is currently paused';
 }
 
 function resolveTheme(pref){
@@ -872,17 +914,6 @@ function updateParentSummaries(){
       parentAccessStatusEl.textContent = 'No requests';
     }
   }
-  if (parentPairingStatusEl){
-    const peers = Array.isArray(pairingState.peers) ? pairingState.peers : [];
-    const relay = (pairingState.relayUrl || '').trim();
-    const source = pairingState.relaySource || '';
-    const locked = Boolean(pairingState.relayLocked);
-    parentPairingStatusEl.textContent = peers.length
-      ? `${peers.length} paired`
-      : (relay
-        ? ((source === 'managed' && locked) ? 'Managed relay (not paired)' : (source === 'default' ? 'Default relay (not paired)' : 'Relay saved (not paired)'))
-        : 'Not configured');
-  }
   if (parentTipStatusEl){
     parentTipStatusEl.textContent = (weeklyTipsEnabled === false) ? 'Disabled' : (pendingTip ? 'New tip' : 'None pending');
   }
@@ -1147,6 +1178,46 @@ function expandAccessSection(){
   scrollToCard(parentAccessSectionEl);
 }
 
+function renderPendingApprovals(pending) {
+  if (!pendingApprovalsListEl) return;
+  const emptyEl = document.getElementById('pendingApprovalsEmpty');
+  pendingApprovalsListEl.innerHTML = '';
+  if (!pending || pending.length === 0) {
+    if (emptyEl) emptyEl.style.display = '';
+    return;
+  }
+  if (emptyEl) emptyEl.style.display = 'none';
+  if (pendingApprovalsCardEl) pendingApprovalsCardEl.style.display = '';
+  pending.forEach(req => {
+    const li = document.createElement('li');
+    li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;';
+    li.innerHTML = `
+      <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${req.domain || 'Unknown site'}</span>
+      <button class="sg-approve-btn" data-id="${req._id}" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">Approve</button>
+      <button class="sg-deny-btn" data-id="${req._id}" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">Deny</button>
+    `;
+    pendingApprovalsListEl.appendChild(li);
+  });
+  pendingApprovalsListEl.querySelectorAll('.sg-approve-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      btn.disabled = true;
+      chrome.runtime.sendMessage({ type: 'sg-fb-approve', requestId: id }, () => {
+        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
+      });
+    });
+  });
+  pendingApprovalsListEl.querySelectorAll('.sg-deny-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      btn.disabled = true;
+      chrome.runtime.sendMessage({ type: 'sg-fb-deny', requestId: id }, () => {
+        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
+      });
+    });
+  });
+}
+
 function expandPairingSection(){
   if (!PAIRING_UI_ENABLED) return;
   if (!parentPairingSectionEl) return;
@@ -1178,8 +1249,9 @@ function scrollToCard(el){
 }
 
 function setParentToggleState(mode){
-  if (parentModeBtn) parentModeBtn.classList.toggle('parent-toggle__button--active', mode === 'parent');
-  if (classroomModeBtn) classroomModeBtn.classList.toggle('parent-toggle__button--active', mode === 'classroom');
+  if (tabHomeBtn) tabHomeBtn.classList.toggle('tab-nav__item--active', mode === '');
+  if (parentModeBtn) parentModeBtn.classList.toggle('tab-nav__item--active', mode === 'parent');
+  if (classroomModeBtn) classroomModeBtn.classList.toggle('tab-nav__item--active', mode === 'classroom');
 }
 
 function setParentCardMode(mode){
@@ -1231,15 +1303,25 @@ function ensureApproverCardVisible(){
   }
 }
 
+if (tabHomeBtn){
+  tabHomeBtn.addEventListener('click', ()=>{
+    hideParentCard();
+    sgTrack('tab_viewed', { tab: 'protection' });
+  });
+}
+
 if (parentModeBtn){
   parentModeBtn.addEventListener('click', ()=>{
     setParentCardMode('parent');
+    chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
+    sgTrack('tab_viewed', { tab: 'parent' });
   });
 }
 
 if (classroomModeBtn){
   classroomModeBtn.addEventListener('click', ()=>{
     setParentCardMode('classroom');
+    sgTrack('tab_viewed', { tab: 'classroom' });
   });
 }
 
@@ -1727,88 +1809,6 @@ function setTempAllowMessage(text, tone = 'muted'){
   else if (tone === 'error') tempAllowMessageEl.classList.add('message--error');
 }
 
-function setPairRelayMessage(text, tone = 'muted'){
-  if (!pairRelayMessageEl) return;
-  pairRelayMessageEl.textContent = text;
-  pairRelayMessageEl.classList.remove('message--success', 'message--error');
-  if (tone === 'success') pairRelayMessageEl.classList.add('message--success');
-  else if (tone === 'error') pairRelayMessageEl.classList.add('message--error');
-}
-
-function renderPairedDevices(){
-  if (!pairedDeviceListEl) return;
-  pairedDeviceListEl.innerHTML = '';
-  const peers = Array.isArray(pairingState.peers) ? pairingState.peers : [];
-  if (!peers.length){
-    if (pairedDeviceMessageEl) pairedDeviceMessageEl.textContent = 'No paired devices yet.';
-    return;
-  }
-  if (pairedDeviceMessageEl) pairedDeviceMessageEl.textContent = `${peers.length} paired device${peers.length === 1 ? '' : 's'}.`;
-  peers.forEach((peer)=>{
-    const li = document.createElement('li');
-    li.className = 'pill pill--wide';
-    const text = document.createElement('span');
-    text.className = 'pill__text';
-    text.textContent = `${peer.peerId || 'device'} (${peer.pairingId || ''})`;
-    const remove = document.createElement('button');
-    remove.type = 'button';
-    remove.className = 'pill__remove';
-    remove.textContent = '×';
-    remove.onclick = async ()=>{
-      if (!(await ensureAllowlistPin('remove paired device'))) return;
-      chrome.runtime.sendMessage({ type: 'sg-pairing-remove', pairingId: peer.pairingId, peerId: peer.peerId }, (resp)=>{
-        if (!resp || !resp.ok) return;
-        pairingState.peers = resp.peers || [];
-        renderPairedDevices();
-        updateParentSummaries();
-      });
-    };
-    li.appendChild(text);
-    li.appendChild(remove);
-    pairedDeviceListEl.appendChild(li);
-  });
-}
-
-function renderPairingPending(){
-  const relayUrl = pairingState.relayUrl || '';
-  const source = pairingState.relaySource || '';
-  const locked = Boolean(pairingState.relayLocked);
-  if (pairRelayUrlEl){
-    pairRelayUrlEl.value = relayUrl;
-    pairRelayUrlEl.disabled = locked;
-  }
-  if (pairRelaySaveBtn) pairRelaySaveBtn.disabled = locked;
-  if (source === 'managed' && locked && relayUrl){
-    setPairRelayMessage('Relay is managed by your admin.', 'muted');
-  } else if (source === 'default' && relayUrl){
-    setPairRelayMessage('Using the default relay for pairing.', 'muted');
-  }
-  const pending = pairingState.pending;
-  if (pairCodeOutEl) pairCodeOutEl.value = '';
-  if (pairSafetyOutEl) pairSafetyOutEl.value = '';
-  if (pairConfirmBtn) pairConfirmBtn.disabled = true;
-  if (!pending) return;
-  if (pairCodeOutEl) pairCodeOutEl.value = pending.pairingId && pending.secret ? `${pending.pairingId}.${pending.secret}` : '';
-  if (pairSafetyOutEl) pairSafetyOutEl.value = pending.safetyCode || '';
-  if (pairConfirmBtn) pairConfirmBtn.disabled = !(pending && pending.safetyCode);
-}
-
-function refreshPairingState(){
-  return new Promise((resolve)=>{
-    chrome.runtime.sendMessage({ type: 'sg-pairing-get-state' }, (resp)=>{
-      if (!resp || !resp.ok){
-        resolve(false);
-        return;
-      }
-      pairingState = { ...pairingState, ...(resp.state || {}) };
-      renderPairingPending();
-      renderPairedDevices();
-      updateParentSummaries();
-      resolve(true);
-    });
-  });
-}
-
 function pruneTemporaryAllows(list){
   const now = Date.now();
   return (Array.isArray(list) ? list : []).filter((entry)=>{
@@ -1882,29 +1882,6 @@ async function resolveAccessRequest(requestId, resolution){
   if (!req) return;
   const now = Date.now();
   const approver = await maybePromptApprover();
-  if (req.source === 'paired' && req.pairingId){
-    chrome.runtime.sendMessage({
-      type: 'sg-pairing-deny-access',
-      pairingId: req.pairingId,
-      requestId,
-      host: req.host,
-      approver
-    }, (resp)=>{
-      if (!resp || !resp.ok){
-        setAccessRequestMessage('Failed to send denial to paired device. Check relay settings.', 'error');
-        return;
-      }
-      accessRequests = accessRequests.map((item)=>{
-        if (!item || item.id !== requestId) return item;
-        return { ...item, status: resolution, resolvedAt: now, approver: approver || null };
-      });
-      chrome.storage.local.set({ accessRequests }, ()=>{
-        renderAccessRequests();
-        updateParentSummaries();
-      });
-    });
-    return;
-  }
   const updated = accessRequests.map((item)=>{
     if (!item || item.id !== requestId) return item;
     return {
@@ -1929,32 +1906,6 @@ async function approveAccessRequest(requestId, minutes){
   const now = Date.now();
   const approver = await maybePromptApprover();
   const duration = Number(minutes) || 0;
-  if (req.source === 'paired' && req.pairingId){
-    const permanent = duration <= 0;
-    chrome.runtime.sendMessage({
-      type: 'sg-pairing-approve-access',
-      pairingId: req.pairingId,
-      requestId,
-      durationMinutes: permanent ? 0 : duration,
-      permanent,
-      host,
-      approver
-    }, (resp)=>{
-      if (!resp || !resp.ok){
-        setAccessRequestMessage('Failed to send approval to paired device. Check relay settings.', 'error');
-        return;
-      }
-      accessRequests = accessRequests.map((item)=>{
-        if (!item || item.id !== requestId) return item;
-        return { ...item, status: 'approved', resolvedAt: now, approver: approver || null, expiresAt: permanent ? null : (now + duration * 60000), permanent };
-      });
-      chrome.storage.local.set({ accessRequests }, ()=>{
-        renderAccessRequests();
-        updateParentSummaries();
-      });
-    });
-    return;
-  }
   if (duration <= 0){
     // Permanent allow
     chrome.storage.sync.get({ allowlist: [] }, (cfg)=>{
@@ -2539,9 +2490,6 @@ chrome.storage.local.get({
   renderInsights();
   updateAlertAvailability();
   updateParentSummaries();
-  if (PAIRING_UI_ENABLED){
-    refreshPairingState().catch(()=>{});
-  }
   localTourPending = Boolean(cfg[TOUR_PENDING_KEY]);
   maybeStartTour();
 });
@@ -2598,8 +2546,10 @@ if (focusToggleEl){
   focusToggleEl.addEventListener('change', ()=>{
     if (focusToggleEl.checked){
       startFocusFromUi();
+      sgTrack('focus_mode_toggled', { enabled: true });
     } else {
       stopFocusFromUi();
+      sgTrack('focus_mode_toggled', { enabled: false });
     }
   });
 }
@@ -2629,6 +2579,7 @@ if (classroomToggleEl){
   classroomToggleEl.addEventListener('change', async ()=>{
     const enabled = classroomToggleEl.checked;
     await persistClassroomState({ enabled });
+    sgTrack('classroom_toggled', { enabled });
     if (enabled && requirePinEl){
       requirePinEl.checked = false;
       chrome.storage.local.set({ requirePin: false });
@@ -3298,7 +3249,6 @@ if (parentPairingBtn){
       ensureParentCardVisible();
       scrollToCard(parentCardEl);
       expandPairingSection();
-      refreshPairingState();
     });
   }
 }
@@ -3358,132 +3308,294 @@ if (accessRequestClearBtn){
   });
 }
 
-if (pairRelaySaveBtn){
-  pairRelaySaveBtn.addEventListener('click', async ()=>{
-    if (!(await ensureAllowlistPin('save pairing relay'))) return;
-    const url = pairRelayUrlEl ? pairRelayUrlEl.value : '';
-    chrome.runtime.sendMessage({ type: 'sg-pairing-set-relay', url }, (resp)=>{
-      if (!resp || !resp.ok){
-        const err = resp && resp.error ? String(resp.error) : '';
-        if (err === 'relay-managed'){
-          setPairRelayMessage('Relay is managed by your admin and cannot be changed here.', 'error');
-        } else {
-          setPairRelayMessage('Relay URL must be HTTPS and not localhost/LAN.', 'error');
-        }
-        return;
-      }
-      pairingState.relayUrl = resp.relayUrl || '';
-      setPairRelayMessage(pairingState.relayUrl ? 'Relay saved.' : 'Relay cleared.', pairingState.relayUrl ? 'success' : 'muted');
-      refreshPairingState();
+// ── Family passphrase (no-relay approval) ──────────────────────────────────
+
+function setPassphraseMessage(text, tone = 'muted'){
+  if (!passphraseMessageEl) return;
+  passphraseMessageEl.textContent = text;
+  passphraseMessageEl.classList.remove('message--success','message--error');
+  if (tone === 'success') passphraseMessageEl.classList.add('message--success');
+  else if (tone === 'error') passphraseMessageEl.classList.add('message--error');
+}
+
+// ── Role-based UI ──────────────────────────────────────────────────────────
+
+function showOnboarding() {
+  if (sgOnboardingEl) sgOnboardingEl.hidden = false;
+  if (sgChildViewEl) sgChildViewEl.hidden = true;
+  if (tabNavEl) tabNavEl.style.display = 'none';
+  document.querySelectorAll('main > section, main > .card').forEach(el => { el.hidden = true; });
+}
+
+function showChildUI() {
+  if (sgOnboardingEl) sgOnboardingEl.hidden = true;
+  if (sgChildViewEl) sgChildViewEl.hidden = false;
+  if (tabNavEl) tabNavEl.style.display = 'none';
+  document.querySelectorAll('main > section, main > .card').forEach(el => { el.hidden = true; });
+}
+
+function showParentUI() {
+  if (sgOnboardingEl) sgOnboardingEl.hidden = true;
+  if (sgChildViewEl) sgChildViewEl.hidden = true;
+  if (tabNavEl) tabNavEl.style.display = '';
+  // don't touch section visibility — existing tab logic handles it
+}
+
+// Check role on popup open
+chrome.storage.local.get({ deviceRole: null }, ({ deviceRole }) => {
+  if (deviceRole === 'child') {
+    showChildUI();
+  } else if (deviceRole === 'parent') {
+    showParentUI();
+  } else {
+    showOnboarding();
+  }
+});
+
+function renderTempPins() {
+  chrome.runtime.sendMessage({ type: 'sg-get-temp-pins' }, (resp) => {
+    if (chrome.runtime.lastError || !resp) return;
+    const pins = resp.pins || [];
+    if (!tempPinItemsEl || !tempPinListEl) return;
+    tempPinItemsEl.innerHTML = '';
+    if (pins.length === 0) { tempPinListEl.style.display = 'none'; return; }
+    tempPinListEl.style.display = '';
+    pins.forEach(p => {
+      const li = document.createElement('li');
+      li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;background:var(--surface-3,rgba(255,255,255,0.04));border-radius:var(--r-sm);border:1px solid rgba(255,255,255,0.07);';
+      const totalMins = Math.max(0, Math.round((p.expiresAt - Date.now()) / 60000));
+      const timeLabel = totalMins >= 60 ? `${Math.round(totalMins/60)}h ${totalMins%60}m` : `${totalMins}m`;
+      const left = document.createElement('div');
+      left.innerHTML = `<span style="font-family:monospace;font-weight:700;letter-spacing:0.15em;font-size:1.05em;color:var(--brand);">${p.pin}</span><span style="display:block;font-size:11px;color:var(--text-3);margin-top:2px;">Expires in ${timeLabel}</span>`;
+      const revoke = document.createElement('button');
+      revoke.className = 'btn btn--ghost btn--xs';
+      revoke.textContent = 'Revoke';
+      revoke.style.flexShrink = '0';
+      revoke.addEventListener('click', () => {
+        chrome.runtime.sendMessage({ type: 'sg-revoke-temp-pin', pin: p.pin }, () => renderTempPins());
+      });
+      li.appendChild(left);
+      li.appendChild(revoke);
+      tempPinItemsEl.appendChild(li);
     });
   });
 }
 
-if (pairRelayTestBtn){
-  pairRelayTestBtn.addEventListener('click', ()=>{
-    setPairRelayMessage('Testing relay…', 'muted');
-    chrome.runtime.sendMessage({ type: 'sg-pairing-test-relay' }, (resp)=>{
-      if (!resp || !resp.ok){
-        const msg = resp && resp.error ? String(resp.error) : 'Relay test failed.';
-        setPairRelayMessage(msg, 'error');
-        return;
-      }
-      setPairRelayMessage('Relay is reachable.', 'success');
-    });
-  });
+function applyParentDeviceUI(isParent) {
+  if (pendingApprovalsCardEl) pendingApprovalsCardEl.style.display = isParent ? '' : 'none';
+  if (inviteChildCardEl) inviteChildCardEl.hidden = !isParent;
+  if (tempPinCardEl) tempPinCardEl.hidden = !isParent;
+  if (isParent) renderTempPins();
 }
 
-if (pairCreateBtn){
-  pairCreateBtn.addEventListener('click', async ()=>{
-    if (!(await ensureAllowlistPin('generate pairing code'))) return;
-    setPairRelayMessage('Generating pairing code…', 'muted');
-    chrome.runtime.sendMessage({ type: 'sg-pairing-create-invite' }, (resp)=>{
-      if (!resp || !resp.ok){
-        setPairRelayMessage(resp && resp.error ? `Pairing failed: ${resp.error}` : 'Pairing failed. Check relay URL.', 'error');
-        return;
-      }
-      pairingState.pending = resp.pending || null;
-      if (pairCodeOutEl) pairCodeOutEl.value = resp.code || '';
-      renderPairingPending();
-      setPairRelayMessage('Share the pairing code with the parent device, then check for a safety code.', 'success');
-    });
-  });
-}
+// Load saved passphrase + parent device role on open
+chrome.storage.local.get({ familyPassphrase: '', isParentDevice: false, deviceRole: null }, (cfg)=>{
+  if (cfg.familyPassphrase && familyPassphraseEl){
+    familyPassphraseEl.placeholder = '●●●●●●●● (saved)';
+  }
+  if (isParentDeviceToggleEl) isParentDeviceToggleEl.checked = Boolean(cfg.isParentDevice);
+  applyParentDeviceUI(Boolean(cfg.isParentDevice));
+  if (cfg.isParentDevice){
+    chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
+  }
+  if (!cfg.deviceRole) { /* onboarding already shown above */ }
+  else if (cfg.deviceRole === 'parent') chrome.storage.local.set({ isParentDevice: true });
+});
 
-if (pairJoinBtn){
-  pairJoinBtn.addEventListener('click', async ()=>{
-    if (!(await ensureAllowlistPin('join pairing'))) return;
-    const code = pairCodeInEl ? pairCodeInEl.value : '';
-    setPairRelayMessage('Joining pairing…', 'muted');
-    chrome.runtime.sendMessage({ type: 'sg-pairing-join', code }, (resp)=>{
-      if (!resp || !resp.ok){
-        setPairRelayMessage(resp && resp.error ? `Join failed: ${resp.error}` : 'Join failed. Check the code and relay.', 'error');
-        return;
-      }
-      pairingState.pending = resp.pending || null;
-      renderPairingPending();
-      if (pairSafetyOutEl && pairingState.pending && pairingState.pending.safetyCode){
-        setPairRelayMessage('Compare safety codes on both devices, then confirm pairing.', 'success');
-      } else {
-        setPairRelayMessage('Joined. If safety code is missing, press Refresh.', 'muted');
+if (isParentDeviceToggleEl){
+  isParentDeviceToggleEl.addEventListener('change', ()=>{
+    const isParent = isParentDeviceToggleEl.checked;
+    chrome.storage.local.set({ isParentDevice: isParent }, ()=>{
+      applyParentDeviceUI(isParent);
+      if (isParent){
+        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
       }
     });
   });
 }
 
-if (pairRefreshBtn){
-  pairRefreshBtn.addEventListener('click', ()=>{
-    chrome.runtime.sendMessage({ type: 'sg-pairing-refresh' }, (resp)=>{
-      if (!resp || !resp.ok){
-        setPairRelayMessage('Refresh failed. Check relay.', 'error');
-        return;
-      }
-      pairingState.pending = resp.pending || pairingState.pending;
-      renderPairingPending();
-      if (pairingState.pending && pairingState.pending.safetyCode){
-        setPairRelayMessage('Safety code ready. Confirm on both devices.', 'success');
-      } else {
-        setPairRelayMessage('Waiting for the other device to join…', 'muted');
-      }
+// Onboarding handlers
+const onboardParentBtnEl = document.getElementById('onboardParentBtn');
+const onboardChildBtnEl = document.getElementById('onboardChildBtn');
+const onboardBackBtnEl = document.getElementById('onboardBackBtn');
+const redeemInviteBtnEl = document.getElementById('redeemInviteBtn');
+const inviteCodeInputEl = document.getElementById('inviteCodeInput');
+const inviteRedeemMsgEl = document.getElementById('inviteRedeemMsg');
+
+if (onboardParentBtnEl) {
+  onboardParentBtnEl.addEventListener('click', () => {
+    chrome.storage.local.set({ deviceRole: 'parent', isParentDevice: true }, () => {
+      showParentUI();
+      applyParentDeviceUI(true);
+      if (isParentDeviceToggleEl) isParentDeviceToggleEl.checked = true;
     });
   });
 }
 
-if (pairConfirmBtn){
-  pairConfirmBtn.addEventListener('click', async ()=>{
-    if (!(await ensureAllowlistPin('confirm pairing'))) return;
-    const safety = pairingState.pending && pairingState.pending.safetyCode ? pairingState.pending.safetyCode : '';
-    if (!safety){
-      setPairRelayMessage('Safety code not ready yet.', 'error');
+if (onboardChildBtnEl) {
+  onboardChildBtnEl.addEventListener('click', () => {
+    document.getElementById('sgOnboardingHome').style.display = 'none';
+    const childPanel = document.getElementById('sgOnboardingChild');
+    childPanel.removeAttribute('hidden');
+    childPanel.style.display = 'flex';
+    childPanel.style.flexDirection = 'column';
+  });
+}
+
+if (onboardBackBtnEl) {
+  onboardBackBtnEl.addEventListener('click', () => {
+    document.getElementById('sgOnboardingHome').style.display = 'flex';
+    const childPanel = document.getElementById('sgOnboardingChild');
+    childPanel.setAttribute('hidden', '');
+    childPanel.style.display = 'none';
+  });
+}
+
+if (redeemInviteBtnEl) {
+  redeemInviteBtnEl.addEventListener('click', () => {
+    const code = inviteCodeInputEl ? inviteCodeInputEl.value.trim().toUpperCase() : '';
+    if (!code || code.length < 6) {
+      if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = 'Enter a valid invite code.'; inviteRedeemMsgEl.className = 'message message--error'; }
       return;
     }
-    const ok = window.confirm(`Confirm pairing only if BOTH devices show the same safety code:\n\n${safety}`);
-    if (!ok) return;
-    chrome.runtime.sendMessage({ type: 'sg-pairing-confirm' }, (resp)=>{
-      if (!resp || !resp.ok){
-        setPairRelayMessage('Confirm failed. Try again.', 'error');
-        return;
+    if (redeemInviteBtnEl) { redeemInviteBtnEl.disabled = true; redeemInviteBtnEl.textContent = 'Joining\u2026'; }
+    chrome.runtime.sendMessage({ type: 'sg-redeem-invite', code }, (resp) => {
+      if (resp && resp.ok) {
+        if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = '\u2713 Joined! Your device is now protected.'; inviteRedeemMsgEl.className = 'message message--success'; }
+        setTimeout(() => showChildUI(), 1200);
+      } else {
+        if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = (resp && resp.error) || 'Failed. Check the code and try again.'; inviteRedeemMsgEl.className = 'message message--error'; }
+        if (redeemInviteBtnEl) { redeemInviteBtnEl.disabled = false; redeemInviteBtnEl.textContent = 'Join family'; }
       }
-      setPairRelayMessage('Paired. Remote access requests can now be approved from this device.', 'success');
-      refreshPairingState();
     });
   });
 }
 
-if (pairPollNowBtn){
-  pairPollNowBtn.addEventListener('click', ()=>{
-    chrome.runtime.sendMessage({ type: 'sg-pairing-poll' }, ()=>{
-      refreshPairingState();
-      chrome.storage.local.get({ accessRequests: [], temporaryAllowlist: [] }, (cfg)=>{
-        accessRequests = Array.isArray(cfg.accessRequests) ? cfg.accessRequests : [];
-        temporaryAllowlist = Array.isArray(cfg.temporaryAllowlist) ? cfg.temporaryAllowlist : [];
-        renderAccessRequests();
-        renderTemporaryAllows();
-        updateParentSummaries();
-      });
+// Generate invite code (parent)
+const generateInviteBtnEl = document.getElementById('generateInviteBtn');
+const inviteCodeOutEl = document.getElementById('inviteCodeOut');
+const inviteCodeValEl = document.getElementById('inviteCodeVal');
+const inviteCodeCopyBtnEl = document.getElementById('inviteCodeCopyBtn');
+const inviteCodeMsgEl = document.getElementById('inviteCodeMsg');
+
+if (generateInviteBtnEl) {
+  generateInviteBtnEl.addEventListener('click', () => {
+    generateInviteBtnEl.disabled = true;
+    generateInviteBtnEl.textContent = 'Generating\u2026';
+    chrome.runtime.sendMessage({ type: 'sg-generate-invite' }, (resp) => {
+      generateInviteBtnEl.disabled = false;
+      generateInviteBtnEl.textContent = 'Generate invite code';
+      if (resp && resp.ok) {
+        if (inviteCodeValEl) inviteCodeValEl.textContent = resp.code;
+        if (inviteCodeOutEl) inviteCodeOutEl.hidden = false;
+        if (inviteCodeMsgEl) { inviteCodeMsgEl.textContent = 'Code valid for 24 hours.'; inviteCodeMsgEl.className = 'message message--success'; }
+      } else {
+        if (inviteCodeMsgEl) { inviteCodeMsgEl.textContent = (resp && resp.error) || 'Failed to generate code.'; inviteCodeMsgEl.className = 'message message--error'; }
+      }
     });
   });
 }
+
+if (inviteCodeCopyBtnEl) {
+  inviteCodeCopyBtnEl.addEventListener('click', () => {
+    const val = inviteCodeValEl ? inviteCodeValEl.textContent : '';
+    if (val) {
+      navigator.clipboard.writeText(val).catch(() => {});
+      inviteCodeCopyBtnEl.textContent = 'Copied!';
+      setTimeout(() => { inviteCodeCopyBtnEl.textContent = 'Copy'; }, 2000);
+    }
+  });
+}
+
+if (tempPinExpiryEl) {
+  tempPinExpiryEl.addEventListener('change', () => {
+    const isCustom = tempPinExpiryEl.value === 'custom';
+    if (tempPinCustomWrapEl) tempPinCustomWrapEl.style.display = isCustom ? 'flex' : 'none';
+    if (isCustom && tempPinCustomValEl) tempPinCustomValEl.focus();
+  });
+}
+
+if (genTempPinBtn) {
+  genTempPinBtn.addEventListener('click', () => {
+    let minutes = 120;
+    if (tempPinExpiryEl && tempPinExpiryEl.value === 'custom') {
+      const val = parseInt(tempPinCustomValEl ? tempPinCustomValEl.value : '2', 10) || 2;
+      const unit = parseInt(tempPinCustomUnitEl ? tempPinCustomUnitEl.value : '60', 10) || 60;
+      minutes = Math.max(1, Math.min(10080, val * unit));
+    } else {
+      minutes = parseInt(tempPinExpiryEl ? tempPinExpiryEl.value : '120', 10) || 120;
+    }
+    genTempPinBtn.disabled = true;
+    genTempPinBtn.textContent = 'Generating…';
+    chrome.runtime.sendMessage({ type: 'sg-gen-temp-pin', minutes }, (resp) => {
+      genTempPinBtn.disabled = false;
+      genTempPinBtn.textContent = 'Generate PIN';
+      if (resp && resp.pin) {
+        if (tempPinValEl) tempPinValEl.textContent = resp.pin;
+        if (tempPinOutEl) tempPinOutEl.hidden = false;
+        if (tempPinSendMsgEl) tempPinSendMsgEl.textContent = '';
+        const isCustom = tempPinExpiryEl && tempPinExpiryEl.value === 'custom';
+        const label = isCustom
+          ? `${minutes} minute${minutes !== 1 ? 's' : ''}`
+          : (tempPinExpiryEl ? tempPinExpiryEl.options[tempPinExpiryEl.selectedIndex].text : '2 hours');
+        if (tempPinMsgEl) { tempPinMsgEl.textContent = `Valid for ${label}, one use only.`; tempPinMsgEl.className = 'message message--success'; }
+        renderTempPins();
+      } else {
+        if (tempPinMsgEl) { tempPinMsgEl.textContent = 'Failed to generate PIN.'; tempPinMsgEl.className = 'message message--error'; }
+      }
+    });
+  });
+}
+
+if (tempPinCopyBtn) {
+  tempPinCopyBtn.addEventListener('click', () => {
+    const val = tempPinValEl ? tempPinValEl.textContent : '';
+    if (val) {
+      navigator.clipboard.writeText(val).catch(() => {});
+      tempPinCopyBtn.textContent = 'Copied!';
+      setTimeout(() => { tempPinCopyBtn.textContent = 'Copy'; }, 2000);
+    }
+  });
+}
+
+if (tempPinSendBtn) {
+  tempPinSendBtn.addEventListener('click', () => {
+    const pin = tempPinValEl ? tempPinValEl.textContent : '';
+    if (!pin) return;
+    tempPinSendBtn.disabled = true;
+    tempPinSendBtn.textContent = 'Sending…';
+    chrome.runtime.sendMessage({ type: 'sg-send-pin-to-child', pin }, (resp) => {
+      tempPinSendBtn.disabled = false;
+      tempPinSendBtn.textContent = 'Send to child';
+      if (resp && resp.ok) {
+        if (tempPinSendMsgEl) { tempPinSendMsgEl.textContent = '✓ PIN sent — child will see it on the blocked page.'; tempPinSendMsgEl.className = 'message message--success'; }
+      } else {
+        if (tempPinSendMsgEl) { tempPinSendMsgEl.textContent = (resp && resp.error) || 'Could not send. Check passphrase is set.'; tempPinSendMsgEl.className = 'message message--error'; }
+      }
+    });
+  });
+}
+
+if (savePassphraseBtn){
+  savePassphraseBtn.addEventListener('click', async ()=>{
+    const val = familyPassphraseEl ? familyPassphraseEl.value.trim() : '';
+    if (!val){ setPassphraseMessage('Enter a passphrase first.', 'error'); return; }
+    if (val.length < 6){ setPassphraseMessage('Passphrase must be at least 6 characters.', 'error'); return; }
+    chrome.storage.local.set({ familyPassphrase: val }, ()=>{
+      if (familyPassphraseEl){ familyPassphraseEl.value = ''; familyPassphraseEl.placeholder = '●●●●●●●● (saved)'; }
+      setPassphraseMessage('Passphrase saved. Set the same passphrase on the child device.', 'success');
+    });
+  });
+}
+
+if (showPassphraseBtn && familyPassphraseEl){
+  showPassphraseBtn.addEventListener('click', ()=>{
+    const isHidden = familyPassphraseEl.type === 'password';
+    familyPassphraseEl.type = isHidden ? 'text' : 'password';
+    showPassphraseBtn.textContent = isHidden ? 'Hide' : 'Show';
+  });
+}
+
 
 if (kidReportBtn){
   kidReportBtn.addEventListener('click', ()=>{
@@ -3688,12 +3800,6 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     renderTemporaryAllows();
     updateParentSummaries();
   }
-  if (area === 'local' && (changes.pairingRelayUrl || changes.pairingPending || changes.pairedPeers)){
-    refreshPairingState().catch(()=>{});
-  }
-  if (area === 'managed' && (changes.pairingRelayUrl || changes.pairingRelayLocked)){
-    refreshPairingState().catch(()=>{});
-  }
   if (area === 'local' && changes.pendingTip){
     pendingTip = changes.pendingTip.newValue || null;
     renderTipCard();
@@ -3738,6 +3844,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
     setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
   }
+  if (area === 'local' && changes.pendingApprovals) {
+    renderPendingApprovals(changes.pendingApprovals.newValue || []);
+  }
 });
 
 if (tourSkip){
@@ -3758,6 +3867,7 @@ if (tourReplay){
 if (profileApplyBtn){
   profileApplyBtn.addEventListener('click', ()=>{
     applySelectedProfile();
+    sgTrack('profile_applied', { profile: selectedProfileId || '' });
   });
 }
 
@@ -4046,6 +4156,7 @@ async function applyWizardSetup(){
   setWizardVisible(false);
   if (wizardStatusEl) wizardStatusEl.textContent = 'Family setup applied.';
   chrome.storage.sync.set({ familyWizardComplete: true });
+  sgTrack('wizard_completed', { profile: profile.id || '' });
   updateParentSummaries();
 }
 
@@ -4063,6 +4174,7 @@ if (digestDownloadBtn){
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       setDigestMessage('Digest downloaded.', 'success');
+      sgTrack('digest_downloaded');
       if (parentDigestStatusEl){
         parentDigestStatusEl.textContent = 'Downloaded just now';
       }

@@ -6,277 +6,403 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <header class="header">
-    <div class="header__logo"><img src="../assets/icons/icon48.png" alt="Safeguard logo"></div>
+
+<!-- ═══════════════════════════════════════ HEADER ═══ -->
+<header class="header">
+  <div class="header__brand">
+    <div class="header__logo">
+      <img src="../assets/icons/icon48.png" alt="Safeguard logo">
+    </div>
     <div>
       <h1 class="header__title">Safeguard</h1>
-      <p class="header__subtitle">On-device protection for safer browsing</p>
-      <p class="header__brand">Product of <a href="https://cyberheroez.co.uk/" target="_blank" rel="noopener noreferrer">CyberHeroez CIC</a></p>
+      <p class="header__by">by <a href="https://cyberheroez.co.uk/" target="_blank" rel="noopener noreferrer">CyberHeroez CIC</a></p>
     </div>
-    <div class="header__actions">
-      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme">
-        <span id="themeToggleIcon" aria-hidden="true">🌙</span>
-      </button>
-      <span id="statusBadge" class="status-badge">Active</span>
-    </div>
+  </div>
+  <div class="header__controls">
+    <button id="themeToggle" class="icon-btn" type="button" aria-label="Toggle theme">
+      <span id="themeToggleIcon" aria-hidden="true">🌙</span>
+    </button>
+    <span id="statusBadge" class="status-badge">Active</span>
+  </div>
 </header>
 
-<div class="parent-toggle">
-  <button id="parentModeBtn" class="button button--secondary parent-toggle__button" type="button">Parent mode</button>
-  <button id="classroomModeBtn" class="button button--secondary parent-toggle__button" type="button">Classroom mode</button>
-</div>
-<button id="parentBackBtn" class="button button--secondary parent-back" type="button" hidden>← Back</button>
+<!-- ═══════════════════════════════════════ TAB NAV ═══ -->
+<nav class="tab-nav" role="tablist">
+  <button id="tabHomeBtn" class="tab-nav__item tab-nav__item--active" type="button" role="tab">
+    <svg class="tab-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+    </svg>
+    <span>Protection</span>
+  </button>
+  <button id="parentModeBtn" class="tab-nav__item" type="button" role="tab">
+    <svg class="tab-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+    </svg>
+    <span>Parent</span>
+  </button>
+  <button id="classroomModeBtn" class="tab-nav__item" type="button" role="tab">
+    <svg class="tab-nav__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-2.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443m-7.007 11.55A5.981 5.981 0 006.75 15.75v-1.5"/>
+    </svg>
+    <span>Classroom</span>
+  </button>
+</nav>
 
+<!-- Back button (shown when inside a sub-section) -->
+<button id="parentBackBtn" class="back-btn" type="button" hidden>
+  <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true">
+    <path fill-rule="evenodd" d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z" clip-rule="evenodd"/>
+  </svg>
+  Back
+</button>
+
+<!-- ═══════════════════════════════════════ MAIN ═══ -->
 <main>
-    <section class="card" id="cardParent" hidden>
-      <h2 class="card__title">Parent mode</h2>
-      <p class="card__subtitle">Quick access to safeguarding controls for guardians and DSLs.</p>
-      <div class="parent-panel">
-        <div class="parent-panel__row" id="parentFamilyRow">
-          <div>
-            <h3 class="parent-panel__title">Family setup</h3>
-            <p id="parentFamilyStatus" class="parent-panel__status">Guided presets</p>
-          </div>
-          <button id="parentFamilyBtn" class="button button--secondary" type="button">Run wizard</button>
-        </div>
-        <div class="parent-panel__row" id="parentProfilesRow">
-          <div>
-            <h3 class="parent-panel__title">Profiles</h3>
-            <p id="parentProfileStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentProfilesBtn" class="button button--secondary" type="button">Manage</button>
-        </div>
-        <div class="parent-panel__row" id="parentOverrideRow">
-          <div>
-            <h3 class="parent-panel__title">Override log</h3>
-            <p id="parentOverrideStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentOverrideBtn" class="button button--secondary" type="button">Review</button>
-        </div>
-        <div class="parent-panel__row" id="parentFocusRow">
-          <div>
-            <h3 class="parent-panel__title">Focus Mode</h3>
-            <p id="parentFocusStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentFocusBtn" class="button button--secondary" type="button">Manage</button>
-        </div>
-        <div class="parent-panel__row" id="parentConversationRow">
-          <div>
-            <h3 class="parent-panel__title">Conversation starters</h3>
-            <p id="parentConversationStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentConversationBtn" class="button button--secondary" type="button">Open</button>
-        </div>
-        <div class="parent-panel__row" id="parentReportRow">
-          <div>
-            <h3 class="parent-panel__title">Child reports</h3>
-            <p id="parentReportStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentReportBtn" class="button button--secondary" type="button">Open</button>
-        </div>
-        <div class="parent-panel__row" id="parentAccessRow">
-          <div>
-            <h3 class="parent-panel__title">Access requests</h3>
-            <p id="parentAccessStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentAccessBtn" class="button button--secondary" type="button">Review</button>
-        </div>
-        <div class="parent-panel__row" id="parentPairingRow" hidden>
-          <div>
-            <h3 class="parent-panel__title">Device pairing</h3>
-            <p id="parentPairingStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentPairingBtn" class="button button--secondary" type="button">Manage</button>
-        </div>
-        <div class="parent-panel__row" id="parentTipRow">
-          <div>
-            <h3 class="parent-panel__title">Weekly safety tip</h3>
-            <p id="parentTipStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentTipBtn" class="button button--secondary" type="button">View</button>
-        </div>
-        <div class="parent-panel__row" id="parentAllowlistRow">
-          <div>
-            <h3 class="parent-panel__title">Allowlist</h3>
-            <p id="parentAllowlistStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentAllowlistBtn" class="button button--secondary" type="button">Manage</button>
-        </div>
-        <div class="parent-panel__row" id="parentBlocklistRow">
-          <div>
-            <h3 class="parent-panel__title">Custom blocklist</h3>
-            <p id="parentBlocklistStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentBlocklistBtn" class="button button--secondary" type="button">Manage</button>
-        </div>
-        <div class="parent-panel__row" id="parentAlertsRow">
-          <div>
-            <h3 class="parent-panel__title">Override alerts</h3>
-            <p id="parentAlertsStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentAlertsBtn" class="button button--secondary" type="button">Configure</button>
-        </div>
-        <div class="parent-panel__row" id="parentTamperRow">
-          <div>
-            <h3 class="parent-panel__title">Tamper alerts</h3>
-            <p id="parentTamperStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentTamperBtn" class="button button--secondary" type="button">Configure</button>
-        </div>
-        <div class="parent-panel__row" id="parentDigestRow">
-          <div>
-            <h3 class="parent-panel__title">Safeguarding digest</h3>
-            <p id="parentDigestStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentDigestBtn" class="button button--secondary" type="button">Download</button>
-        </div>
-        <div class="parent-panel__row" id="parentApproverRow">
-          <div>
-            <h3 class="parent-panel__title">Approver prompt</h3>
-            <p id="parentApproverStatus" class="parent-panel__status">Loading…</p>
-          </div>
-          <button id="parentApproverBtn" class="button button--secondary" type="button">Open</button>
-        </div>
-      </div>
-      <div class="parent-section" id="parentProfilesSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Profiles</h3>
-            <p class="parent-section__status">Apply age-based presets. This overwrites current allowlists and blocklists.</p>
-          </div>
-        </div>
-        <div id="profileList" class="profile-list"></div>
-        <small id="profileMessage" class="message">Select a profile to preview recommended settings.</small>
 
-        <div id="profileDetails" class="profile-details" hidden>
-          <p id="profileDescription" class="profile-details__desc"></p>
-          <div id="profileSummary" class="profile-summary"></div>
-        </div>
+<!-- ══════════════════════ ONBOARDING ══ -->
+<div id="sgOnboarding" hidden>
+  <div class="sg-view">
+    <div class="sg-view__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+      </svg>
+    </div>
+    <h2 class="sg-view__title">Welcome to Safeguard</h2>
+    <p class="sg-view__body">Are you a parent setting up protection, or a child with an invite code?</p>
+    <div id="sgOnboardingHome" class="sg-view__actions">
+      <button id="onboardParentBtn" class="btn btn--primary" type="button">Set up as Parent</button>
+      <button id="onboardChildBtn" class="btn btn--ghost" type="button">I have an invite code</button>
+    </div>
+    <div id="sgOnboardingChild" class="sg-view__code-form" hidden>
+      <p class="sg-view__code-label">Enter your invite code</p>
+      <input id="inviteCodeInput" type="text" class="code-input" placeholder="e.g. A3F9B2K7" maxlength="8" autocomplete="off">
+      <button id="redeemInviteBtn" class="btn btn--primary" type="button">Join family</button>
+      <button id="onboardBackBtn" class="btn btn--ghost btn--sm" type="button">Back</button>
+      <small id="inviteRedeemMsg" class="message"></small>
+    </div>
+  </div>
+</div>
 
-        <div class="actions actions--wrap">
-          <button id="profileApply" class="button button--primary" type="button" disabled>Apply profile</button>
-          <button id="profileReset" class="button button--link actions__end" type="button">Clear selection</button>
+<!-- ══════════════════════ CHILD VIEW ══ -->
+<div id="sgChildView" hidden>
+  <div class="sg-view">
+    <div class="sg-view__icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+      </svg>
+    </div>
+    <h2 class="sg-view__title">Your device is protected</h2>
+    <p class="sg-view__body">Managed by your parent. Adult content, phishing, and harmful sites are blocked.</p>
+    <p class="sg-view__hint">If a site is blocked and you need access, tap "Request parent approval" on the blocked page.</p>
+  </div>
+</div>
+
+  <!-- ─────────────────────── PARENT / CLASSROOM CARD ─── -->
+  <section class="card" id="cardParent" hidden>
+    <h2 class="card__title">Parent mode</h2>
+    <p class="card__subtitle">Safeguarding controls for guardians and DSLs.</p>
+
+    <div class="parent-panel">
+
+      <!-- SETUP group -->
+      <p class="panel-group-label">Setup</p>
+
+      <div class="panel-row" id="parentFamilyRow">
+        <div class="panel-row__icon panel-row__icon--indigo">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/></svg>
         </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Family setup</span>
+          <span id="parentFamilyStatus" class="panel-row__meta">Guided presets</span>
+        </div>
+        <button id="parentFamilyBtn" class="btn btn--ghost btn--xs" type="button">Run wizard</button>
       </div>
-      <div class="parent-section" id="parentOverrides" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Override log</h3>
-            <p class="parent-section__status">Reasons for manual overrides stay on this device for safeguarding reviews.</p>
-          </div>
+
+      <div class="panel-row" id="parentProfilesRow">
+        <div class="panel-row__icon panel-row__icon--green">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
         </div>
-        <ul id="overrideList" class="log-list"></ul>
-        <small id="overrideMessage" class="message">No overrides recorded yet.</small>
-        <div class="actions actions--wrap">
-          <button id="overrideExport" class="button button--secondary" type="button">Download log</button>
-          <button id="overrideClear" class="button button--link actions__end" type="button">Clear log</button>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Profiles</span>
+          <span id="parentProfileStatus" class="panel-row__meta">Loading…</span>
         </div>
+        <button id="parentProfilesBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
       </div>
-      <div class="parent-section" id="parentAllowlistSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Allowlist</h3>
-            <p class="parent-section__status">Bypass filtering for trusted domains (e.g. intranet portals).</p>
-          </div>
+
+      <!-- MONITORING group -->
+      <p class="panel-group-label">Monitoring</p>
+
+      <div class="panel-row" id="parentOverrideRow">
+        <div class="panel-row__icon panel-row__icon--amber">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/></svg>
         </div>
-        <div class="field">
-          <input id="allowHost" type="text" placeholder="example.com">
-          <button id="addAllow" class="button button--primary" type="button">Add</button>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Override log</span>
+          <span id="parentOverrideStatus" class="panel-row__meta">Loading…</span>
         </div>
-        <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
-        <ul id="allowList" class="pill-list"></ul>
-        <div class="actions actions--wrap">
-          <button id="allowUpload" class="button button--secondary" type="button">Upload list</button>
-          <button id="allowExport" class="button button--secondary" type="button">Download</button>
-          <button id="clearAllow" class="button button--link actions__end" type="button">Clear allowlist</button>
-        </div>
-        <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
+        <button id="parentOverrideBtn" class="btn btn--ghost btn--xs" type="button">Review</button>
       </div>
-      <div class="parent-section" id="parentBlocklistSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Custom blocklist</h3>
-            <p class="parent-section__status">Import policy domains that should always be blocked.</p>
-          </div>
+
+      <div class="panel-row" id="parentReportRow">
+        <div class="panel-row__icon panel-row__icon--red">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 7l2.55 2.4A1 1 0 0116 11H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"/></svg>
         </div>
-        <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
-        <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
-        <div class="actions actions--wrap">
-          <button id="importBlocklist" class="button button--primary" type="button">Import / Replace</button>
-          <button id="blockUpload" class="button button--secondary" type="button">Upload file</button>
-          <button id="exportBlocklist" class="button button--secondary" type="button">Download</button>
-          <button id="clearBlocklist" class="button button--link actions__end" type="button">Clear</button>
-          <span id="blockCount" class="badge">0 domains</span>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Child reports</span>
+          <span id="parentReportStatus" class="panel-row__meta">Loading…</span>
         </div>
-        <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+        <button id="parentReportBtn" class="btn btn--ghost btn--xs" type="button">Open</button>
       </div>
-      <div class="parent-section" id="parentAlertsSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Override alerts</h3>
-            <p class="parent-section__status">Send webhooks when PIN overrides or tamper events occur.</p>
-          </div>
+
+      <div class="panel-row" id="parentAccessRow">
+        <div class="panel-row__icon panel-row__icon--orange">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
         </div>
-        <div class="alert-config">
-          <label class="toggle">
-            <input id="alertEnabled" type="checkbox">
-            <span>
-              <span class="toggle__label">Send override alerts</span>
-              <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.) when a PIN override is approved.</span>
-            </span>
-          </label>
-          <div id="alertForm" class="alert-form">
-            <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
-            <button id="alertSave" class="button button--secondary" type="button">Save webhook</button>
-          </div>
-          <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
-          <label class="toggle">
-            <input id="tamperAlertEnabled" type="checkbox">
-            <span>
-              <span class="toggle__label">Tamper alerts</span>
-              <span class="toggle__hint">Send a webhook alert if Safeguard goes offline or is disabled for a while.</span>
-            </span>
-          </label>
-          <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Access requests</span>
+          <span id="parentAccessStatus" class="panel-row__meta">Loading…</span>
         </div>
-        <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
+        <button id="parentAccessBtn" class="btn btn--ghost btn--xs" type="button">Review</button>
       </div>
-      <div class="parent-section" id="parentDigestSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Safeguarding digest</h3>
-            <p class="parent-section__status">Generate a CSV summary for safeguarding meetings or audit trails.</p>
-          </div>
+
+      <!-- CONTENT group -->
+      <p class="panel-group-label">Content</p>
+
+      <div class="panel-row" id="parentAllowlistRow">
+        <div class="panel-row__icon panel-row__icon--green">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
         </div>
-        <div class="actions actions--wrap">
-          <button id="digestDownload" class="button button--primary" type="button">Download weekly digest</button>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Allowlist</span>
+          <span id="parentAllowlistStatus" class="panel-row__meta">Loading…</span>
         </div>
-        <small id="digestMessage" class="message">Digest highlights settings, allow/block counts and recent overrides.</small>
+        <button id="parentAllowlistBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
       </div>
-      <div class="parent-section" id="parentFocusSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Focus Mode</h3>
-            <p class="parent-section__status">Kid Homework Mode — block social/gaming/streaming and allow only educational sites.</p>
-          </div>
+
+      <div class="panel-row" id="parentBlocklistRow">
+        <div class="panel-row__icon panel-row__icon--red">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M13.477 14.89A6 6 0 015.11 6.524l8.367 8.368zm1.414-1.414L6.524 5.11a6 6 0 018.367 8.367zM18 10a8 8 0 11-16 0 8 8 0 0116 0z" clip-rule="evenodd"/></svg>
         </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Custom blocklist</span>
+          <span id="parentBlocklistStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentBlocklistBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
+      </div>
+
+      <div class="panel-row" id="parentFocusRow">
+        <div class="panel-row__icon panel-row__icon--purple">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Focus Mode</span>
+          <span id="parentFocusStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentFocusBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
+      </div>
+
+      <!-- ALERTS group -->
+      <p class="panel-group-label">Alerts &amp; Reporting</p>
+
+      <div class="panel-row" id="parentAlertsRow">
+        <div class="panel-row__icon panel-row__icon--amber">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Override alerts</span>
+          <span id="parentAlertsStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentAlertsBtn" class="btn btn--ghost btn--xs" type="button">Configure</button>
+      </div>
+
+      <div class="panel-row" id="parentTamperRow">
+        <div class="panel-row__icon panel-row__icon--red">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Tamper alerts</span>
+          <span id="parentTamperStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentTamperBtn" class="btn btn--ghost btn--xs" type="button">Configure</button>
+      </div>
+
+      <div class="panel-row" id="parentDigestRow">
+        <div class="panel-row__icon panel-row__icon--blue">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Safeguarding digest</span>
+          <span id="parentDigestStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentDigestBtn" class="btn btn--ghost btn--xs" type="button">Download</button>
+      </div>
+
+      <!-- TOOLS group -->
+      <p class="panel-group-label">Tools</p>
+
+      <div class="panel-row" id="parentConversationRow">
+        <div class="panel-row__icon panel-row__icon--teal">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Conversation starters</span>
+          <span id="parentConversationStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentConversationBtn" class="btn btn--ghost btn--xs" type="button">Open</button>
+      </div>
+
+      <div class="panel-row" id="parentTipRow">
+        <div class="panel-row__icon panel-row__icon--green">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Weekly safety tip</span>
+          <span id="parentTipStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentTipBtn" class="btn btn--ghost btn--xs" type="button">View</button>
+      </div>
+
+      <div class="panel-row" id="parentApproverRow">
+        <div class="panel-row__icon panel-row__icon--purple">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Approver prompt</span>
+          <span id="parentApproverStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentApproverBtn" class="btn btn--ghost btn--xs" type="button">Open</button>
+      </div>
+
+      <div class="panel-row" id="parentPairingRow">
+        <div class="panel-row__icon panel-row__icon--blue">
+          <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"/></svg>
+        </div>
+        <div class="panel-row__body">
+          <span class="panel-row__title">Device pairing</span>
+          <span id="parentPairingStatus" class="panel-row__meta">Loading…</span>
+        </div>
+        <button id="parentPairingBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
+      </div>
+    </div>
+
+    <!-- ── Sub-sections (shown when a row button is clicked) ── -->
+
+    <div class="subsection" id="parentProfilesSection" hidden>
+      <h3 class="subsection__title">Profiles</h3>
+      <p class="subsection__desc">Apply age-based presets. This overwrites current allowlists and blocklists.</p>
+      <div id="profileList" class="profile-list"></div>
+      <small id="profileMessage" class="message">Select a profile to preview recommended settings.</small>
+      <div id="profileDetails" class="profile-details" hidden>
+        <p id="profileDescription" class="profile-details__desc"></p>
+        <div id="profileSummary" class="profile-summary"></div>
+      </div>
+      <div class="actions actions--wrap">
+        <button id="profileApply" class="btn btn--primary" type="button" disabled>Apply profile</button>
+        <button id="profileReset" class="btn btn--link actions__end" type="button">Clear selection</button>
+      </div>
+    </div>
+
+    <div class="subsection" id="parentOverrides" hidden>
+      <h3 class="subsection__title">Override log</h3>
+      <p class="subsection__desc">Reasons for manual overrides stay on this device for safeguarding reviews.</p>
+      <ul id="overrideList" class="log-list"></ul>
+      <small id="overrideMessage" class="message">No overrides recorded yet.</small>
+      <div class="actions actions--wrap">
+        <button id="overrideExport" class="btn btn--ghost" type="button">Download log</button>
+        <button id="overrideClear" class="btn btn--link actions__end" type="button">Clear log</button>
+      </div>
+    </div>
+
+    <div class="subsection" id="parentAllowlistSection" hidden>
+      <h3 class="subsection__title">Allowlist</h3>
+      <p class="subsection__desc">Bypass filtering for trusted domains (e.g. intranet portals).</p>
+      <div class="field">
+        <input id="allowHost" type="text" placeholder="example.com">
+        <button id="addAllow" class="btn btn--primary btn--sm" type="button">Add</button>
+      </div>
+      <small id="allowMessage" class="message">Enter hostnames without http/https.</small>
+      <ul id="allowList" class="pill-list"></ul>
+      <div class="actions actions--wrap">
+        <button id="allowUpload" class="btn btn--ghost" type="button">Upload list</button>
+        <button id="allowExport" class="btn btn--ghost" type="button">Download</button>
+        <button id="clearAllow" class="btn btn--link actions__end" type="button">Clear allowlist</button>
+      </div>
+      <input id="allowFileInput" type="file" accept=".txt,.csv,.json" hidden>
+    </div>
+
+    <div class="subsection" id="parentBlocklistSection" hidden>
+      <h3 class="subsection__title">Custom blocklist</h3>
+      <p class="subsection__desc">Import policy domains that should always be blocked.</p>
+      <textarea id="blocklistInput" placeholder="one domain per line (example.com)"></textarea>
+      <small id="blockMessage" class="message">Paste or import domains to replace the current list.</small>
+      <div class="actions actions--wrap">
+        <button id="importBlocklist" class="btn btn--primary" type="button">Import / Replace</button>
+        <button id="blockUpload" class="btn btn--ghost" type="button">Upload file</button>
+        <button id="exportBlocklist" class="btn btn--ghost" type="button">Download</button>
+        <button id="clearBlocklist" class="btn btn--link actions__end" type="button">Clear</button>
+        <span id="blockCount" class="count-badge">0 domains</span>
+      </div>
+      <input id="blockFileInput" type="file" accept=".txt,.csv,.json" hidden>
+    </div>
+
+    <div class="subsection" id="parentAlertsSection" hidden>
+      <h3 class="subsection__title">Override alerts</h3>
+      <p class="subsection__desc">Send webhooks when PIN overrides or tamper events occur.</p>
+      <div class="setting-rows">
+        <label class="toggle">
+          <input id="alertEnabled" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Send override alerts</span>
+            <span class="toggle__hint">Notify DSLs via webhook (Slack, Teams, etc.)</span>
+          </span>
+        </label>
+        <div id="alertForm" class="inline-field">
+          <input id="alertWebhook" type="text" placeholder="https://hooks.slack.com/...">
+          <button id="alertSave" class="btn btn--ghost btn--sm" type="button">Save</button>
+        </div>
+        <small id="alertMessage" class="message">Alerts stay on-device until you provide a webhook.</small>
+        <label class="toggle">
+          <input id="tamperAlertEnabled" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Tamper alerts</span>
+            <span class="toggle__hint">Alert if Safeguard goes offline or is disabled for a while.</span>
+          </span>
+        </label>
+        <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
+      </div>
+      <small id="alertPlaceholder" class="message message--error" hidden>Apply a safeguarding profile to unlock alerting.</small>
+    </div>
+
+    <div class="subsection" id="parentDigestSection" hidden>
+      <h3 class="subsection__title">Safeguarding digest</h3>
+      <p class="subsection__desc">Generate a CSV summary for safeguarding meetings or audit trails.</p>
+      <button id="digestDownload" class="btn btn--primary" type="button">Download weekly digest</button>
+      <small id="digestMessage" class="message">Highlights settings, allow/block counts and recent overrides.</small>
+    </div>
+
+    <div class="subsection" id="parentFocusSection" hidden>
+      <h3 class="subsection__title">Focus Mode</h3>
+      <p class="subsection__desc">Kid Homework Mode — block social/gaming/streaming, allow only educational sites.</p>
+      <div class="setting-rows">
         <label class="toggle">
           <input id="focusToggle" type="checkbox">
-          <span>
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
             <span class="toggle__label">Enable Focus Mode</span>
             <span class="toggle__hint">Starts a timed homework session across every tab.</span>
           </span>
         </label>
-
         <div class="focus-grid">
           <div class="focus-durations" id="focusDurations">
-            <label class="select-label" for="focusDurationSelect">Session length</label>
-            <div class="select">
+            <label class="field__label" for="focusDurationSelect">Session length</label>
+            <div class="select-wrap">
               <select id="focusDurationSelect">
                 <option value="30">30 minutes</option>
                 <option value="45">45 minutes</option>
                 <option value="60">60 minutes</option>
-                <option value="2">2 minutes (test)</option>
+
               </select>
             </div>
           </div>
@@ -285,380 +411,507 @@
               <p id="focusCountdown" class="focus-countdown">Focus Mode is off</p>
               <p id="focusEta" class="focus-eta">Duration 45 minutes</p>
             </div>
-            <button id="focusEnd" class="button button--secondary" type="button">End early</button>
+            <button id="focusEnd" class="btn btn--ghost btn--sm" type="button">End early</button>
           </div>
         </div>
-
         <label class="toggle">
           <input id="focusPin" type="checkbox">
-          <span>
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
             <span class="toggle__label">Require PIN to end early</span>
             <span class="toggle__hint">Prevents kids from turning off Focus Mode without approval.</span>
           </span>
         </label>
+      </div>
+      <p class="info-note">Social media, gaming, and streaming are blocked. Wikipedia, Khan Academy, .edu/.org domains, and your allowlist stay open.</p>
+      <small id="focusMessage" class="message">Pick a duration and start homework mode.</small>
+    </div>
 
-        <p class="focus-note">
-          Social media, gaming, and streaming are blocked. Wikipedia, Khan Academy, .edu/.org domains, and your allowlist stay open.
-        </p>
-        <small id="focusMessage" class="message">Pick a duration and start homework mode.</small>
+    <div class="subsection" id="parentFamilySection" hidden>
+      <h3 class="subsection__title">Family setup wizard</h3>
+      <p class="subsection__desc">Guided presets for age, PIN, and focus defaults.</p>
+      <div class="actions">
+        <button id="wizardStart" class="btn btn--primary" type="button">Start wizard</button>
+        <button id="wizardReplay" class="btn btn--link actions__end" type="button">Replay anytime</button>
       </div>
-      <div class="parent-section" id="parentFamilySection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Family setup wizard</h3>
-            <p class="parent-section__status">Guided presets for age, PIN, and focus defaults.</p>
-          </div>
-        </div>
-        <div class="actions">
-          <button id="wizardStart" class="button button--primary" type="button">Start wizard</button>
-          <button id="wizardReplay" class="button button--link actions__end" type="button">Replay anytime</button>
-        </div>
-        <small id="wizardMessage" class="message">Runs once unless you replay it.</small>
-      </div>
-      <div class="parent-section" id="parentConversationSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Conversation starters</h3>
-            <p class="parent-section__status">Offer a short script when risky content is blocked.</p>
-          </div>
-        </div>
-        <div class="toggle">
-          <input id="conversationToggle" type="checkbox">
+      <small id="wizardMessage" class="message">Runs once unless you replay it.</small>
+    </div>
+
+    <div class="subsection" id="parentConversationSection" hidden>
+      <h3 class="subsection__title">Conversation starters</h3>
+      <p class="subsection__desc">Offer a short script when risky content is blocked.</p>
+      <label class="toggle">
+        <input id="conversationToggle" type="checkbox">
+        <span class="toggle__switch" aria-hidden="true"></span>
+        <span class="toggle__content">
           <span class="toggle__label">Enable conversation starter reminders</span>
-        </div>
-        <div id="conversationCard" class="card card--inline" hidden>
-          <p id="conversationBody" class="card__subtitle"></p>
-          <div class="actions actions--wrap">
-            <button id="conversationDismiss" class="button button--secondary" type="button">Mark as read</button>
-          </div>
-          <small id="conversationMessage" class="message">Latest blocked topic</small>
-        </div>
-        <small id="conversationStatus" class="message">Waiting for the next blocked page.</small>
-      </div>
-      <div class="parent-section" id="parentReportSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Child reports</h3>
-            <p class="parent-section__status">Show guidance when a child taps “This felt unsafe.”</p>
-          </div>
-        </div>
-        <div class="toggle">
-          <input id="kidReportToggle" type="checkbox" checked>
-          <span class="toggle__label">Allow “Report unsafe page” button in the popup</span>
-        </div>
-        <div id="reportCard" class="card card--inline" hidden>
-          <p id="reportBody" class="card__subtitle"></p>
-          <div class="actions actions--wrap">
-            <button id="reportDismiss" class="button button--secondary" type="button">Dismiss</button>
-          </div>
-          <small id="reportMessage" class="message">No URLs are stored, just the event type.</small>
-        </div>
-        <small id="reportStatus" class="message">No child reports yet.</small>
-      </div>
-      <div class="parent-section" id="parentAccessSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Access requests</h3>
-            <p class="parent-section__status">Approve time-limited access requests raised from blocked pages.</p>
-          </div>
-        </div>
-        <ul id="accessRequestList" class="log-list"></ul>
-        <small id="accessRequestMessage" class="message">No access requests yet.</small>
+        </span>
+      </label>
+      <div id="conversationCard" class="inline-card" hidden>
+        <p id="conversationBody" class="card__subtitle"></p>
         <div class="actions actions--wrap">
-          <button id="accessRequestClear" class="button button--link actions__end" type="button">Clear history</button>
+          <button id="conversationDismiss" class="btn btn--ghost btn--sm" type="button">Mark as read</button>
         </div>
-        <p class="message">Active temporary allows</p>
-        <ul id="tempAllowList" class="log-list"></ul>
-        <small id="tempAllowMessage" class="message">No temporary allows active.</small>
+        <small id="conversationMessage" class="message">Latest blocked topic</small>
       </div>
-      <div class="parent-section" id="parentPairingSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Device pairing</h3>
-            <p class="parent-section__status">Pair a parent device so approvals can happen from a different computer (no shared Gmail required).</p>
-          </div>
-        </div>
-        <div class="field field--stack">
-          <label class="field__label" for="pairRelayUrl">Relay URL (HTTPS)</label>
-          <input id="pairRelayUrl" type="text" placeholder="https://your-relay.example.com">
-          <div class="actions actions--wrap">
-            <button id="pairRelaySave" class="button button--secondary" type="button">Save relay</button>
-            <button id="pairRelayTest" class="button button--secondary" type="button">Test relay</button>
-            <button id="pairPollNow" class="button button--link actions__end" type="button">Refresh</button>
-          </div>
-          <small id="pairRelayMessage" class="message">Required for cross-device approvals. Your relay should store only encrypted messages.</small>
-        </div>
+      <small id="conversationStatus" class="message">Waiting for the next blocked page.</small>
+    </div>
 
-        <div class="card card--inline">
-          <p class="card__subtitle">Kid device: generate a pairing code, then compare the safety code on both devices before confirming.</p>
-          <div class="actions actions--wrap">
-            <button id="pairCreate" class="button button--primary" type="button">Generate pairing code</button>
-            <button id="pairRefresh" class="button button--secondary" type="button">Check for parent</button>
-          </div>
-          <div class="field field--stack">
-            <label class="field__label" for="pairCodeOut">Pairing code</label>
-            <input id="pairCodeOut" type="text" readonly>
-          </div>
-          <div class="field field--stack">
-            <label class="field__label" for="pairSafetyOut">Safety code</label>
-            <input id="pairSafetyOut" type="text" readonly placeholder="Appears after the other device joins">
-          </div>
-          <div class="actions actions--wrap">
-            <button id="pairConfirm" class="button button--secondary" type="button" disabled>Confirm pairing</button>
-          </div>
+    <div class="subsection" id="parentReportSection" hidden>
+      <h3 class="subsection__title">Child reports</h3>
+      <p class="subsection__desc">Show guidance when a child taps "This felt unsafe."</p>
+      <label class="toggle">
+        <input id="kidReportToggle" type="checkbox" checked>
+        <span class="toggle__switch" aria-hidden="true"></span>
+        <span class="toggle__content">
+          <span class="toggle__label">Allow "Report unsafe page" button in the popup</span>
+        </span>
+      </label>
+      <div id="reportCard" class="inline-card" hidden>
+        <p id="reportBody" class="card__subtitle"></p>
+        <div class="actions actions--wrap">
+          <button id="reportDismiss" class="btn btn--ghost btn--sm" type="button">Dismiss</button>
         </div>
-
-        <div class="card card--inline">
-          <p class="card__subtitle">Parent device: paste the pairing code from the kid’s device, then confirm the matching safety code.</p>
-          <div class="field field--stack">
-            <label class="field__label" for="pairCodeIn">Enter pairing code</label>
-            <input id="pairCodeIn" type="text" placeholder="xxxxxxxxxxxx.xxxxxxxxxxxx">
-          </div>
-          <div class="actions actions--wrap">
-            <button id="pairJoin" class="button button--secondary" type="button">Join pairing</button>
-          </div>
-        </div>
-
-        <div class="pill-wrap">
-          <div class="pill-wrap__header">
-            <span class="pill-wrap__title">Paired devices</span>
-            <span class="pill-wrap__hint">Remove to stop remote approvals.</span>
-          </div>
-          <ul id="pairedDeviceList" class="pill-list"></ul>
-          <small id="pairedDeviceMessage" class="message">No paired devices yet.</small>
-        </div>
+        <small id="reportMessage" class="message">No URLs are stored, just the event type.</small>
       </div>
-      <div class="parent-section" id="parentTipSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Weekly digital safety tip</h3>
-            <p class="parent-section__status">One short reminder per week. Stays on-device.</p>
-          </div>
-        </div>
-        <div class="toggle">
-          <input id="tipToggle" type="checkbox">
-          <span class="toggle__label">Enable weekly tips</span>
-        </div>
-        <div id="tipCard" class="card card--inline" hidden>
-          <p id="tipBody" class="card__subtitle"></p>
-          <div class="actions actions--wrap">
-            <button id="tipDismiss" class="button button--secondary" type="button">Dismiss tip</button>
-          </div>
-          <small id="tipMessage" class="message">New tips rotate weekly.</small>
-        </div>
-        <small id="tipStatus" class="message">No tip yet.</small>
+      <small id="reportStatus" class="message">No child reports yet.</small>
+    </div>
+
+    <div class="subsection" id="parentAccessSection" hidden>
+      <h3 class="subsection__title">Access requests</h3>
+      <p class="subsection__desc">Approve time-limited access requests raised from blocked pages.</p>
+      <ul id="accessRequestList" class="log-list"></ul>
+      <small id="accessRequestMessage" class="message">No access requests yet.</small>
+      <div class="actions actions--wrap">
+        <button id="accessRequestClear" class="btn btn--link actions__end" type="button">Clear history</button>
       </div>
-      <div class="parent-section" id="parentClassroomSection" hidden>
-        <div class="parent-section__header">
-          <div>
-            <h3 class="parent-section__title">Classroom mode</h3>
-            <p class="parent-section__status">One click to lock social/gaming, strict SafeSearch, and YouTube only via classroom playlists.</p>
-          </div>
-        </div>
+      <p class="section-label" style="margin-top:10px">Active temporary allows</p>
+      <ul id="tempAllowList" class="log-list"></ul>
+      <small id="tempAllowMessage" class="message">No temporary allows active.</small>
+    </div>
+
+    <div class="subsection" id="parentPairingSection" hidden>
+      <h3 class="subsection__title">Device pairing</h3>
+      <p class="subsection__desc">Set the same passphrase on both parent and child devices to link them via the cloud.</p>
+
+      <!-- Device role toggle -->
+      <div class="inline-card">
         <label class="toggle">
-          <input id="classroomToggle" type="checkbox">
-          <span>
-            <span class="toggle__label">Enable Classroom mode</span>
-            <span class="toggle__hint">Blocks social/gaming, pauses YouTube unless on an approved playlist, and disables overrides.</span>
+          <input id="isParentDeviceToggle" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">This is the parent device</span>
+            <span class="toggle__desc">Turn ON on the parent's device. Leave OFF on the child's device.</span>
           </span>
         </label>
+      </div>
+
+      <!-- Pending child approvals (parent device only) -->
+      <div class="inline-card" id="pendingApprovalsCard" style="display:none;">
+        <div class="inline-card__header">
+          <div class="inline-card__icon inline-card__icon--amber">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
+          </div>
+          <h3 class="inline-card__title">Pending Approvals</h3>
+        </div>
+        <ul id="pendingApprovalsList" class="approval-list"></ul>
+        <p id="pendingApprovalsEmpty" class="empty-state">No pending requests from your child.</p>
+      </div>
+
+      <!-- ── Passphrase ── -->
+      <div class="inline-card">
+        <div class="inline-card__header">
+          <div class="inline-card__icon inline-card__icon--purple">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+          </div>
+          <h3 class="inline-card__title">Family passphrase</h3>
+        </div>
+        <p class="inline-card__desc">Set the same passphrase on both parent and child devices to link them securely.</p>
         <div class="field field--stack">
-          <label class="field__label" for="classroomPlaylists">Allowed YouTube playlist IDs or URLs (one per line)</label>
-          <textarea id="classroomPlaylists" placeholder="PL1234567890abcdef..."></textarea>
+          <label class="field__label" for="familyPassphrase">Passphrase</label>
+          <input id="familyPassphrase" type="password" placeholder="Choose a shared passphrase" autocomplete="off">
         </div>
         <div class="actions actions--wrap">
-          <button id="classroomSave" class="button button--secondary" type="button">Save allowlist</button>
+          <button id="savePassphrase" class="btn btn--primary" type="button">Save passphrase</button>
+          <button id="showPassphrase" class="btn btn--ghost btn--sm" type="button">Show</button>
         </div>
-        <div class="pill-wrap">
-          <div class="pill-wrap__header">
-            <span class="pill-wrap__title">Saved playlists</span>
-            <span class="pill-wrap__hint">Remove to block again.</span>
-          </div>
-          <ul id="classroomPlaylistList" class="pill-list"></ul>
-          <small id="classroomPlaylistEmpty" class="message">No playlists saved yet.</small>
-        </div>
-        <small id="classroomMessage" class="message">No playlists saved yet; YouTube will stay blocked in Classroom mode.</small>
+        <small id="passphraseMessage" class="message"></small>
       </div>
-    </section>
 
-    <section class="card" id="cardProtection">
-      <h2 class="card__title">Protection</h2>
-      <p class="card__subtitle">Control network filtering and visual safeguards for every site.</p>
 
+      <!-- ── Temp PIN (parent only) ── -->
+      <div class="inline-card" id="tempPinCard" hidden>
+
+        <div class="inline-card__header">
+          <div class="inline-card__icon inline-card__icon--green">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/></svg>
+          </div>
+          <h3 class="inline-card__title">One-Time Unlock PIN</h3>
+        </div>
+        <p class="inline-card__desc">Create a single-use PIN for your child. It expires automatically and works only once.</p>
+
+        <!-- Expiry selector -->
+        <div class="field field--stack">
+          <label class="field__label" for="tempPinExpiry">PIN valid for</label>
+          <div class="field">
+            <div class="select-wrap select-wrap--flex">
+              <select id="tempPinExpiry">
+                <option value="30">30 minutes</option>
+                <option value="60">1 hour</option>
+                <option value="120" selected>2 hours</option>
+                <option value="240">4 hours</option>
+                <option value="480">8 hours</option>
+                <option value="1440">24 hours</option>
+                <option value="custom">Custom…</option>
+              </select>
+            </div>
+            <div id="tempPinCustomWrap" class="field" style="display:none;">
+              <input id="tempPinCustomVal" type="number" min="1" max="10080" placeholder="45" class="input--narrow">
+              <div class="select-wrap">
+                <select id="tempPinCustomUnit">
+                  <option value="1">min</option>
+                  <option value="60" selected>hrs</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="genTempPinBtn" class="btn btn--primary" type="button">Generate PIN</button>
+        </div>
+        <small id="tempPinMsg" class="message"></small>
+
+        <!-- Generated PIN output -->
+        <div id="tempPinOut" class="pin-display" hidden>
+          <div class="pin-display__header">
+            <span class="pin-display__label">Generated PIN</span>
+            <button id="tempPinCopyBtn" class="btn btn--ghost btn--xs" type="button">Copy</button>
+          </div>
+          <span id="tempPinVal" class="pin-display__value"></span>
+          <div class="pin-display__divider"></div>
+          <div class="pin-display__send-row">
+            <p class="pin-display__send-label">Send directly to child's extension</p>
+            <button id="tempPinSendBtn" class="btn btn--primary btn--sm" type="button">Send to child</button>
+          </div>
+          <small id="tempPinSendMsg" class="message"></small>
+        </div>
+
+        <!-- Active PINs list -->
+        <div id="tempPinList" style="display:none;">
+          <p class="section-label">Active PINs</p>
+          <ul id="tempPinItems" class="pin-list"></ul>
+        </div>
+
+      </div>
+
+      <!-- ── Invite child device (parent only) ── -->
+      <div class="inline-card" id="inviteChildCard" hidden>
+        <div class="inline-card__header">
+          <div class="inline-card__icon inline-card__icon--blue">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/></svg>
+          </div>
+          <h3 class="inline-card__title">Invite a child device</h3>
+        </div>
+        <p class="inline-card__desc">Generate a one-time code. Your child enters it in their extension to join this family.</p>
+        <div class="actions">
+          <button id="generateInviteBtn" class="btn btn--primary" type="button">Generate invite code</button>
+        </div>
+        <div id="inviteCodeOut" hidden>
+          <p class="section-label" style="margin-bottom:8px;">Share with your child (expires in 24 hours)</p>
+          <div class="invite-code-display">
+            <strong id="inviteCodeVal" class="invite-code-display__value"></strong>
+            <button id="inviteCodeCopyBtn" class="btn btn--ghost btn--sm" type="button">Copy</button>
+          </div>
+        </div>
+        <small id="inviteCodeMsg" class="message"></small>
+      </div>
+
+    </div>
+
+    <div class="subsection" id="parentTipSection" hidden>
+      <h3 class="subsection__title">Weekly digital safety tip</h3>
+      <p class="subsection__desc">One short reminder per week. Stays on-device.</p>
       <label class="toggle">
+        <input id="tipToggle" type="checkbox">
+        <span class="toggle__switch" aria-hidden="true"></span>
+        <span class="toggle__content">
+          <span class="toggle__label">Enable weekly tips</span>
+        </span>
+      </label>
+      <div id="tipCard" class="inline-card" hidden>
+        <p id="tipBody" class="card__subtitle"></p>
+        <div class="actions actions--wrap">
+          <button id="tipDismiss" class="btn btn--ghost btn--sm" type="button">Dismiss tip</button>
+        </div>
+        <small id="tipMessage" class="message">New tips rotate weekly.</small>
+      </div>
+      <small id="tipStatus" class="message">No tip yet.</small>
+    </div>
+
+    <div class="subsection" id="parentClassroomSection" hidden>
+      <h3 class="subsection__title">Classroom mode</h3>
+      <p class="subsection__desc">Lock social/gaming, strict SafeSearch, and YouTube only via approved playlists.</p>
+      <label class="toggle">
+        <input id="classroomToggle" type="checkbox">
+        <span class="toggle__switch" aria-hidden="true"></span>
+        <span class="toggle__content">
+          <span class="toggle__label">Enable Classroom mode</span>
+          <span class="toggle__hint">Blocks social/gaming, pauses YouTube unless on an approved playlist.</span>
+        </span>
+      </label>
+      <div class="field field--stack">
+        <label class="field__label" for="classroomPlaylists">Allowed YouTube playlist IDs or URLs (one per line)</label>
+        <textarea id="classroomPlaylists" placeholder="PL1234567890abcdef..."></textarea>
+      </div>
+      <div class="actions actions--wrap">
+        <button id="classroomSave" class="btn btn--ghost btn--sm" type="button">Save allowlist</button>
+      </div>
+      <div class="pill-wrap">
+        <div class="pill-wrap__header">
+          <span class="pill-wrap__title">Saved playlists</span>
+          <span class="pill-wrap__hint">Remove to block again.</span>
+        </div>
+        <ul id="classroomPlaylistList" class="pill-list"></ul>
+        <small id="classroomPlaylistEmpty" class="message">No playlists saved yet.</small>
+      </div>
+      <small id="classroomMessage" class="message">YouTube will stay blocked in Classroom mode until playlists are added.</small>
+    </div>
+  </section>
+
+  <!-- ─────────────────────────────────── PROTECTION CARD ─── -->
+  <section class="card" id="cardProtection">
+
+    <!-- Status hero -->
+    <div class="status-hero">
+      <div class="status-hero__icon">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25z" fill="currentColor" opacity=".15"/>
+          <path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
+        </svg>
+      </div>
+      <div class="status-hero__text">
+        <p class="status-hero__state">Protected</p>
+        <p class="status-hero__desc">Filtering active on all sites</p>
+      </div>
+      <label class="status-hero__toggle" aria-label="Enable protection">
         <input id="enabled" type="checkbox">
-        <span>
-          <span class="toggle__label">Enable protection</span>
-          <span class="toggle__hint">Blocks adult domains and suspicious media automatically.</span>
-        </span>
+        <span class="toggle__switch" aria-hidden="true"></span>
       </label>
-
-      <label class="toggle">
-        <input id="siteToggle" type="checkbox" disabled>
-        <span>
-          <span class="toggle__label">Allow this site</span>
-          <span class="toggle__hint">Bypass filtering for <strong id="siteHost">loading…</strong>.</span>
-        </span>
-      </label>
-
-      <label class="toggle">
-        <input id="aggressive" type="checkbox">
-        <span>
-          <span class="toggle__label">Aggressive mode</span>
-          <span class="toggle__hint">Blur and pause explicit images/videos detected on the page.</span>
-        </span>
-      </label>
-
-      <label class="toggle">
-        <input id="nudgeEnabled" type="checkbox">
-        <span>
-          <span class="toggle__label">Healthy nudges</span>
-          <span class="toggle__hint">Gentle reminders for breaks and staying on track. All on-device.</span>
-        </span>
-      </label>
-
-      <label class="toggle">
-        <input id="requirePin" type="checkbox">
-        <span>
-          <span class="toggle__label">Require PIN for overrides</span>
-          <span class="toggle__hint">Ask for a private PIN before “Continue anyway” works.</span>
-        </span>
-      </label>
-
-      <div id="pinControls" class="pin-controls">
-        <div class="actions actions--wrap">
-          <button id="pinUpdate" class="button button--primary" type="button">Set PIN</button>
-          <button id="pinRemove" class="button button--link actions__end" type="button">Remove PIN</button>
-        </div>
-        <small id="pinMessage" class="message">Protect manual overrides with a PIN that stays on this device.</small>
-      </div>
-
-      <div class="report-cta">
-        <div class="report-cta__header">
-          <button id="kidReportBtn" class="button button--secondary report-cta__button" type="button">🛡️ Report unsafe page</button>
-          <p class="report-cta__hint">Kids can flag a page that feels wrong. Only the site name is stored.</p>
-        </div>
-        <input id="kidReportNote" class="note-input" type="text" maxlength="60" placeholder="Optional: what felt unsafe? (60 chars max)">
-        <small id="kidReportMessage" class="message">No history is kept—just the report event.</small>
-      </div>
-
-      <div class="slider">
-        <div class="slider__label">Sensitivity <span id="sensitivityValue" class="slider__value">60</span></div>
-        <input id="sensitivity" type="range" min="10" max="100" step="1" value="60">
-      </div>
-
-      <div class="metrics" aria-label="policy metrics">
-        <div class="metrics__item">
-          <span id="metricAllowed" class="metrics__value">0</span>
-          <span class="metrics__label">Allowlisted</span>
-        </div>
-        <div class="metrics__item">
-          <span id="metricBlocked" class="metrics__value">0</span>
-          <span class="metrics__label">Policy blocks</span>
-        </div>
-      </div>
-    </section>
-    <section class="card" id="cardApprover" hidden>
-      <h2 class="card__title">Override approvers</h2>
-      <p class="card__subtitle">Collect initials/names when PIN overrides happen for audit trails.</p>
-      <label class="toggle">
-        <input id="approverPromptEnabled" type="checkbox">
-        <span>
-          <span class="toggle__label">Require approver name</span>
-          <span class="toggle__hint">Prompt for staff initials/name whenever a PIN override is approved.</span>
-        </span>
-      </label>
-      <small id="approverMessage" class="message">Enable to capture who approves each override. Names stay on this device.</small>
-    </section>
-  </main>
-
-  <footer class="footer">
-    <div class="footer__links">
-      <a href="../site/index.html" target="_blank" rel="noopener">Product Guide</a>
-      <a href="../site/privacy.html" target="_blank" rel="noopener">Privacy</a>
-      <a href="../site/support.html" target="_blank" rel="noopener">Support</a>
     </div>
-    <button type="button" id="tourReplay" class="button button--link">Show tour</button>
-  </footer>
 
-  <div id="tour" class="tour tour--hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
-    <div class="tour__panel">
-      <div class="tour__progress" id="tourProgress">Step 1 of 3</div>
-      <h2 id="tourTitle" class="tour__title">Welcome to Safeguard</h2>
-      <p id="tourBody" class="tour__body">Safeguard blocks adult content and risky ads before they appear.</p>
-      <div class="tour__actions">
-        <button type="button" id="tourSkip" class="button button--secondary">Skip tour</button>
-        <button type="button" id="tourNext" class="button button--primary">Next</button>
+    <!-- Stats row -->
+    <div class="stats-row" aria-label="policy metrics">
+      <div class="stat-card stat-card--allow">
+        <span id="metricAllowed" class="stat-card__value">0</span>
+        <span class="stat-card__label">Allowlisted</span>
       </div>
+      <div class="stat-card stat-card--block">
+        <span id="metricBlocked" class="stat-card__value">0</span>
+        <span class="stat-card__label">Blocked</span>
+      </div>
+    </div>
+
+    <!-- Protection settings -->
+    <div class="settings-card">
+      <p class="settings-card__label">Settings</p>
+      <div class="setting-rows">
+        <!-- Per-site toggle -->
+        <label class="toggle">
+          <input id="siteToggle" type="checkbox" disabled>
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Allow this site</span>
+            <span class="toggle__hint">Bypass filtering for <strong id="siteHost">loading…</strong></span>
+          </span>
+        </label>
+        <label class="toggle">
+          <input id="aggressive" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Aggressive mode</span>
+            <span class="toggle__hint">Blur and pause explicit images/videos detected on-page.</span>
+          </span>
+        </label>
+        <label class="toggle">
+          <input id="nudgeEnabled" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Healthy nudges</span>
+            <span class="toggle__hint">Gentle reminders for breaks and staying on track. All on-device.</span>
+          </span>
+        </label>
+        <label class="toggle">
+          <input id="requirePin" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Require PIN for overrides</span>
+            <span class="toggle__hint">Ask for a private PIN before "Continue anyway" works.</span>
+          </span>
+        </label>
+      </div>
+    </div>
+
+    <!-- PIN controls -->
+    <div id="pinControls" class="pin-controls">
+      <div class="actions actions--wrap">
+        <button id="pinUpdate" class="btn btn--primary btn--sm" type="button">Set PIN</button>
+        <button id="pinRemove" class="btn btn--link actions__end" type="button">Remove PIN</button>
+      </div>
+      <small id="pinMessage" class="message">Protect manual overrides with a PIN stored only on this device.</small>
+    </div>
+
+    <!-- Sensitivity slider -->
+    <div class="slider-section">
+      <div class="slider-section__header">
+        <span class="slider-section__label">Filter sensitivity</span>
+        <span id="sensitivityValue" class="slider-section__value">60</span>
+      </div>
+      <input id="sensitivity" type="range" min="10" max="100" step="1" value="60">
+      <div class="slider-section__marks">
+        <span>Lenient</span>
+        <span>Strict</span>
+      </div>
+    </div>
+
+    <!-- Report unsafe -->
+    <div class="report-cta">
+      <div class="report-cta__row">
+        <button id="kidReportBtn" class="btn btn--report" type="button">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14" aria-hidden="true"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          Report unsafe page
+        </button>
+        <p class="report-cta__hint">Kids can flag a page that feels wrong. Only the site name is stored.</p>
+      </div>
+      <input id="kidReportNote" class="text-input" type="text" maxlength="60" placeholder="Optional: what felt unsafe? (60 chars)">
+      <small id="kidReportMessage" class="message">No history is kept — just the report event.</small>
+    </div>
+
+  </section>
+
+  <!-- Override approvers (shown in parent mode) -->
+  <section class="card" id="cardApprover" hidden>
+    <h2 class="card__title">Override approvers</h2>
+    <p class="card__subtitle">Collect initials/names when PIN overrides happen for audit trails.</p>
+    <label class="toggle">
+      <input id="approverPromptEnabled" type="checkbox">
+      <span class="toggle__switch" aria-hidden="true"></span>
+      <span class="toggle__content">
+        <span class="toggle__label">Require approver name</span>
+        <span class="toggle__hint">Prompt for staff initials/name whenever a PIN override is approved.</span>
+      </span>
+    </label>
+    <small id="approverMessage" class="message">Enable to capture who approves each override. Names stay on this device.</small>
+  </section>
+
+</main>
+
+<!-- ═══════════════════════════════════════ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer__links">
+    <a href="../site/index.html" target="_blank" rel="noopener">Guide</a>
+    <a href="../site/privacy.html" target="_blank" rel="noopener">Privacy</a>
+    <a href="../site/support.html" target="_blank" rel="noopener">Support</a>
+  </div>
+  <button type="button" id="tourReplay" class="btn btn--link btn--sm">Show tour</button>
+</footer>
+
+<!-- ═══════════════════════════════════════ TOUR ═══ -->
+<div id="tour" class="tour tour--hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
+  <div class="tour__panel">
+    <div class="tour__progress" id="tourProgress">Step 1 of 3</div>
+    <h2 id="tourTitle" class="tour__title">Welcome to Safeguard</h2>
+    <p id="tourBody" class="tour__body">Safeguard blocks adult content and risky ads before they appear.</p>
+    <div class="tour__actions">
+      <button type="button" id="tourSkip" class="btn btn--ghost">Skip tour</button>
+      <button type="button" id="tourNext" class="btn btn--primary">Next</button>
     </div>
   </div>
+</div>
 
-  <div id="pinModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
-    <div class="modal__panel">
-      <h3 id="pinModalTitle" class="modal__title">Enter PIN</h3>
-      <p id="pinModalMessage" class="modal__message"></p>
-      <div class="modal__field">
-        <label for="pinModalInput">PIN (4-8 digits)</label>
-        <input id="pinModalInput" type="password" inputmode="numeric" pattern="\\d{4,8}" maxlength="8" autocomplete="off" aria-label="PIN">
-      </div>
-      <div id="pinModalConfirmGroup" class="modal__field modal__field--hidden">
-        <label for="pinModalConfirm">Confirm PIN</label>
-        <input id="pinModalConfirm" type="password" inputmode="numeric" pattern="\\d{4,8}" maxlength="8" autocomplete="off" aria-label="Confirm PIN">
-      </div>
-      <div id="pinModalError" class="modal__error" aria-live="polite"></div>
-      <div class="modal__actions">
-        <button type="button" id="pinModalCancel" class="button button--secondary">Cancel</button>
-        <button type="button" id="pinModalSubmit" class="button button--primary">Continue</button>
-      </div>
+<!-- ═══════════════════════════════════════ PIN MODAL ═══ -->
+<div id="pinModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="pinModalTitle">
+  <div class="modal__panel">
+    <h3 id="pinModalTitle" class="modal__title">Enter PIN</h3>
+    <p id="pinModalMessage" class="modal__message"></p>
+    <div class="modal__field">
+      <label for="pinModalInput">PIN (4–8 digits)</label>
+      <input id="pinModalInput" type="password" inputmode="numeric" pattern="\d{4,8}" maxlength="8" autocomplete="off">
+    </div>
+    <div id="pinModalConfirmGroup" class="modal__field modal__field--hidden">
+      <label for="pinModalConfirm">Confirm PIN</label>
+      <input id="pinModalConfirm" type="password" inputmode="numeric" pattern="\d{4,8}" maxlength="8" autocomplete="off">
+    </div>
+    <div id="pinModalError" class="modal__error" aria-live="polite"></div>
+    <div class="modal__actions">
+      <button type="button" id="pinModalCancel" class="btn btn--ghost">Cancel</button>
+      <button type="button" id="pinModalSubmit" class="btn btn--primary">Continue</button>
     </div>
   </div>
+</div>
 
-  <div id="wizardModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
-    <div class="modal__panel modal__panel--wide">
-      <div class="modal__header">
-        <h3 id="wizardTitle" class="modal__title">Family setup</h3>
-        <button id="wizardClose" class="modal__close" type="button" aria-label="Close wizard">×</button>
-      </div>
-      <div class="wizard">
-        <div class="wizard__steps">
-          <div class="wizard__step">
-            <p class="wizard__label">Age band</p>
-            <div id="wizardProfileOptions" class="pill-list pill-list--grid"></div>
-          </div>
-          <div class="wizard__step">
-            <p class="wizard__label">Safety level</p>
-            <label class="field__label" for="wizardSensitivity">Sensitivity</label>
-            <input id="wizardSensitivity" type="range" min="20" max="100" value="60">
-            <p id="wizardSensitivityValue" class="wizard__value">60</p>
-            <label class="toggle">
-              <input id="wizardAggressive" type="checkbox">
+<!-- ═══════════════════════════════════════ WIZARD MODAL ═══ -->
+<div id="wizardModal" class="modal modal--hidden" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
+  <div class="modal__panel modal__panel--wide">
+    <div class="modal__header">
+      <h3 id="wizardTitle" class="modal__title">Family setup</h3>
+      <button id="wizardClose" class="modal__close" type="button" aria-label="Close wizard">&times;</button>
+    </div>
+    <div class="wizard">
+      <div class="wizard__steps">
+        <div class="wizard__step">
+          <p class="wizard__step-label">
+            <span class="wizard__step-num">1</span>
+            Age band
+          </p>
+          <div id="wizardProfileOptions" class="pill-list pill-list--grid"></div>
+        </div>
+        <div class="wizard__step">
+          <p class="wizard__step-label">
+            <span class="wizard__step-num">2</span>
+            Safety level
+          </p>
+          <label class="field__label" for="wizardSensitivity">Sensitivity</label>
+          <input id="wizardSensitivity" type="range" min="20" max="100" value="60">
+          <p id="wizardSensitivityValue" class="wizard__range-val">60</p>
+          <label class="toggle">
+            <input id="wizardAggressive" type="checkbox">
+            <span class="toggle__switch" aria-hidden="true"></span>
+            <span class="toggle__content">
               <span class="toggle__label">Enable aggressive visual blur</span>
-            </label>
-          </div>
-          <div class="wizard__step">
-            <p class="wizard__label">PIN & Focus</p>
-            <label class="toggle">
-              <input id="wizardRequirePin" type="checkbox" checked>
+            </span>
+          </label>
+        </div>
+        <div class="wizard__step">
+          <p class="wizard__step-label">
+            <span class="wizard__step-num">3</span>
+            PIN &amp; Focus
+          </p>
+          <label class="toggle">
+            <input id="wizardRequirePin" type="checkbox" checked>
+            <span class="toggle__switch" aria-hidden="true"></span>
+            <span class="toggle__content">
               <span class="toggle__label">Require PIN for overrides</span>
-            </label>
-            <button id="wizardSetPin" class="button button--secondary" type="button">Set PIN</button>
-            <label class="field__label" for="wizardFocusDuration">Default Focus duration</label>
-            <select id="wizardFocusDuration" class="wizard__select">
-              <option value="30">30 minutes</option>
-              <option value="45">45 minutes</option>
-              <option value="60">60 minutes</option>
-            </select>
-          </div>
+            </span>
+          </label>
+          <button id="wizardSetPin" class="btn btn--ghost btn--sm" type="button">Set PIN</button>
+          <label class="field__label" for="wizardFocusDuration">Default Focus duration</label>
+          <select id="wizardFocusDuration">
+            <option value="30">30 minutes</option>
+            <option value="45">45 minutes</option>
+            <option value="60">60 minutes</option>
+          </select>
         </div>
-        <div class="wizard__actions">
-          <button id="wizardSubmit" class="button button--primary" type="button">Apply family setup</button>
-          <button id="wizardCancel" class="button button--link" type="button">Cancel</button>
-          <small id="wizardStatus" class="message">Select an age band to begin.</small>
-        </div>
+      </div>
+      <div class="wizard__footer">
+        <button id="wizardSubmit" class="btn btn--primary" type="button">Apply family setup</button>
+        <button id="wizardCancel" class="btn btn--link" type="button">Cancel</button>
+        <small id="wizardStatus" class="message">Select an age band to begin.</small>
       </div>
     </div>
   </div>
+</div>
 
-  <script src="popup.js"></script>
+<script src="popup.js"></script>
 </body>
 </html>

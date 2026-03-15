@@ -1,37 +1,61 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Safeguard (SafeBrowse AI)",
-  "version": "0.3.4",
-  "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
+  "version": "1.0.0",
+  "description": "Block harmful sites, enforce SafeSearch & protect kids online. Parent dashboard with PIN controls, focus mode & family pairing.",
   "homepage_url": "https://cyberheroez.co.uk/",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "safeguard@cyberheroez.co.uk",
+      "strict_min_version": "109.0"
+    }
+  },
   "permissions": [
     "storage",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
     "tabs",
     "alarms",
-    "<all_urls>"
+    "privacy"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
   ],
   "icons": {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
     "128": "assets/icons/icon128.png"
   },
-  "browser_action": {
+  "action": {
     "default_popup": "src/popup.html"
   },
   "background": {
-    "scripts": [
-      "src/background.js"
-    ],
-    "persistent": false
+    "scripts": ["src/background.js"],
+    "type": "module"
   },
   "web_accessible_resources": [
-    "site/index.html",
-    "site/privacy.html",
-    "site/support.html",
-    "site/*.html",
-    "model/nsfw/*",
-    "assets/icons/*"
+    {
+      "resources": [
+        "site/index.html",
+        "site/privacy.html",
+        "site/support.html",
+        "site/*.html",
+        "model/nsfw/*",
+        "assets/icons/*"
+      ],
+      "matches": ["https://*/*", "http://*/*"]
+    }
   ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "static_rules",
+        "enabled": true,
+        "path": "data/dnr_static_rules.json"
+      }
+    ]
+  },
   "content_scripts": [
     {
       "matches": [
@@ -46,4 +70,3 @@
     }
   ]
 }
-

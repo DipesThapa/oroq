@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Safeguard (SafeBrowse AI)",
-  "version": "0.3.4",
-  "description": "Privacy-first web safety — blocklist + SafeSearch + on-device heuristics; PIN-locked overrides, HTTPS alerts, encrypted logs.",
+  "version": "1.0.0",
+  "description": "Block harmful sites, enforce SafeSearch & protect kids online. Parent dashboard with PIN controls, focus mode & family pairing.",
   "homepage_url": "https://cyberheroez.co.uk/",
   "minimum_chrome_version": "100",
   "permissions": [
     "storage",
     "declarativeNetRequest",
     "tabs",
-    "alarms"
+    "alarms",
+    "privacy"
   ],
   "icons": {
     "16": "assets/icons/icon16.png",

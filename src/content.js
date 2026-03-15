@@ -1,3 +1,7 @@
+/* global browser */
+if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'undefined') {
+  globalThis.chrome = globalThis.browser;
+}
 (function(){
   /*
    * Content script runs entirely on-device to flag adult/phishing cues quickly: keyword heuristics, URL hints,
@@ -6,23 +10,57 @@
    */
   // Advanced textual heuristic (non-exhaustive, on-device). Balanced for privacy and speed.
   const KW_STRONG = [
-    'porn','xxx','hentai','onlyfans','pornhub','xvideos','xnxx','xhamster','redtube','youporn','brazzers','spankbang',
-    'pornographie','pornografía','porno','sex tape','live sex','webcam sex','camgirl','cam boy',
-    'nude','nudity','hardcore','softcore','fetish','bdsm','orgasm','blowjob','handjob','anal','threesome','milf','teen',
-    'whore','slut','slutty','cum','cumshot','creampie','cunt','fuck','fucked','bondage','dominatrix','submissive','kink','demoness',
-    'gagged','spank','buttplug','deepthroat','gangbang','facial','pegging'
+    // Major platforms
+    'pornhub','xvideos','xnxx','xhamster','redtube','youporn','spankbang','brazzers','chaturbate','myfreecams',
+    'onlyfans','fansly','livejasmin','bongacams','stripchat','cam4','camsoda','streamate','flirt4free',
+    // Hentai / anime
+    'hentai','nhentai','hanime','rule34','gelbooru','danbooru','e621','e926','yande','konachan','hentaihaven',
+    'lolicon','shotacon','yaoi','yuri','doujin','doujinshi','ecchi','ahegao','futanari','tentacle porn',
+    // Explicit acts / anatomy (keep only clearly adult-only terms)
+    'porn','porno','pornography','pornographie','pornografía','xxx','sex tape','live sex','webcam sex',
+    'nude','nudity','hardcore sex','softcore','fetish','bdsm','orgasm','blowjob','handjob','anal sex','threesome',
+    'cumshot','creampie','cunt','bondage','dominatrix','submissive kink','gagged','deepthroat',
+    'gangbang','pegging','buttplug','spanking','femdom','voyeur upskirt','nonconsensual',
+    // Cam / live content
+    'camgirl','cam girl','cam boy','camboy','stripper','stripclub','live cam','sex cam','webcam show',
+    // Adult production studios
+    'bangbros','realitykings','mofos','naughtyamerica','digitalplayground','evilangel','teamskeet',
+    // Multilingual
+    'sexo','sexe','puta','porno gratis','nackt','porr','порно','섹스','ポルノ','色情','成人内容',
+    // Slang
+    'whore','slut','slutty','cum shot','jizz','cock pic','dick pic','titties','nude selfie','onlyfans leak',
+    'nsfw leak','nudes leaked','amateur porn','teen porn','milf porn','gay porn','lesbian sex','porn video','sex video'
   ];
   const KW_MEDIUM = [
-    'adult','nsfw','explicit','erotic','escort','models','amateur','nsfw','18+','age verification','lust','filthy'
+    'adult','nsfw','explicit','erotic','escort','amateur','18+','age verification','lust','filthy',
+    'adult content','mature content','adult film','sex worker','strip club','nude model','bikini model',
+    'adult site','adult video','adult entertainment','x-rated','r-rated content','sensual','seductive',
+    'intimate photos','intimate video','risque','provocative','suggestive','barely legal','legal age'
   ];
-  const HOST_HINTS = ['porn','xxx','sex','hentai','xh','xv','xnxx','onlyfans','cam','lust','fuck','whore','slut','kink','bdsm'];
-  const PATH_HINT_RX = /(\/porn|\/xxx|\/hentai|\/adult|\/sex|\/cum|\/fuck|\/slut|\/whore|\/kink|\/fetish)/;
-  const URL_KEYWORD_RX = /(fuck|whore|slut|cum|bdsm|fetish|nsfw)/;
-  const AGE_GATE_RX = /(18\+|adults? only|are you 18|age verification|enter if 18)/i;
-  const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report)/i;
+  // HOST_HINTS uses substring matching against the hostname — keep only terms that won't fire
+  // on legitimate sites (e.g. avoid 'tube'→youtube, 'ass'→classroom, 'cum'→document, 'live'→live.com)
+  const HOST_HINTS = [
+    'porn','xxx','hentai','xnxx','onlyfans','bdsm','nsfw',
+    'nudist','nudie','nudecam','nakedcam','sexcam','livesex','liveshow',
+    'camgirl','camboy','camwhore','camslut','camshow',
+    'slutload','slutty','whores','fucking','fuckme',
+    'milfsex','milfporn','teenporn','gayporn','lesbianporn',
+    'chaturbate','myfreecams','livejasmin','bongacams','stripchat',
+    'rule34','nhentai','gelbooru','danbooru','e621','hanime','hentaihaven',
+    'brazzers','bangbros','mofos','realitykings','naughtyamerica','evilangel','teamskeet',
+    'onlyfan','fansly','manyvids','clips4sale','niteflirt',
+    'vixen','tushy','blacked','deeper','spankbang','redtube','youporn',
+    'xhamster','xvideos','xnxx','pornhub','beeg','drtuber','tnaflix','tubegalore'
+  ];
+  const PATH_HINT_RX = /(\/porn|\/xxx|\/hentai|\/adult|\/sex|\/cum|\/fuck|\/slut|\/whore|\/kink|\/fetish|\/nude|\/naked|\/erotic|\/bdsm|\/cam|\/webcam|\/strip|\/escort|\/milf|\/teen-porn|\/gay-porn|\/lesbian)/;
+  const URL_KEYWORD_RX = /(fuck|whore|slut|cum|bdsm|fetish|nsfw|nude|naked|porn|xxx|hentai|erotic|milf|camgirl|onlyfans|brazzers|chaturbate|rule34|nhentai|e621|gelbooru)/;
+  const AGE_GATE_RX = /(18\+|adults? only|are you 18|age verification|enter if 18|must be 18|over 18|confirm age|i am 18|i am an adult|adult content warning|adults only|18 and over|21 and over|over 21|age restricted|age gate)/i;
+  const NEGATIVE_RX = /(sex education|sexual education|sex ed|reproductive health|biology|anatomy|consent education|porn addiction help|porn recovery|filter porn|block porn|family safety|child safety|parental control|safesearch|wikipedia|encyclopedia|news report|medical|clinic|hospital|health|puberty education|human sexuality course|psychology|sociology|gender studies|lgbtq support|counseling|therapy|abuse support|domestic violence|assault awareness)/i;
   const PIN_ITERATIONS_FALLBACK = 200000;
   const VISUAL_SAMPLE_LIMIT = 8;
-  const RISKY_MEDIA_HOSTS = ['instagram.com','cdninstagram.com','twitter.com','x.com','tiktok.com','facebook.com','fbcdn.net','messenger.com','snapchat.com','reddit.com','discord.com','pinimg.com'];
+  // These platforms self-moderate content — skip body/meta keyword scan and visual score to avoid
+  // false positives from comments, video descriptions, or thumbnails of innocent content.
+  const RISKY_MEDIA_HOSTS = ['youtube.com','youtu.be','music.youtube.com','instagram.com','cdninstagram.com','twitter.com','x.com','tiktok.com','facebook.com','fbcdn.net','messenger.com','snapchat.com','reddit.com','discord.com','pinimg.com','spotify.com','soundcloud.com','vimeo.com'];
   // Leave empty to disable TF.js when the file is not bundled; prevents CSP fetch errors
   const TFJS_SRC = ''; // set to chrome.runtime.getURL('model/nsfw/tf.min.js') if bundled
   const NSFW_MODEL_PATH = 'model/nsfw/model.json'; // optional bundled model; place under /model/nsfw/
@@ -1394,20 +1432,6 @@
       chrome.runtime.sendMessage({ type: 'sg-kid-report', tone });
     } catch(_e){}
   }
-  function sendAccessRequest(payload = {}){
-    const host = typeof payload.host === 'string' ? payload.host : '';
-    const url = typeof payload.url === 'string' ? payload.url : '';
-    const note = typeof payload.note === 'string' ? payload.note : '';
-    return new Promise((resolve)=>{
-      try {
-        chrome.runtime.sendMessage({ type: 'sg-access-request', host, url, note }, (resp)=>{
-          resolve(resp || null);
-        });
-      } catch(_e){
-        resolve(null);
-      }
-    });
-  }
 
   function isTempAllowlisted(host, list){
     if (!host) return false;
@@ -2461,7 +2485,9 @@
     const targetW = 96, targetH = 54;
     let blocked = false;
     let taintedCount = 0;
-    const thr = 0.35 - 0.2 * (Math.max(10, Math.min(100, sensitivity||60)) / 100);
+    // Threshold: requires 55–70% skin pixels before blocking. At sensitivity 100 → 0.55, at 10 → 0.70.
+    // Previously was 0.23 at default sensitivity which blocked faces in music videos.
+    const thr = 0.70 - 0.15 * (Math.max(10, Math.min(100, sensitivity||60)) / 100);
     const tick = ()=>{
       if (!video.isConnected){ return; }
       if (video.readyState < 2){ setTimeout(tick, 800); return; }
@@ -3584,34 +3610,149 @@
     requestBtn.type = 'button';
     requestBtn.className = 'sg-button sg-button--secondary';
     requestBtn.textContent = 'Request access';
-    requestBtn.addEventListener('click', async ()=>{
+    requestBtn.addEventListener('click', ()=>{
       requestBtn.disabled = true;
-      requestBtn.textContent = 'Sending request…';
-      const host = getHost();
-      const url = (()=>{ try { return location.href; } catch(_e){ return ''; } })();
-      const resp = await sendAccessRequest({ host, url });
-      const code = resp && resp.ok && resp.request && resp.request.code ? String(resp.request.code) : '';
-      if (!code){
-        requestBtn.disabled = false;
-        requestBtn.textContent = 'Request access';
-        requestStatus.style.display = 'block';
-        requestStatus.textContent = 'Could not create an access request. Ask a parent/teacher to review Safeguard settings.';
-        return;
-      }
-      requestBtn.textContent = 'Request sent';
+      requestBtn.textContent = 'Sending…';
       requestStatus.style.display = 'block';
       requestStatus.innerHTML = '';
-      const line1 = doc.createElement('div');
-      line1.appendChild(doc.createTextNode('Tell a parent/teacher this code: '));
-      const strong = doc.createElement('strong');
-      strong.textContent = code;
-      line1.appendChild(strong);
-      requestStatus.appendChild(line1);
-      const line2 = doc.createElement('div');
-      line2.textContent = 'They can approve it in Safeguard → Parent mode → Access requests, then reload this page.';
-      requestStatus.appendChild(line2);
+
+      let pollInterval = null;
+
+      const startPolling = (requestId) => {
+        try { sessionStorage.setItem('sg-pending-req:' + getHost(), requestId); } catch(_e) {}
+        requestBtn.disabled = true;
+        requestBtn.textContent = '✓ Request sent';
+        requestStatus.style.display = 'block';
+        requestStatus.textContent = 'Waiting for parent to approve…';
+        pollInterval = setInterval(() => {
+          chrome.runtime.sendMessage({ type: 'sg-fb-check-approval', requestId }, (r) => {
+            if (chrome.runtime.lastError || !r) return;
+            if (r.status === 'approved') {
+              clearInterval(pollInterval);
+              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
+              requestStatus.textContent = '✅ Approved! Reloading…';
+              try { sessionStorage.setItem('sg-ov:' + getHost(), '1'); } catch(_e) {}
+              chrome.runtime.sendMessage({ type: 'sg-parent-approved', domain: getHost() }, () => {
+                location.reload();
+              });
+            } else if (r.status === 'denied') {
+              clearInterval(pollInterval);
+              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
+              requestStatus.textContent = '❌ Request denied by parent.';
+              requestBtn.disabled = false;
+              requestBtn.textContent = 'Request access';
+            } else if (r.status === 'expired') {
+              clearInterval(pollInterval);
+              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
+              requestStatus.textContent = 'Request expired. Try again.';
+              requestBtn.disabled = false;
+              requestBtn.textContent = 'Request access';
+            }
+          });
+        }, 15000);
+      };
+
+      // Resume polling if a request was already sent before reload
+      try {
+        const pendingId = sessionStorage.getItem('sg-pending-req:' + getHost());
+        if (pendingId) { startPolling(pendingId); return; }
+      } catch(_e) {}
+
+      chrome.runtime.sendMessage({ type: 'sg-fb-send-request', domain: getHost() }, (resp) => {
+        if (chrome.runtime.lastError || !resp) {
+          requestStatus.textContent = 'Could not reach Safeguard. Try reloading the page.';
+          requestBtn.disabled = false;
+          requestBtn.textContent = 'Request access';
+          return;
+        }
+        if (resp.error === 'no-passphrase') {
+          requestStatus.textContent = 'Your device is not linked to a family account. Ask your parent to set up Safeguard and share an invite code.';
+          requestBtn.disabled = false;
+          requestBtn.textContent = 'Request access';
+          return;
+        }
+        if (resp.error === 'firebase-error') {
+          requestStatus.textContent = 'Could not send request. Check your internet connection.';
+          requestBtn.disabled = false;
+          requestBtn.textContent = 'Request access';
+          return;
+        }
+        if (resp.requestId) { startPolling(resp.requestId); }
+      });
     });
     actions.appendChild(requestBtn);
+
+    // ── Temp PIN entry ──
+    const pinEntry = doc.createElement('div');
+    pinEntry.style.cssText = 'margin-top:10px;';
+    const pinToggle = doc.createElement('button');
+    pinToggle.type = 'button';
+    pinToggle.className = 'sg-button sg-button--ghost sg-button--sm';
+    pinToggle.textContent = 'Have a PIN from your parent?';
+    pinEntry.appendChild(pinToggle);
+    const pinForm = doc.createElement('div');
+    pinForm.style.cssText = 'display:none;margin-top:8px;display:none;gap:6px;align-items:center;flex-wrap:wrap;';
+    const tpInput = doc.createElement('input');
+    tpInput.type = 'text';
+    tpInput.maxLength = 6;
+    tpInput.placeholder = 'Enter PIN';
+    tpInput.autocomplete = 'off';
+    tpInput.style.cssText = 'text-transform:uppercase;letter-spacing:0.15em;font-family:monospace;font-size:1.1em;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;width:120px;';
+    const tpSubmit = doc.createElement('button');
+    tpSubmit.type = 'button';
+    tpSubmit.className = 'sg-button sg-button--primary sg-button--sm';
+    tpSubmit.textContent = 'Unlock';
+    const tpMsg = doc.createElement('small');
+    tpMsg.style.cssText = 'display:block;margin-top:4px;font-size:12px;';
+    pinForm.appendChild(tpInput);
+    pinForm.appendChild(tpSubmit);
+    pinEntry.appendChild(pinForm);
+    pinEntry.appendChild(tpMsg);
+    actions.appendChild(pinEntry);
+    // Auto-fill if parent sent a PIN via Firebase
+    chrome.runtime.sendMessage({ type: 'sg-get-sent-pins' }, (resp) => {
+      if (chrome.runtime.lastError || !resp || !resp.pins || !resp.pins.length) return;
+      pinToggle.style.display = 'none';
+      pinForm.style.display = 'flex';
+      tpInput.value = resp.pins[0];
+      tpMsg.textContent = '📨 Your parent sent you a PIN — click Unlock to continue.';
+    });
+
+    pinToggle.addEventListener('click', () => {
+      const visible = pinForm.style.display !== 'none';
+      pinForm.style.display = visible ? 'none' : 'flex';
+      pinToggle.textContent = visible ? 'Have a PIN from your parent?' : 'Cancel';
+      if (!visible) tpInput.focus();
+    });
+    tpSubmit.addEventListener('click', () => {
+      const code = tpInput.value.trim().toUpperCase();
+      if (code.length !== 6) { tpMsg.textContent = 'PIN must be 6 characters.'; return; }
+      tpSubmit.disabled = true;
+      tpSubmit.textContent = 'Checking…';
+      tpMsg.textContent = '';
+      chrome.runtime.sendMessage({ type: 'sg-verify-temp-pin', pin: code, domain: getHost() }, (resp) => {
+        if (chrome.runtime.lastError || !resp) { tpMsg.textContent = 'Could not reach extension.'; tpSubmit.disabled = false; tpSubmit.textContent = 'Unlock'; return; }
+        if (resp.ok) {
+          tpMsg.textContent = '✅ PIN accepted! Reloading…';
+          try { sessionStorage.setItem('sg-ov:' + getHost(), '1'); } catch(_e) {}
+          setTimeout(() => location.reload(), 800);
+        } else {
+          tpMsg.textContent = resp.error || 'Invalid PIN.';
+          tpSubmit.disabled = false;
+          tpSubmit.textContent = 'Unlock';
+          tpInput.value = '';
+          tpInput.focus();
+        }
+      });
+    });
+    tpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tpSubmit.click(); });
+
+    // Auto-resume polling if page was reloaded while waiting for approval
+    try {
+      const pendingId = sessionStorage.getItem('sg-pending-req:' + getHost());
+      if (pendingId) { requestBtn.click(); }
+    } catch(_e) {}
+
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;
       try {
@@ -3819,9 +3960,13 @@
     const urlScore = urlEval.score;
     const metaScore = metaEval.score;
     const isSocialMediaHost = isRiskyMediaHost(host);
-    const visualScore = isSocialMediaHost ? 0 : visualEval.score; // keep blur, avoid full-page block on social feeds
+    // Self-moderated platforms (YouTube, Facebook, etc.): only block on URL signals.
+    // Body text includes comments from random users which cause false positives on innocent pages.
+    const visualScore = isSocialMediaHost ? 0 : visualEval.score;
+    const effectiveBodyScore = isSocialMediaHost ? 0 : bodyScore;
+    const effectiveMetaScore = isSocialMediaHost ? 0 : metaScore;
     window.__sg_visualScore = visualScore;
-    const total = urlScore + metaScore + bodyScore + visualScore;
+    const total = urlScore + effectiveMetaScore + effectiveBodyScore + visualScore;
     const sens = Number(cfg.sensitivity)||60; window.__sg_sensitivity = sens;
     const threshold = 12 - Math.floor(6 * (sens/100)); // 12..6
     if(total >= threshold) {
@@ -3829,9 +3974,9 @@
       const heuristicPayload = createHeuristicInsights({
         host,
         urlEval,
-        metaEval,
-        bodyEval,
-        bodyScore,
+        metaEval: isSocialMediaHost ? { ...metaEval, score: 0, strong: [], medium: [] } : metaEval,
+        bodyEval: isSocialMediaHost ? { ...bodyEval, score: 0, strong: [], medium: [] } : bodyEval,
+        bodyScore: effectiveBodyScore,
         visualEval: isSocialMediaHost ? { ...visualEval, score: 0 } : visualEval,
         total,
         threshold

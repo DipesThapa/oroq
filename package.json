@@ -1,13 +1,14 @@
 {
   "name": "safebrowse-ai",
-  "version": "0.3.4",
+  "version": "1.0.0",
   "description": "Privacy-first web safety extension with on-device heuristics, PIN-locked overrides, HTTPS alerts, and encrypted logs.",
   "private": true,
   "scripts": {
     "lint": "eslint src --max-warnings=0",
     "build:chromium": "node scripts/build.mjs chromium",
     "build:firefox": "node scripts/build.mjs firefox",
-    "zip:webstore": "mkdir -p dist && rm -f dist/extension.zip && zip -r dist/extension.zip assets/icons data site src manifest.json LICENSE README.md -x src/content.js.bak content.js manifest.backup.json assets/store/*",
+    "zip:webstore": "npm run build:chromium && rm -f dist/extension.zip && (cd dist/chromium && zip -r ../extension.zip . -x '*.DS_Store' -x 'assets/store/*')",
+    "build:safari": "node scripts/build.mjs safari",
     "zip:chromium": "npm run build:chromium && rm -f dist/chromium.zip && (cd dist/chromium && zip -r ../chromium.zip .)",
     "zip:firefox": "npm run build:firefox && rm -f dist/firefox.zip && (cd dist/firefox && zip -r ../firefox.zip .)"
   },
