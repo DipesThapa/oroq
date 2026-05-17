@@ -62,6 +62,32 @@ export default {
       headers: { 'content-type': 'application/dns-message' },
     });
   },
+
+  async scheduled(event, env, ctx) {
+    // 1. Rotate the daily salt so today's IP hashes cannot link back
+    //    to yesterday's IP hashes.
+    const newSalt = crypto.randomUUID();
+    await env.BLOCKLIST_KV.put('meta:dailysalt', newSalt);
+
+    // 2. Snapshot yesterday's per-level DO counters into long-lived
+    //    KV keys so the public stats page can read them without
+    //    touching Durable Objects directly.
+    const yesterday = new Date(Date.now() - 86_400_000);
+    const yKey = dateKey(yesterday);
+    const levels = ['kids', 'teens', 'family'];
+
+    for (const level of levels) {
+      try {
+        const id = env.STATS_DO.idFromName(`${level}:${yKey}`);
+        const stub = env.STATS_DO.get(id);
+        const resp = await stub.fetch('https://do/snapshot');
+        const snap = await resp.json();
+        await env.BLOCKLIST_KV.put(`stats:${level}:${yKey}`, JSON.stringify(snap));
+      } catch (err) {
+        console.error(`snapshot failed for ${level}:${yKey}`, err);
+      }
+    }
+  },
 };
 
 async function safeCheckBlocked(env, level, domain) {
