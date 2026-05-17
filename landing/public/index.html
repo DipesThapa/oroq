@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SafeBrowse — Free family DNS protection</title>
+  <meta name="description" content="Block harmful websites across all browsers and apps on your child's phone, tablet, and computer in 60 seconds. Free, private, no app to install.">
+  <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__brand" href="/">
+        <img src="/assets/logo.svg" alt="">
+        <span>SafeBrowse</span>
+      </a>
+      <nav>
+        <a href="/verify.html">Verify</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>Free DNS-based web safety for your family</h1>
+      <p>Block harmful websites across all browsers and apps on your child's
+         phone, tablet, and computer — in 60 seconds.</p>
+      <ul class="trust-list">
+        <li>No app to install</li>
+        <li>Works on all devices</li>
+        <li>Free</li>
+        <li>Privacy-first (no tracking)</li>
+      </ul>
+    </section>
+
+    <section class="step" id="step-level" aria-labelledby="step-level-h">
+      <h2 class="step__heading" id="step-level-h">Step 1: Choose protection level</h2>
+      <p class="step__hint">Pick the level that fits your child's age. You can change it later.</p>
+      <div class="level-grid">
+        <button class="level-card" data-level="kids" aria-pressed="false">
+          <span class="level-card__emoji" aria-hidden="true">👦</span>
+          <span class="level-card__title">Kids</span>
+          <span class="level-card__age">Under 13</span>
+          <ul class="level-card__list">
+            <li>Adult content</li>
+            <li>Social media</li>
+            <li>Gaming sites</li>
+            <li>Violence &amp; drugs</li>
+          </ul>
+        </button>
+        <button class="level-card" data-level="teens" aria-pressed="false">
+          <span class="level-card__emoji" aria-hidden="true">🧑</span>
+          <span class="level-card__title">Teens</span>
+          <span class="level-card__age">13–17</span>
+          <ul class="level-card__list">
+            <li>Adult content</li>
+            <li>Gambling &amp; drugs</li>
+            <li>Malware &amp; phishing</li>
+          </ul>
+        </button>
+        <button class="level-card" data-level="family" aria-pressed="false">
+          <span class="level-card__emoji" aria-hidden="true">👪</span>
+          <span class="level-card__title">Family</span>
+          <span class="level-card__age">Adults</span>
+          <ul class="level-card__list">
+            <li>Adult content</li>
+            <li>Malware &amp; phishing</li>
+          </ul>
+        </button>
+      </div>
+    </section>
+
+    <section class="step" id="step-install" hidden aria-labelledby="step-install-h">
+      <h2 class="step__heading" id="step-install-h">Step 2: Install on your device</h2>
+      <p class="step__hint">We've auto-detected your device, but you can pick a different one.</p>
+      <div class="platform-tabs" role="tablist">
+        <button class="platform-tab" role="tab" aria-selected="false" data-platform="ios">iPhone / iPad</button>
+        <button class="platform-tab" role="tab" aria-selected="false" data-platform="android">Android</button>
+        <button class="platform-tab" role="tab" aria-selected="false" data-platform="desktop">Desktop</button>
+      </div>
+
+      <div class="platform-panel" data-platform="ios" data-active="false" role="tabpanel">
+        <div class="notice notice--warn" role="alert">
+          <p class="notice__title">⚠ iOS will show "Unverified Profile" — that's expected</p>
+          <p class="notice__body">
+            Our profile is currently <strong>unsigned</strong> while we wait for our
+            Apple Developer Program enrolment to complete. Installation works
+            exactly the same — iOS just asks you to confirm twice. We'll
+            replace this with a verified profile soon.
+          </p>
+        </div>
+        <p>Tap the button to download the profile for the level you picked above:</p>
+        <p><a class="btn" id="ios-download" href="#" download>Download profile</a></p>
+        <ol class="step__list">
+          <li>Tap <strong>Allow</strong> when iOS asks "Allow profile download?"</li>
+          <li>Open <strong>Settings</strong> on your device</li>
+          <li>Tap <strong>Profile Downloaded</strong> near the top
+              (or Settings → General → VPN &amp; Device Management)</li>
+          <li>Tap <strong>Install</strong> in the top right</li>
+          <li>Enter your iPhone passcode</li>
+          <li>Tap <strong>Install</strong> twice more to confirm</li>
+        </ol>
+      </div>
+
+      <div class="platform-panel" data-platform="android" data-active="false" role="tabpanel">
+        <p>
+          Android 9 (Pie) or newer supports DNS-over-TLS natively. No app needed —
+          just one setting change.
+        </p>
+        <p>Copy this hostname:</p>
+        <div class="copy-row">
+          <span class="copy-row__text" id="android-hostname">kids.dns.cyberheroez.co.uk</span>
+          <button class="copy-row__btn" id="android-copy" type="button">Copy</button>
+        </div>
+        <ol class="step__list">
+          <li>Open <strong>Settings</strong> on the device</li>
+          <li>Tap <strong>Network &amp; Internet → Private DNS</strong>
+              (on some phones: Connections → More → Private DNS)</li>
+          <li>Select <strong>Private DNS provider hostname</strong></li>
+          <li>Paste the hostname above</li>
+          <li>Tap <strong>Save</strong></li>
+        </ol>
+      </div>
+
+      <div class="platform-panel" data-platform="desktop" data-active="false" role="tabpanel">
+        <p>
+          For browser protection on Mac, Windows, or Chromebook we recommend
+          our free SafeBrowse browser extension. It works in Chrome, Edge,
+          Brave, Opera, and Vivaldi.
+        </p>
+        <p>
+          <a class="btn"
+             href="https://chromewebstore.google.com/detail/safebrowse"
+             rel="noopener" target="_blank">
+            Install Chrome extension →
+          </a>
+        </p>
+        <p>For Firefox:</p>
+        <p>
+          <a class="btn btn--ghost"
+             href="https://addons.mozilla.org/firefox/addon/safebrowse/"
+             rel="noopener" target="_blank">
+            Install Firefox add-on →
+          </a>
+        </p>
+        <hr>
+        <div class="notice notice--info">
+          <p class="notice__title">Want network-wide protection?</p>
+          <p class="notice__body">
+            Configure your home router's DNS to use the hostname below
+            and every device on your Wi-Fi (including phones, tablets,
+            smart TVs) gets the same filter.
+          </p>
+        </div>
+        <p>Use this hostname in your router's DNS settings:</p>
+        <div class="copy-row">
+          <span class="copy-row__text" id="router-hostname">kids.dns.cyberheroez.co.uk</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="step" id="step-verify" hidden aria-labelledby="step-verify-h">
+      <h2 class="step__heading" id="step-verify-h">Step 3: Verify it's working</h2>
+      <p class="step__hint">After installing, tap the button below to confirm SafeBrowse is active.</p>
+      <a class="btn" href="/verify.html">Test now →</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>SafeBrowse · A CyberHeroez CIC project</span>
+      <span>
+        <a href="/privacy.html">Privacy</a> ·
+        <a href="/terms.html">Terms</a> ·
+        <a href="https://github.com/DipesThapa/safebrowse-ai">GitHub</a>
+      </span>
+    </div>
+  </footer>
+
+  <script type="module" src="/assets/app.js"></script>
+</body>
+</html>
