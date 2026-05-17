@@ -1,0 +1,9 @@
+{
+  "category": "social",
+  "description": "Major social networks (blocked only for Kids profile)",
+  "domains": [
+    "tiktok.com", "instagram.com", "snapchat.com",
+    "facebook.com", "twitter.com", "x.com",
+    "reddit.com", "discord.com", "tumblr.com"
+  ]
+}
