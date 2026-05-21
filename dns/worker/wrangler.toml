@@ -6,7 +6,7 @@ compatibility_flags = ["nodejs_compat"]
 # KV binding (id filled in after running `wrangler kv:namespace create BLOCKLIST_KV`)
 [[kv_namespaces]]
 binding = "BLOCKLIST_KV"
-id = "PLACEHOLDER_FILL_AFTER_NAMESPACE_CREATE"
+id = "1844717598454abe8e23ed680c688bcf"
 
 # Durable Object binding
 [[durable_objects.bindings]]
