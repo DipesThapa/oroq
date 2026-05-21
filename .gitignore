@@ -3,9 +3,5 @@ node_modules
 dist
 docs/idea-to-store-flow.md
 .env
-dns/data/built/
-dns/worker/.wrangler/
-profiles/build/
-profiles/node_modules/
-landing/node_modules/
-landing/.wrangler/
+ga-key.json
+*-ga-key.json

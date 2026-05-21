@@ -1,5 +1,0 @@
-{
-  "kids":   ["adult", "gambling", "violence", "social", "gaming", "drugs"],
-  "teens":  ["adult", "gambling", "drugs", "malware", "phishing"],
-  "family": ["adult", "malware", "phishing"]
-}

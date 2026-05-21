@@ -1,8 +1,0 @@
-{
-  "category": "phishing",
-  "description": "Known phishing domains",
-  "domains": [
-    "phishing-test-1.com",
-    "phishing-test-2.com"
-  ]
-}
