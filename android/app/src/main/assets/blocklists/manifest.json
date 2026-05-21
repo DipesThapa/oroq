@@ -1,0 +1,34 @@
+{
+  "adult": {
+    "count": 21,
+    "version": "dc06018fd437"
+  },
+  "drugs": {
+    "count": 4,
+    "version": "a24dccde1ba0"
+  },
+  "gambling": {
+    "count": 9,
+    "version": "dcfa19e03ecc"
+  },
+  "gaming": {
+    "count": 6,
+    "version": "8cf4598752e6"
+  },
+  "malware": {
+    "count": 2,
+    "version": "0d4ba1920f5c"
+  },
+  "phishing": {
+    "count": 2,
+    "version": "8fec0a945b9a"
+  },
+  "social": {
+    "count": 9,
+    "version": "5aab33847e36"
+  },
+  "violence": {
+    "count": 5,
+    "version": "e559751f48d1"
+  }
+}
