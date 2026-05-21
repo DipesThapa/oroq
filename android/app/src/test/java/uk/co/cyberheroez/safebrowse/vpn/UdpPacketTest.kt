@@ -39,4 +39,32 @@ class UdpPacketTest {
     @Test fun returnsNullForTruncatedPacket() {
         assertNull(parseUdp(byteArrayOf(0x45, 0x00)))
     }
+
+    @Test fun buildsAParsablePacketThatRoundTrips() {
+        val built = buildUdpPacket(
+            sourceAddress = byteArrayOf(10, 0, 0, 2),
+            destinationAddress = byteArrayOf(10, 0, 0, 1),
+            sourcePort = 53,
+            destinationPort = 40000,
+            payload = byteArrayOf(0xAB.toByte(), 0xCD.toByte()),
+        )
+        val parsed = parseUdp(built)!!
+        assertEquals(53, parsed.sourcePort)
+        assertEquals(40000, parsed.destinationPort)
+        assertArrayEquals(byteArrayOf(0xAB.toByte(), 0xCD.toByte()), parsed.payload)
+        assertArrayEquals(byteArrayOf(10, 0, 0, 2), parsed.sourceAddress)
+        assertArrayEquals(byteArrayOf(10, 0, 0, 1), parsed.destinationAddress)
+    }
+
+    @Test fun builtPacketHasAValidIpv4HeaderChecksum() {
+        val built = buildUdpPacket(
+            sourceAddress = byteArrayOf(10, 0, 0, 2),
+            destinationAddress = byteArrayOf(10, 0, 0, 1),
+            sourcePort = 53,
+            destinationPort = 40000,
+            payload = byteArrayOf(1, 2, 3),
+        )
+        // Summing a valid header (checksum field included) yields 0.
+        assertEquals(0, ones16Checksum(built, 0, 20))
+    }
 }
