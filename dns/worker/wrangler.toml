@@ -15,7 +15,7 @@ class_name = "StatsCounter"
 
 [[migrations]]
 tag = "v1"
-new_classes = ["StatsCounter"]
+new_sqlite_classes = ["StatsCounter"]
 
 # Daily cron at 00:05 UTC
 [triggers]
