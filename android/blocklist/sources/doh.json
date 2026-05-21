@@ -1,0 +1,18 @@
+{
+  "category": "doh",
+  "description": "Public DNS-over-HTTPS endpoints, blocked so browsers fall back to system DNS",
+  "domains": [
+    "cloudflare-dns.com",
+    "mozilla.cloudflare-dns.com",
+    "dns.google",
+    "dns.google.com",
+    "dns.quad9.net",
+    "doh.opendns.com",
+    "dns.adguard.com",
+    "dns.adguard-dns.com",
+    "doh.cleanbrowsing.org",
+    "dns.nextdns.io",
+    "chrome.cloudflare-dns.com",
+    "dns11.quad9.net"
+  ]
+}

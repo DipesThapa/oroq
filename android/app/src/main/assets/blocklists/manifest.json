@@ -3,6 +3,10 @@
     "count": 21,
     "version": "dc06018fd437"
   },
+  "doh": {
+    "count": 12,
+    "version": "a1ea419375bb"
+  },
   "drugs": {
     "count": 4,
     "version": "a24dccde1ba0"
