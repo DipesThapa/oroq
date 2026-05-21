@@ -3,5 +3,3 @@ node_modules
 dist
 docs/idea-to-store-flow.md
 .env
-ga-key.json
-*-ga-key.json
