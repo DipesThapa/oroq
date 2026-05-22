@@ -96,6 +96,9 @@ class FamilyStore(context: Context) {
     /** Blocking read of the device key pair — for use off the main thread only. */
     fun keyPairBlocking(): FamilyKeyPair = kotlinx.coroutines.runBlocking { getOrCreateKeyPair() }
 
+    /** Blocking read of the paired children — for use off the main thread only. */
+    fun childrenBlocking(): List<PairedChild> = kotlinx.coroutines.runBlocking { getChildren() }
+
     private fun encodeChild(c: PairedChild): String =
         JSONObject().put("id", c.pairingId).put("label", c.label).put("pk", c.childPublicKeyB64).toString()
 

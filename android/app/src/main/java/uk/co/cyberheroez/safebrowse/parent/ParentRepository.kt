@@ -1,6 +1,7 @@
 package uk.co.cyberheroez.safebrowse.parent
 
 import android.content.Context
+import uk.co.cyberheroez.safebrowse.family.FamilyCommand
 import uk.co.cyberheroez.safebrowse.family.FamilyCrypto
 import uk.co.cyberheroez.safebrowse.family.FamilyStore
 import uk.co.cyberheroez.safebrowse.family.FamilySummary
@@ -28,5 +29,18 @@ class ParentRepository(context: Context) {
             )
             parseSummary(plaintext.decodeToString())
         }.getOrNull()
+    }
+
+    /**
+     * Encrypts [command] with the child's public key and enqueues it on the
+     * Worker. Returns true on success.
+     */
+    fun sendCommand(pairingId: String, command: FamilyCommand): Boolean {
+        val token = store.tokenBlocking() ?: return false
+        val child = store.childrenBlocking().firstOrNull { it.pairingId == pairingId } ?: return false
+        val ciphertext = FamilyCrypto.encryptFor(
+            child.childPublicKeyB64, command.toJson().toByteArray(),
+        )
+        return api.cmdSend(token, pairingId, Base64.getEncoder().encodeToString(ciphertext))
     }
 }

@@ -2,16 +2,22 @@ package uk.co.cyberheroez.safebrowse.parent
 
 import android.graphics.Typeface
 import android.os.Bundle
+import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.cyberheroez.safebrowse.family.FamilyCommand
 import uk.co.cyberheroez.safebrowse.family.FamilySummary
 import uk.co.cyberheroez.safebrowse.ui.Style
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
@@ -55,6 +61,12 @@ class ChildDashboardActivity : AppCompatActivity() {
         column.addView(statusBlock(summary.protectionOn), gap(20))
         column.addView(screenTimeBlock(summary), gap(14))
         column.addView(blockedBlock(summary), gap(14))
+
+        column.addView(sectionLabel("REMOTE CONTROL"), gap(24))
+        column.addView(actionButton("Grant 30 minutes") {
+            sendCommand(FamilyCommand(FamilyCommand.GRANT_EXTRA_TIME, 30), "Granted 30 minutes")
+        }, gap(10))
+        column.addView(actionButton("Set daily limit") { promptDailyLimit() }, gap(10))
 
         return ScrollView(this).apply {
             setBackgroundColor(Style.BG)
@@ -101,6 +113,58 @@ class ChildDashboardActivity : AppCompatActivity() {
             setPadding(dp(22), dp(20), dp(22), dp(20))
             build()
         }
+
+    private fun sectionLabel(text: String) = TextView(this).apply {
+        this.text = text
+        textSize = 12f
+        letterSpacing = 0.12f
+        setTypeface(typeface, Typeface.BOLD)
+        setTextColor(Style.MUTED)
+    }
+
+    private fun actionButton(label: String, onClick: () -> Unit): MaterialButton =
+        MaterialButton(this).apply {
+            text = label
+            isAllCaps = false
+            textSize = 16f
+            setTypeface(typeface, Typeface.BOLD)
+            cornerRadius = dp(30)
+            insetTop = 0
+            insetBottom = 0
+            setOnClickListener { onClick() }
+        }
+
+    private fun promptDailyLimit() {
+        val input = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+            hint = "Minutes per day (0 = no limit)"
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Daily screen-time limit")
+            .setView(input)
+            .setPositiveButton("Send") { _, _ ->
+                val minutes = input.text.toString().toIntOrNull() ?: 0
+                sendCommand(
+                    FamilyCommand(FamilyCommand.SET_DAILY_LIMIT, minutes),
+                    "Daily limit set to ${formatMinutes(minutes)}",
+                )
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun sendCommand(command: FamilyCommand, successMessage: String) {
+        val pairingId = intent.getStringExtra(EXTRA_PAIRING_ID) ?: return
+        lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { repo.sendCommand(pairingId, command) }
+            Toast.makeText(
+                this@ChildDashboardActivity,
+                if (ok) "$successMessage — it reaches the phone shortly"
+                else "Couldn't send — check your connection",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
 
     private fun backRow() = TextView(this).apply {
         text = "‹  Back"
