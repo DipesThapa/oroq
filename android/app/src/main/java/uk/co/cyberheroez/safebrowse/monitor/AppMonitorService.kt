@@ -10,6 +10,7 @@ import android.util.Log
 import kotlinx.coroutines.runBlocking
 import uk.co.cyberheroez.safebrowse.R
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.family.BlockEventLog
 import uk.co.cyberheroez.safebrowse.ui.BlockActivity
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -18,6 +19,8 @@ class AppMonitorService : android.app.Service() {
 
     private val running = AtomicBoolean(false)
     private var worker: Thread? = null
+    private val blockLog by lazy { BlockEventLog.forContext(this) }
+    private var lastBlockedApp: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -48,7 +51,15 @@ class AppMonitorService : android.app.Service() {
                             )
                         }
                         when (decision) {
-                            BlockDecision.BLOCK_APP -> showBlock(BlockActivity.REASON_APP)
+                            BlockDecision.BLOCK_APP -> {
+                                foreground?.let { pkg ->
+                                    if (pkg != lastBlockedApp) {
+                                        lastBlockedApp = pkg
+                                        blockLog.record("app", appLabel(pkg))
+                                    }
+                                }
+                                showBlock(BlockActivity.REASON_APP)
+                            }
                             BlockDecision.TIME_UP -> showBlock(BlockActivity.REASON_TIME)
                             BlockDecision.ALLOW -> {}
                         }
@@ -64,6 +75,10 @@ class AppMonitorService : android.app.Service() {
             }
         }
     }
+
+    private fun appLabel(pkg: String): String = runCatching {
+        packageManager.getApplicationLabel(packageManager.getApplicationInfo(pkg, 0)).toString()
+    }.getOrDefault(pkg)
 
     private fun showBlock(reason: String) {
         try {

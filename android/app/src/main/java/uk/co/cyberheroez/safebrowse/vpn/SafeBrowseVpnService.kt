@@ -16,6 +16,7 @@ import uk.co.cyberheroez.safebrowse.config.Categories
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.filter.DnsFilter
 import uk.co.cyberheroez.safebrowse.filter.DnsMessage
+import uk.co.cyberheroez.safebrowse.family.BlockEventLog
 import uk.co.cyberheroez.safebrowse.filter.loadBlocklistRepository
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -34,6 +35,8 @@ class SafeBrowseVpnService : VpnService() {
     private val running = AtomicBoolean(false)
     private var tun: ParcelFileDescriptor? = null
     private var worker: Thread? = null
+    private val blockLog by lazy { BlockEventLog.forContext(this) }
+    private var lastBlockedDomain: String? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -97,6 +100,12 @@ class SafeBrowseVpnService : VpnService() {
                 val responsePayload = when (val decision = filter.decide(udp.payload)) {
                     is DnsFilter.Decision.Block -> {
                         Log.d(TAG, "BLOCK $domain")
+                        domain?.let { d ->
+                            if (d != lastBlockedDomain) {
+                                lastBlockedDomain = d
+                                blockLog.record("web", d)
+                            }
+                        }
                         decision.response
                     }
                     DnsFilter.Decision.Allow -> {
