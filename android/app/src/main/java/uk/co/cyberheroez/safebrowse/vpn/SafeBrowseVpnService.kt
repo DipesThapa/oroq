@@ -9,8 +9,11 @@ import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import kotlinx.coroutines.runBlocking
 import uk.co.cyberheroez.safebrowse.MainActivity
 import uk.co.cyberheroez.safebrowse.R
+import uk.co.cyberheroez.safebrowse.config.Categories
+import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.filter.DnsFilter
 import uk.co.cyberheroez.safebrowse.filter.DnsMessage
 import uk.co.cyberheroez.safebrowse.filter.loadBlocklistRepository
@@ -64,8 +67,11 @@ class SafeBrowseVpnService : VpnService() {
     private fun runLoop(descriptor: ParcelFileDescriptor) {
         try {
             val repository = loadBlocklistRepository(assets)
-            Log.i(TAG, "blocklist loaded: categories=${repository.availableCategories}")
-            val filter = DnsFilter(repository) { repository.availableCategories }
+            val enabled = runBlocking {
+                ConfigRepository(applicationContext).getEnabledCategories()
+            } + Categories.ALWAYS_ON
+            Log.i(TAG, "blocklist loaded; enabled categories=$enabled")
+            val filter = DnsFilter(repository) { enabled }
             val input = FileInputStream(descriptor.fileDescriptor)
             val output = FileOutputStream(descriptor.fileDescriptor)
             val buffer = ByteArray(MAX_PACKET)
