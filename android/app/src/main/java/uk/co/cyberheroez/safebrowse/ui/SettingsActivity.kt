@@ -123,6 +123,9 @@ class SettingsActivity : AppCompatActivity() {
         ghostButton("Screen time") {
             startActivity(Intent(this@SettingsActivity, ScreenTimeActivity::class.java))
         }
+        ghostButton("Link a parent") {
+            startActivity(Intent(this@SettingsActivity, LinkParentActivity::class.java))
+        }
         primaryButton("Save categories") { saveCategories() }
         ghostButton("Change PIN") { changePin() }
     }
