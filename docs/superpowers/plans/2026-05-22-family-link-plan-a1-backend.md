@@ -827,7 +827,7 @@ describe("/pair", () => {
     expect(res.status).toBe(404);
   });
 
-  it("rejects a second join on an already-paired code", async () => {
+  it("rejects re-using a consumed code", async () => {
     const token = await accountToken();
     const create = await fetchJson("/pair/create", {
       method: "POST",
@@ -837,9 +837,11 @@ describe("/pair", () => {
     const { code } = (await create.json()) as { code: string };
     const body = JSON.stringify({ code, childPublicKey: CHILD_KEY });
     const headers = { "content-type": "application/json" };
-    await fetchJson("/pair/join", { method: "POST", headers, body });
+    const first = await fetchJson("/pair/join", { method: "POST", headers, body });
+    expect(first.status).toBe(200);
+    // A successful join consumes the code, so re-using it is rejected.
     const second = await fetchJson("/pair/join", { method: "POST", headers, body });
-    expect(second.status).toBe(409);
+    expect(second.status).toBe(404);
   });
 });
 ```

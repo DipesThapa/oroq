@@ -1,6 +1,7 @@
 import { Env, validateEnv } from "./env";
 import { json } from "./http";
 import { handleAuth } from "./auth";
+import { handlePairing } from "./pairing";
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
@@ -9,6 +10,7 @@ export default {
     try {
       if (path === "/health") return json({ ok: true });
       if (path.startsWith("/auth/")) return await handleAuth(req, env, path);
+      if (path.startsWith("/pair")) return await handlePairing(req, env, path);
       return json({ error: "not_found" }, 404);
     } catch {
       return json({ error: "server_error" }, 500);
