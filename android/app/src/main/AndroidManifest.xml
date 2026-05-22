@@ -64,6 +64,7 @@
         <activity android:name=".parent.ParentActivity" android:exported="false" />
         <activity android:name=".parent.ParentLoginActivity" android:exported="false" />
         <activity android:name=".parent.AddChildActivity" android:exported="false" />
+        <activity android:name=".parent.ChildDashboardActivity" android:exported="false" />
         <activity android:name=".ui.LinkParentActivity" android:exported="false" />
 
         <service

@@ -75,6 +75,14 @@ class ParentActivity : AppCompatActivity() {
         orientation = LinearLayout.VERTICAL
         background = Style.roundRect(Style.VIOLET, dp(22).toFloat())
         setPadding(dp(22), dp(20), dp(22), dp(20))
+        isClickable = true
+        setOnClickListener {
+            startActivity(
+                Intent(this@ParentActivity, ChildDashboardActivity::class.java)
+                    .putExtra(ChildDashboardActivity.EXTRA_PAIRING_ID, child.pairingId)
+                    .putExtra(ChildDashboardActivity.EXTRA_LABEL, child.label),
+            )
+        }
         addView(TextView(context).apply {
             text = child.label
             textSize = 18f
@@ -82,7 +90,7 @@ class ParentActivity : AppCompatActivity() {
             setTextColor(Style.ON_DARK)
         })
         addView(TextView(context).apply {
-            text = "Linked · live status arrives in a later update"
+            text = "Tap to see today's activity"
             textSize = 12.5f
             setTextColor(Style.ON_DARK_SOFT)
         })
