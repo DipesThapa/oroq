@@ -15,6 +15,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.ui.OnboardingActivity
+import uk.co.cyberheroez.safebrowse.update.scheduleBlocklistUpdates
 import uk.co.cyberheroez.safebrowse.ui.SettingsActivity
 import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
 
@@ -38,6 +39,7 @@ class MainActivity : AppCompatActivity() {
                 startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
                 finish()
             } else {
+                scheduleBlocklistUpdates(this@MainActivity)
                 setContentView(buildLayout())
             }
         }
