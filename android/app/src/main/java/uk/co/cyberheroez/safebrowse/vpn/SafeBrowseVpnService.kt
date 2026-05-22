@@ -66,7 +66,7 @@ class SafeBrowseVpnService : VpnService() {
 
     private fun runLoop(descriptor: ParcelFileDescriptor) {
         try {
-            val repository = loadBlocklistRepository(assets)
+            val repository = loadBlocklistRepository(this@SafeBrowseVpnService)
             val enabled = runBlocking {
                 ConfigRepository(applicationContext).getEnabledCategories()
             } + Categories.ALWAYS_ON

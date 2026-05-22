@@ -1,6 +1,6 @@
 package uk.co.cyberheroez.safebrowse.filter
 
-import android.content.res.AssetManager
+import android.content.Context
 
 /**
  * Parses the text of a bundled blocklist file into a set of domains.
@@ -13,16 +13,24 @@ fun parseBlocklistText(text: String): Set<String> =
         .toSet()
 
 /**
- * Loads every `blocklists/<category>.txt` asset bundled in the APK into a
- * [BlocklistRepository]. The category name is the file name without `.txt`.
+ * Loads every bundled `blocklists/<category>.txt` asset into a
+ * [BlocklistRepository]. For each category, an updated copy downloaded into
+ * `filesDir/blocklists/` takes precedence over the bundled asset. The
+ * `manifest.txt` file is not a category and is skipped.
  */
-fun loadBlocklistRepository(assets: AssetManager): BlocklistRepository {
+fun loadBlocklistRepository(context: Context): BlocklistRepository {
     val dir = "blocklists"
+    val updatedDir = java.io.File(context.filesDir, dir)
     val categories = HashMap<String, Set<String>>()
-    for (name in assets.list(dir).orEmpty()) {
-        if (!name.endsWith(".txt")) continue
+    for (name in context.assets.list(dir).orEmpty()) {
+        if (!name.endsWith(".txt") || name == "manifest.txt") continue
         val category = name.removeSuffix(".txt")
-        val text = assets.open("$dir/$name").bufferedReader().use { it.readText() }
+        val updatedFile = java.io.File(updatedDir, name)
+        val text = if (updatedFile.exists()) {
+            updatedFile.readText()
+        } else {
+            context.assets.open("$dir/$name").bufferedReader().use { it.readText() }
+        }
         categories[category] = parseBlocklistText(text)
     }
     return BlocklistRepository(categories)
