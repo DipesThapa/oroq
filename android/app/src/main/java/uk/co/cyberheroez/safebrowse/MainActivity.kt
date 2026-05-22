@@ -11,17 +11,19 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.ui.OnboardingActivity
+import uk.co.cyberheroez.safebrowse.ui.SettingsActivity
 import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
 
-/**
- * Plan 2 debug screen: start and stop the VPN filter and show its status.
- * The real parent-facing UI (onboarding, PIN, settings) is built in Plan 3.
- */
+/** Home screen: protection status, start/stop, and a link to Settings. */
 class MainActivity : AppCompatActivity() {
 
+    private val config by lazy { ConfigRepository(this) }
     private lateinit var statusText: TextView
 
-    /** Launches the system VPN-consent dialog; starts the service if granted. */
     private val vpnConsent = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -31,12 +33,19 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(buildLayout())
+        lifecycleScope.launch {
+            if (!config.isOnboardingComplete()) {
+                startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
+                finish()
+            } else {
+                setContentView(buildLayout())
+            }
+        }
     }
 
     override fun onResume() {
         super.onResume()
-        updateStatus()
+        if (this::statusText.isInitialized) updateStatus()
     }
 
     private fun buildLayout(): LinearLayout {
@@ -70,10 +79,16 @@ class MainActivity : AppCompatActivity() {
                     refreshStatusSoon()
                 }
             })
+            addView(Button(context).apply {
+                text = "Settings"
+                setOnClickListener {
+                    startActivity(Intent(this@MainActivity, SettingsActivity::class.java))
+                }
+            })
         }
+        .also { updateStatus() }
     }
 
-    /** Reflects the live VpnService state in [statusText]. */
     private fun updateStatus() {
         if (SafeBrowseVpnService.isActive) {
             statusText.text = "● Protected"
@@ -84,7 +99,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** The service starts/stops asynchronously; re-check shortly after. */
     private fun refreshStatusSoon() {
         statusText.postDelayed({ updateStatus() }, 900)
     }
