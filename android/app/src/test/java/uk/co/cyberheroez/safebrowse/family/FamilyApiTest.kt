@@ -110,4 +110,30 @@ class FamilyApiTest {
         )))
         assertNull(api.syncFetch("jwt-123", "pid-1"))
     }
+
+    @Test fun cmdSendReturnsTrueOn200() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "POST $base/cmd/pid-1" to HttpResponse(200, """{"id":"c1"}"""),
+        )))
+        assertTrue(api.cmdSend("jwt-1", "pid-1", "CIPHER"))
+    }
+
+    @Test fun cmdFetchParsesTheQueue() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "GET $base/cmd/pid-1" to HttpResponse(
+                200, """{"commands":[{"id":"c1","ciphertext":"A"},{"id":"c2","ciphertext":"B"}]}""",
+            ),
+        )))
+        val queue = api.cmdFetch("pid-1")
+        assertEquals(2, queue?.size)
+        assertEquals("c1", queue?.get(0)?.first)
+        assertEquals("B", queue?.get(1)?.second)
+    }
+
+    @Test fun cmdAckReturnsTrueOn200() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "POST $base/cmd/pid-1/ack" to HttpResponse(200, """{"ok":true}"""),
+        )))
+        assertTrue(api.cmdAck("pid-1", listOf("c1", "c2")))
+    }
 }

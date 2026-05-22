@@ -1,5 +1,6 @@
 package uk.co.cyberheroez.safebrowse.family
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** A single HTTP response: status code and raw body text. */
@@ -94,6 +95,32 @@ class FamilyApi(
         if (res.status != 200) return null
         val value = JSONObject(res.body).optString("ciphertext")
         return value.ifEmpty { null }
+    }
+
+    /** Parent: enqueue an encrypted command for a pairing. Returns true on success. */
+    fun cmdSend(token: String, pairingId: String, ciphertextB64: String): Boolean {
+        val headers = jsonHeaders + ("authorization" to "Bearer $token")
+        val body = JSONObject().put("ciphertext", ciphertextB64).toString()
+        return post("/cmd/$pairingId", headers, body).status == 200
+    }
+
+    /** Child: fetch pending commands as (id, ciphertext) pairs, or null on failure. */
+    fun cmdFetch(pairingId: String): List<Pair<String, String>>? {
+        val res = transport.request("GET", "$baseUrl/cmd/$pairingId", emptyMap(), null)
+        if (res.status != 200) return null
+        val array = JSONObject(res.body).getJSONArray("commands")
+        return (0 until array.length()).map { i ->
+            val o = array.getJSONObject(i)
+            o.getString("id") to o.getString("ciphertext")
+        }
+    }
+
+    /** Child: acknowledge applied commands so the server drops them. */
+    fun cmdAck(pairingId: String, ids: List<String>): Boolean {
+        val array = JSONArray()
+        for (id in ids) array.put(id)
+        val body = JSONObject().put("ids", array).toString()
+        return post("/cmd/$pairingId/ack", jsonHeaders, body).status == 200
     }
 
     private fun post(path: String, headers: Map<String, String>, body: String): HttpResponse =
