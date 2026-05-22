@@ -15,7 +15,12 @@ class HttpUrlTransport(
         headers: Map<String, String>,
         body: String?,
     ): HttpResponse {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = try {
+            URL(url).openConnection() as HttpURLConnection
+        } catch (e: Exception) {
+            // Malformed URL (e.g. an unconfigured base URL) — fail gracefully.
+            return HttpResponse(0, "")
+        }
         try {
             connection.requestMethod = method
             connection.connectTimeout = connectTimeoutMs
@@ -31,6 +36,9 @@ class HttpUrlTransport(
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.use { it.readBytes().decodeToString() } ?: ""
             return HttpResponse(status, text)
+        } catch (e: Exception) {
+            // Network failure (offline, DNS, timeout) — status 0 signals "no response".
+            return HttpResponse(0, "")
         } finally {
             connection.disconnect()
         }

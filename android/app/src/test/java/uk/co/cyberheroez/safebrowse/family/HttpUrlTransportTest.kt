@@ -60,4 +60,12 @@ class HttpUrlTransportTest {
         )
         assertEquals(404, res.status)
     }
+
+    @Test fun returnsStatusZeroOnAnUnreachableHost() {
+        // Port 9 (discard) is closed on the loopback interface — connection refused.
+        val res = HttpUrlTransport(connectTimeoutMs = 500, readTimeoutMs = 500).request(
+            "GET", "http://127.0.0.1:9/whatever", emptyMap(), null,
+        )
+        assertEquals(0, res.status)
+    }
 }
