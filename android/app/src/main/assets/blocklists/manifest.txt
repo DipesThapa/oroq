@@ -1,0 +1,9 @@
+adult e86f3a809084
+doh a1ea419375bb
+drugs a67bb6a95877
+gambling 456193e7dee5
+gaming 8cf4598752e6
+malware 4697258c6846
+phishing d63316c901e5
+social 5aab33847e36
+violence e559751f48d1

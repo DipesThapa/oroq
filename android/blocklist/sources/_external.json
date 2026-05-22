@@ -1,0 +1,7 @@
+{
+  "adult": "https://raw.githubusercontent.com/blocklistproject/Lists/master/porn.txt",
+  "gambling": "https://raw.githubusercontent.com/blocklistproject/Lists/master/gambling.txt",
+  "drugs": "https://raw.githubusercontent.com/blocklistproject/Lists/master/drugs.txt",
+  "malware": "https://raw.githubusercontent.com/blocklistproject/Lists/master/malware.txt",
+  "phishing": "https://raw.githubusercontent.com/blocklistproject/Lists/master/phishing.txt"
+}
