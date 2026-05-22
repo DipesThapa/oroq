@@ -77,7 +77,7 @@ class AddChildActivity : AppCompatActivity() {
     }
 
     private fun codeView(code: String): View = screen(this) {
-        pageHeader("Pairing code")
+        pageHeader("Pairing code") { finish() }
         card {
             cardTitle("On your child's phone")
             body("Open SafeBrowse, choose \"This is my child's phone\", then " +
@@ -96,7 +96,7 @@ class AddChildActivity : AppCompatActivity() {
     }
 
     private fun sasView(pairingId: String, childKey: String, sas: String): View = screen(this) {
-        pageHeader("Confirm it's safe")
+        pageHeader("Confirm it's safe") { finish() }
         card {
             cardTitle("Security code")
             body("Both phones should show the same 6 digits. Check your child's " +
@@ -121,7 +121,7 @@ class AddChildActivity : AppCompatActivity() {
     }
 
     private fun loadingView(message: String): View = screen(this) {
-        pageHeader("Add a child")
+        pageHeader("Add a child") { finish() }
         card { body(message) }
     }
 

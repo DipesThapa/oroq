@@ -48,7 +48,8 @@ class ChildDashboardActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(60), dp(20), dp(28))
         }
-        column.addView(title(label))
+        column.addView(backRow())
+        column.addView(title(label), gap(10))
         column.addView(caption("Last synced ${relativeTime(summary.ts)}"), gap(2))
 
         column.addView(statusBlock(summary.protectionOn), gap(20))
@@ -101,6 +102,15 @@ class ChildDashboardActivity : AppCompatActivity() {
             build()
         }
 
+    private fun backRow() = TextView(this).apply {
+        text = "‹  Back"
+        textSize = 15f
+        setTypeface(typeface, Typeface.BOLD)
+        setTextColor(Style.MUTED)
+        isClickable = true
+        setOnClickListener { finish() }
+    }
+
     private fun title(text: String) = TextView(this).apply {
         this.text = text
         textSize = 27f
@@ -149,7 +159,8 @@ class ChildDashboardActivity : AppCompatActivity() {
         val column = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(60), dp(20), dp(28))
-            addView(title(intent.getStringExtra(EXTRA_LABEL) ?: "Child phone"))
+            addView(backRow())
+            addView(title(intent.getStringExtra(EXTRA_LABEL) ?: "Child phone"), gap(10))
             addView(caption(text), gap(8))
         }
         return ScrollView(this).apply {
