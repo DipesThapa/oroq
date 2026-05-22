@@ -1,6 +1,8 @@
 package uk.co.cyberheroez.safebrowse.ui
 
+import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.Button
@@ -120,6 +122,31 @@ class SettingsActivity : AppCompatActivity() {
         column.addView(Button(this).apply {
             text = "Change PIN"
             setOnClickListener { changePin() }
+        })
+
+        column.addView(TextView(this).apply {
+            text = "Reliability"
+            textSize = 16f
+            setPadding(0, pad, 0, 0)
+        })
+        column.addView(TextView(this).apply {
+            text = "For protection that cannot be switched off easily, exempt " +
+                "SafeBrowse from battery optimisation and enable Always-on VPN " +
+                "for SafeBrowse in Android's VPN settings."
+        })
+        column.addView(Button(this).apply {
+            text = "Battery settings"
+            setOnClickListener {
+                runCatching {
+                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                }
+            }
+        })
+        column.addView(Button(this).apply {
+            text = "VPN settings"
+            setOnClickListener {
+                runCatching { startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) }
+            }
         })
 
         return ScrollView(this).apply {

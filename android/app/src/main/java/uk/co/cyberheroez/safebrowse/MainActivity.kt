@@ -1,8 +1,10 @@
 package uk.co.cyberheroez.safebrowse
 
+import android.Manifest
 import android.content.Intent
 import android.graphics.Color
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
@@ -32,6 +34,17 @@ class MainActivity : AppCompatActivity() {
         refreshStatusSoon()
     }
 
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            /* best effort — protection works without the notification */
+        }
+
+    private fun requestNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         lifecycleScope.launch {
@@ -40,6 +53,7 @@ class MainActivity : AppCompatActivity() {
                 finish()
             } else {
                 scheduleBlocklistUpdates(this@MainActivity)
+                requestNotificationPermissionIfNeeded()
                 setContentView(buildLayout())
             }
         }
