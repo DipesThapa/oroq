@@ -7,4 +7,10 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- SafeBrowse brand palette -->
+    <color name="sb_bg">#FFEEF1F6</color>
+    <color name="sb_primary">#FF3D5AFE</color>
+    <color name="sb_primary_dark">#FF2B3FB8</color>
+    <color name="sb_on_primary">#FFFFFFFF</color>
 </resources>

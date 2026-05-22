@@ -3,14 +3,11 @@ package uk.co.cyberheroez.safebrowse.ui
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
-import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -18,8 +15,15 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.config.Categories
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.ui.Style.body
+import uk.co.cyberheroez.safebrowse.ui.Style.card
+import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
+import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
+import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
+import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
-/** PIN-locked settings: category toggles and change-PIN. */
+/** PIN-locked settings: category toggles, change-PIN, and reliability guidance. */
 class SettingsActivity : AppCompatActivity() {
 
     private val config by lazy { ConfigRepository(this) }
@@ -27,7 +31,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Gate entry behind the PIN before showing anything.
+        title = "Settings"
         showPinPrompt(
             context = this,
             title = "Enter parent PIN",
@@ -37,7 +41,6 @@ class SettingsActivity : AppCompatActivity() {
         )
     }
 
-    /** Forgot-PIN path: verify the recovery code, then set a new PIN. */
     private fun showRecoveryFlow() {
         val input = EditText(this).apply { hint = "Recovery code" }
         AlertDialog.Builder(this)
@@ -89,74 +92,36 @@ class SettingsActivity : AppCompatActivity() {
         }
     }
 
-    private fun buildLayout(enabled: Set<String>): ScrollView {
-        val pad = (24 * resources.displayMetrics.density).toInt()
-        val column = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(pad, pad, pad, pad)
-        }
-        column.addView(TextView(this).apply {
-            text = "Settings"
-            textSize = 24f
-            gravity = Gravity.CENTER
-        })
-
-        column.addView(TextView(this).apply {
-            text = "Blocked categories"
-            textSize = 16f
-            setPadding(0, pad, 0, 0)
-        })
-        for (category in Categories.SELECTABLE) {
-            val box = CheckBox(this).apply {
-                text = category.label
-                isChecked = category.id in enabled
-            }
-            categoryBoxes[category.id] = box
-            column.addView(box)
-        }
-
-        column.addView(Button(this).apply {
-            text = "Save categories"
-            setOnClickListener { saveCategories() }
-        })
-        column.addView(Button(this).apply {
-            text = "Change PIN"
-            setOnClickListener { changePin() }
-        })
-
-        column.addView(TextView(this).apply {
-            text = "Reliability"
-            textSize = 16f
-            setPadding(0, pad, 0, 0)
-        })
-        column.addView(TextView(this).apply {
-            text = "For protection that cannot be switched off easily, exempt " +
-                "SafeBrowse from battery optimisation and enable Always-on VPN " +
-                "for SafeBrowse in Android's VPN settings."
-        })
-        column.addView(Button(this).apply {
-            text = "Battery settings"
-            setOnClickListener {
-                runCatching {
-                    startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    private fun buildLayout(enabled: Set<String>): View = screen(this) {
+        card {
+            cardTitle("Blocked categories")
+            for (category in Categories.SELECTABLE) {
+                val box = CheckBox(context).apply {
+                    text = category.label
+                    textSize = 15f
+                    isChecked = category.id in enabled
                 }
+                categoryBoxes[category.id] = box
+                addView(box, gap(2))
             }
-        })
-        column.addView(Button(this).apply {
-            text = "VPN settings"
-            setOnClickListener {
+        }
+        card {
+            cardTitle("Reliability")
+            body("Keep protection always on and exempt SafeBrowse from battery limits.")
+            ghostButton("Battery settings") {
+                runCatching { startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) }
+            }
+            ghostButton("VPN settings") {
                 runCatching { startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) }
             }
-        })
-
-        return ScrollView(this).apply {
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-            )
-            addView(column)
         }
+        primaryButton("Save categories") { saveCategories() }
+        ghostButton("Change PIN") { changePin() }
     }
+
+    private fun LinearLayout.gap(topDp: Int) = LinearLayout.LayoutParams(
+        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
+    ).apply { topMargin = dp(topDp) }
 
     private fun saveCategories() {
         val categories = categoryBoxes.filterValues { it.isChecked }.keys.toSet()
