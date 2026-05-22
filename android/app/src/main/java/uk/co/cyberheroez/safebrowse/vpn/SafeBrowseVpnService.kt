@@ -8,9 +8,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import uk.co.cyberheroez.safebrowse.MainActivity
 import uk.co.cyberheroez.safebrowse.R
 import uk.co.cyberheroez.safebrowse.filter.DnsFilter
+import uk.co.cyberheroez.safebrowse.filter.DnsMessage
 import uk.co.cyberheroez.safebrowse.filter.loadBlocklistRepository
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -48,6 +50,7 @@ class SafeBrowseVpnService : VpnService() {
             .addDnsServer(DNS_SERVER)
             .addRoute(DNS_SERVER, 32)
             .establish()
+        Log.i(TAG, "establish() -> ${if (descriptor == null) "NULL" else "ok"}")
         if (descriptor == null) {
             stopVpn()
             return
@@ -58,38 +61,65 @@ class SafeBrowseVpnService : VpnService() {
     }
 
     private fun runLoop(descriptor: ParcelFileDescriptor) {
-        val repository = loadBlocklistRepository(assets)
-        // Plan 2: every category is enabled. Plan 3 replaces this with the
-        // parent's saved configuration. "doh" is always among the categories.
-        val filter = DnsFilter(repository) { repository.availableCategories }
-        val input = FileInputStream(descriptor.fileDescriptor)
-        val output = FileOutputStream(descriptor.fileDescriptor)
-        val buffer = ByteArray(MAX_PACKET)
-        while (running.get()) {
-            val length = try {
-                input.read(buffer)
-            } catch (e: Exception) {
-                break
+        try {
+            val repository = loadBlocklistRepository(assets)
+            Log.i(TAG, "blocklist loaded: categories=${repository.availableCategories}")
+            val filter = DnsFilter(repository) { repository.availableCategories }
+            val input = FileInputStream(descriptor.fileDescriptor)
+            val output = FileOutputStream(descriptor.fileDescriptor)
+            val buffer = ByteArray(MAX_PACKET)
+            Log.i(TAG, "worker loop started")
+            while (running.get()) {
+                val length = try {
+                    input.read(buffer)
+                } catch (e: Exception) {
+                    Log.w(TAG, "tun read failed", e)
+                    break
+                }
+                if (length <= 0) continue
+                val udp = parseUdp(buffer.copyOf(length))
+                if (udp == null) {
+                    Log.d(TAG, "read $length bytes: not IPv4/UDP")
+                    continue
+                }
+                if (udp.destinationPort != DNS_PORT) {
+                    Log.d(TAG, "read $length bytes: udp dstPort=${udp.destinationPort}, skipping")
+                    continue
+                }
+                val domain = DnsMessage.parseQuestionDomain(udp.payload)
+                val responsePayload = when (val decision = filter.decide(udp.payload)) {
+                    is DnsFilter.Decision.Block -> {
+                        Log.d(TAG, "BLOCK $domain")
+                        decision.response
+                    }
+                    DnsFilter.Decision.Allow -> {
+                        val upstream = resolveUpstream(udp.payload)
+                        if (upstream == null) {
+                            Log.w(TAG, "ALLOW $domain: upstream failed, dropping")
+                            continue
+                        }
+                        Log.d(TAG, "ALLOW $domain: upstream ${upstream.size} bytes")
+                        upstream
+                    }
+                }
+                val reply = buildUdpPacket(
+                    sourceAddress = udp.destinationAddress,
+                    destinationAddress = udp.sourceAddress,
+                    sourcePort = udp.destinationPort,
+                    destinationPort = udp.sourcePort,
+                    payload = responsePayload,
+                )
+                try {
+                    output.write(reply)
+                    Log.d(TAG, "wrote ${reply.size} bytes for $domain")
+                } catch (e: Exception) {
+                    Log.w(TAG, "tun write failed", e)
+                    break
+                }
             }
-            if (length <= 0) continue
-            val udp = parseUdp(buffer.copyOf(length)) ?: continue
-            if (udp.destinationPort != DNS_PORT) continue
-            val responsePayload = when (val decision = filter.decide(udp.payload)) {
-                is DnsFilter.Decision.Block -> decision.response
-                DnsFilter.Decision.Allow -> resolveUpstream(udp.payload) ?: continue
-            }
-            val reply = buildUdpPacket(
-                sourceAddress = udp.destinationAddress,
-                destinationAddress = udp.sourceAddress,
-                sourcePort = udp.destinationPort,
-                destinationPort = udp.sourcePort,
-                payload = responsePayload,
-            )
-            try {
-                output.write(reply)
-            } catch (e: Exception) {
-                break
-            }
+            Log.i(TAG, "worker loop ended")
+        } catch (e: Exception) {
+            Log.e(TAG, "worker loop crashed", e)
         }
     }
 
@@ -106,6 +136,7 @@ class SafeBrowseVpnService : VpnService() {
             buf.copyOf(response.length)
         }
     } catch (e: Exception) {
+        Log.w(TAG, "resolveUpstream failed", e)
         null
     }
 
@@ -155,6 +186,7 @@ class SafeBrowseVpnService : VpnService() {
     companion object {
         const val ACTION_STOP = "uk.co.cyberheroez.safebrowse.STOP_VPN"
 
+        private const val TAG = "SafeBrowseVpn"
         private const val VPN_ADDRESS = "10.111.222.1"
         private const val DNS_SERVER = "10.111.222.2"
         private const val UPSTREAM_DNS = "1.1.1.1"
