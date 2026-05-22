@@ -5,12 +5,12 @@ compatibility_date = "2025-09-06"
 [[d1_databases]]
 binding = "DB"
 database_name = "safebrowse-family"
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "6ff2b5f1-ce1c-4f70-9157-f2929f526bb0"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "0000000000000000000000000000000000"
+id = "b101d3dc0103425cb8ca29b7ed102d1a"
 
 # JWT_SECRET, RESEND_API_KEY and RESEND_FROM are set with `wrangler secret put`,
 # never committed here.
