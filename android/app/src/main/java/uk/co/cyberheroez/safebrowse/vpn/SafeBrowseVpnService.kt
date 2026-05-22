@@ -57,6 +57,7 @@ class SafeBrowseVpnService : VpnService() {
         }
         tun = descriptor
         running.set(true)
+        isActive = true
         worker = Thread { runLoop(descriptor) }.also { it.start() }
     }
 
@@ -142,6 +143,7 @@ class SafeBrowseVpnService : VpnService() {
 
     private fun stopVpn() {
         running.set(false)
+        isActive = false
         worker?.interrupt()
         worker = null
         try {
@@ -185,6 +187,11 @@ class SafeBrowseVpnService : VpnService() {
 
     companion object {
         const val ACTION_STOP = "uk.co.cyberheroez.safebrowse.STOP_VPN"
+
+        /** True while the VPN filter is established and the worker loop runs. */
+        @Volatile
+        var isActive: Boolean = false
+            private set
 
         private const val TAG = "SafeBrowseVpn"
         private const val VPN_ADDRESS = "10.111.222.1"
