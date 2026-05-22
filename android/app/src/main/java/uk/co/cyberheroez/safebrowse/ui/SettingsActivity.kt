@@ -115,6 +115,12 @@ class SettingsActivity : AppCompatActivity() {
                 runCatching { startActivity(Intent(Settings.ACTION_VPN_SETTINGS)) }
             }
         }
+        ghostButton("App blocking") {
+            startActivity(Intent(this@SettingsActivity, AppBlockActivity::class.java))
+        }
+        ghostButton("Screen time") {
+            startActivity(Intent(this@SettingsActivity, ScreenTimeActivity::class.java))
+        }
         primaryButton("Save categories") { saveCategories() }
         ghostButton("Change PIN") { changePin() }
     }
