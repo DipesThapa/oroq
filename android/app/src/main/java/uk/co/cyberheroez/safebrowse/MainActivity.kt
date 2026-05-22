@@ -17,6 +17,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
 import uk.co.cyberheroez.safebrowse.ui.OnboardingActivity
 import uk.co.cyberheroez.safebrowse.ui.SettingsActivity
 import uk.co.cyberheroez.safebrowse.ui.Style
@@ -171,6 +172,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun startVpnService() {
         startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, AppMonitorService::class.java))
     }
 
     private fun stopVpnService() {
@@ -178,5 +180,6 @@ class MainActivity : AppCompatActivity() {
             Intent(this, SafeBrowseVpnService::class.java)
                 .setAction(SafeBrowseVpnService.ACTION_STOP)
         )
+        stopService(Intent(this, AppMonitorService::class.java))
     }
 }
