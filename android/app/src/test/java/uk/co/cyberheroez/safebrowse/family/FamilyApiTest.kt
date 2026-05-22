@@ -96,4 +96,18 @@ class FamilyApiTest {
         FamilyApi(base, transport).pairCreate("jwt-xyz", "PK", null)
         assertTrue(transport.sent.any { it.contains("/pair/create") })
     }
+
+    @Test fun syncFetchReturnsTheCiphertext() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "GET $base/sync/pid-1" to HttpResponse(200, """{"ciphertext":"BLOB"}"""),
+        )))
+        assertEquals("BLOB", api.syncFetch("jwt-123", "pid-1"))
+    }
+
+    @Test fun syncFetchReturnsNullWhenEmpty() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "GET $base/sync/pid-1" to HttpResponse(200, """{"ciphertext":null}"""),
+        )))
+        assertNull(api.syncFetch("jwt-123", "pid-1"))
+    }
 }

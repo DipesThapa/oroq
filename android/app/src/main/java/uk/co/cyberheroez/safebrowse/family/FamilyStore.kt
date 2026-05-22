@@ -90,6 +90,12 @@ class FamilyStore(context: Context) {
         }
     }
 
+    /** Blocking read of the parent token — for use off the main thread only. */
+    fun tokenBlocking(): String? = kotlinx.coroutines.runBlocking { getParentToken() }
+
+    /** Blocking read of the device key pair — for use off the main thread only. */
+    fun keyPairBlocking(): FamilyKeyPair = kotlinx.coroutines.runBlocking { getOrCreateKeyPair() }
+
     private fun encodeChild(c: PairedChild): String =
         JSONObject().put("id", c.pairingId).put("label", c.label).put("pk", c.childPublicKeyB64).toString()
 

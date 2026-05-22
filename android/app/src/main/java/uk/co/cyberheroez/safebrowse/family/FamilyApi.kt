@@ -87,6 +87,15 @@ class FamilyApi(
         return post("/sync/$pairingId", jsonHeaders, body).status == 200
     }
 
+    /** Fetches the latest encrypted summary blob for a pairing, or null if none. */
+    fun syncFetch(token: String, pairingId: String): String? {
+        val headers = mapOf("authorization" to "Bearer $token")
+        val res = transport.request("GET", "$baseUrl/sync/$pairingId", headers, null)
+        if (res.status != 200) return null
+        val value = JSONObject(res.body).optString("ciphertext")
+        return value.ifEmpty { null }
+    }
+
     private fun post(path: String, headers: Map<String, String>, body: String): HttpResponse =
         transport.request("POST", "$baseUrl$path", headers, body)
 }
