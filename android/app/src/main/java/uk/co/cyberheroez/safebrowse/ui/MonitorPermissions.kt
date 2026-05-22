@@ -7,6 +7,7 @@ import uk.co.cyberheroez.safebrowse.ui.Style.body
 import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
 import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
+import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
 import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
 import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
@@ -15,6 +16,7 @@ import uk.co.cyberheroez.safebrowse.ui.Style.screen
  * screen time need: Usage Access and "display over other apps".
  */
 fun monitorPermissionView(context: Context): View = screen(context) {
+    pageHeader("Permission needed")
     card {
         cardTitle("Two permissions needed")
         body(

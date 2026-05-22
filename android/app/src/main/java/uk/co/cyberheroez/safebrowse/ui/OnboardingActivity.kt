@@ -21,7 +21,7 @@ import uk.co.cyberheroez.safebrowse.ui.Style.body
 import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.heading
+import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
 import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
 import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
@@ -35,11 +35,12 @@ class OnboardingActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Style.lightSystemBars(this)
         setContentView(buildLayout())
     }
 
     private fun buildLayout(): View = screen(this) {
-        heading("Set up SafeBrowse")
+        pageHeader("Set up SafeBrowse")
         body("Create a parent PIN, then choose what to block.")
         card {
             cardTitle("Parent PIN")

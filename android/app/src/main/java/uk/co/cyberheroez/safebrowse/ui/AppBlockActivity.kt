@@ -15,6 +15,7 @@ import uk.co.cyberheroez.safebrowse.monitor.UsageReader
 import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
 import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
 import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
@@ -27,7 +28,7 @@ class AppBlockActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "App blocking"
+        Style.lightSystemBars(this)
     }
 
     override fun onResume() {
@@ -51,6 +52,7 @@ class AppBlockActivity : AppCompatActivity() {
     }
 
     private fun buildLayout(blocked: Set<String>): View = screen(this) {
+        pageHeader("App blocking") { finish() }
         card {
             cardTitle("Block these apps")
             for ((pkg, label) in launchableApps()) {

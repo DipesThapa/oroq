@@ -20,6 +20,7 @@ import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
 import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
+import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
 import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
 import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
@@ -31,7 +32,7 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Settings"
+        Style.lightSystemBars(this)
         showPinPrompt(
             context = this,
             title = "Enter parent PIN",
@@ -93,6 +94,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun buildLayout(enabled: Set<String>): View = screen(this) {
+        pageHeader("Settings") { finish() }
         card {
             cardTitle("Blocked categories")
             for (category in Categories.SELECTABLE) {

@@ -16,6 +16,7 @@ import uk.co.cyberheroez.safebrowse.ui.Style.body
 import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
 import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
 import uk.co.cyberheroez.safebrowse.ui.Style.screen
 
@@ -28,7 +29,7 @@ class ScreenTimeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        title = "Screen time"
+        Style.lightSystemBars(this)
     }
 
     override fun onResume() {
@@ -42,6 +43,7 @@ class ScreenTimeActivity : AppCompatActivity() {
     }
 
     private fun mainView(limitMinutes: Int): View = screen(this) {
+        pageHeader("Screen time") { finish() }
         card {
             cardTitle("Today")
             body("Total screen time: ${formatMinutes(usage.todayForegroundMinutes())}")
