@@ -3,10 +3,13 @@ package uk.co.cyberheroez.safebrowse.config
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
+import uk.co.cyberheroez.safebrowse.monitor.effectiveExtraMinutes
+import java.time.LocalDate
 
 private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
 
@@ -25,6 +28,10 @@ class ConfigRepository(context: Context) {
         val RECOVERY_SALT = stringPreferencesKey("recovery_salt")
         val CATEGORIES = stringSetPreferencesKey("enabled_categories")
         val ONBOARDED = booleanPreferencesKey("onboarding_done")
+        val BLOCKED_APPS = stringSetPreferencesKey("blocked_apps")
+        val DAILY_LIMIT = intPreferencesKey("daily_limit_minutes")
+        val EXTRA_MINUTES = intPreferencesKey("extra_minutes")
+        val EXTRA_DATE = stringPreferencesKey("extra_date")
     }
 
     suspend fun isOnboardingComplete(): Boolean =
@@ -71,5 +78,37 @@ class ConfigRepository(context: Context) {
 
     suspend fun setEnabledCategories(categories: Set<String>) {
         store.edit { it[Keys.CATEGORIES] = categories }
+    }
+
+    suspend fun getBlockedApps(): Set<String> =
+        store.data.first()[Keys.BLOCKED_APPS] ?: emptySet()
+
+    suspend fun setBlockedApps(apps: Set<String>) {
+        store.edit { it[Keys.BLOCKED_APPS] = apps }
+    }
+
+    suspend fun getDailyLimitMinutes(): Int =
+        store.data.first()[Keys.DAILY_LIMIT] ?: 0
+
+    suspend fun setDailyLimitMinutes(minutes: Int) {
+        store.edit { it[Keys.DAILY_LIMIT] = minutes }
+    }
+
+    /** Extra minutes still valid today (0 if the grant was on an earlier day). */
+    suspend fun getExtraMinutes(): Int {
+        val prefs = store.data.first()
+        val minutes = prefs[Keys.EXTRA_MINUTES] ?: return 0
+        val date = prefs[Keys.EXTRA_DATE] ?: return 0
+        return effectiveExtraMinutes(minutes, date, LocalDate.now().toString())
+    }
+
+    /** Adds [minutes] of bonus time for today (accumulates if granted again). */
+    suspend fun grantExtraMinutes(minutes: Int) {
+        val today = LocalDate.now().toString()
+        store.edit { prefs ->
+            val existing = if (prefs[Keys.EXTRA_DATE] == today) prefs[Keys.EXTRA_MINUTES] ?: 0 else 0
+            prefs[Keys.EXTRA_MINUTES] = existing + minutes
+            prefs[Keys.EXTRA_DATE] = today
+        }
     }
 }
