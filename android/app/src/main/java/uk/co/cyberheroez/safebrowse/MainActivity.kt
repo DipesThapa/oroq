@@ -22,10 +22,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.family.DeviceRole
+import uk.co.cyberheroez.safebrowse.family.FamilyStore
 import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
 import uk.co.cyberheroez.safebrowse.monitor.UsageReader
+import uk.co.cyberheroez.safebrowse.parent.ParentActivity
 import uk.co.cyberheroez.safebrowse.ui.AppBlockActivity
 import uk.co.cyberheroez.safebrowse.ui.OnboardingActivity
+import uk.co.cyberheroez.safebrowse.ui.RolePickerActivity
 import uk.co.cyberheroez.safebrowse.ui.ScreenTimeActivity
 import uk.co.cyberheroez.safebrowse.ui.SettingsActivity
 import uk.co.cyberheroez.safebrowse.ui.Style
@@ -41,6 +45,7 @@ import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
 class MainActivity : AppCompatActivity() {
 
     private val config by lazy { ConfigRepository(this) }
+    private val familyStore by lazy { FamilyStore(this) }
     private val usage by lazy { UsageReader(this) }
 
     private val match = ViewGroup.LayoutParams.MATCH_PARENT
@@ -80,14 +85,26 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
         lifecycleScope.launch {
-            if (!config.isOnboardingComplete()) {
-                startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
-                finish()
-            } else {
-                scheduleBlocklistUpdates(this@MainActivity)
-                requestNotificationPermissionIfNeeded()
-                setContentView(buildLayout())
-                refreshMetrics()
+            when (familyStore.getRole()) {
+                null -> {
+                    startActivity(Intent(this@MainActivity, RolePickerActivity::class.java))
+                    finish()
+                }
+                DeviceRole.PARENT -> {
+                    startActivity(Intent(this@MainActivity, ParentActivity::class.java))
+                    finish()
+                }
+                DeviceRole.CHILD -> {
+                    if (!config.isOnboardingComplete()) {
+                        startActivity(Intent(this@MainActivity, OnboardingActivity::class.java))
+                        finish()
+                    } else {
+                        scheduleBlocklistUpdates(this@MainActivity)
+                        requestNotificationPermissionIfNeeded()
+                        setContentView(buildLayout())
+                        refreshMetrics()
+                    }
+                }
             }
         }
     }

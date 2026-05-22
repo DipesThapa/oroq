@@ -60,6 +60,12 @@
             android:name=".ui.ScreenTimeActivity"
             android:exported="false" />
 
+        <activity android:name=".ui.RolePickerActivity" android:exported="false" />
+        <activity android:name=".parent.ParentActivity" android:exported="false" />
+        <activity android:name=".parent.ParentLoginActivity" android:exported="false" />
+        <activity android:name=".parent.AddChildActivity" android:exported="false" />
+        <activity android:name=".ui.LinkParentActivity" android:exported="false" />
+
         <service
             android:name=".vpn.SafeBrowseVpnService"
             android:exported="false"
