@@ -19,6 +19,7 @@ import uk.co.cyberheroez.safebrowse.family.FamilyStore
 import uk.co.cyberheroez.safebrowse.family.ParentLink
 import uk.co.cyberheroez.safebrowse.family.familyApi
 import uk.co.cyberheroez.safebrowse.family.normalizeCode
+import uk.co.cyberheroez.safebrowse.family.scheduleFamilySync
 import uk.co.cyberheroez.safebrowse.ui.Style.body
 import uk.co.cyberheroez.safebrowse.ui.Style.card
 import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
@@ -95,6 +96,7 @@ class LinkParentActivity : AppCompatActivity() {
         primaryButton("They match — finish") {
             lifecycleScope.launch {
                 store.setParentLink(ParentLink(pairingId, parentKey))
+                scheduleFamilySync(this@LinkParentActivity)
                 Toast.makeText(this@LinkParentActivity, "Linked to a parent", Toast.LENGTH_SHORT).show()
                 finish()
             }

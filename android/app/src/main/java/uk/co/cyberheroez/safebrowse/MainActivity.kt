@@ -24,6 +24,7 @@ import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.family.DeviceRole
 import uk.co.cyberheroez.safebrowse.family.FamilyStore
+import uk.co.cyberheroez.safebrowse.family.scheduleFamilySync
 import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
 import uk.co.cyberheroez.safebrowse.monitor.UsageReader
 import uk.co.cyberheroez.safebrowse.parent.ParentActivity
@@ -100,6 +101,7 @@ class MainActivity : AppCompatActivity() {
                         finish()
                     } else {
                         scheduleBlocklistUpdates(this@MainActivity)
+                        scheduleFamilySync(this@MainActivity)
                         requestNotificationPermissionIfNeeded()
                         setContentView(buildLayout())
                         refreshMetrics()

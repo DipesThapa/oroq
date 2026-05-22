@@ -81,6 +81,12 @@ class FamilyApi(
         )
     }
 
+    /** Uploads an encrypted summary blob for a pairing. Returns true on success. */
+    fun syncUpload(pairingId: String, ciphertextB64: String): Boolean {
+        val body = JSONObject().put("ciphertext", ciphertextB64).toString()
+        return post("/sync/$pairingId", jsonHeaders, body).status == 200
+    }
+
     private fun post(path: String, headers: Map<String, String>, body: String): HttpResponse =
         transport.request("POST", "$baseUrl$path", headers, body)
 }
