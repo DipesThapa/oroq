@@ -37,7 +37,18 @@ class LinkParentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Style.lightSystemBars(this)
-        setContentView(codeEntryView())
+        lifecycleScope.launch {
+            setContentView(if (store.getParentLink() != null) linkedView() else codeEntryView())
+        }
+    }
+
+    private fun linkedView(): View = screen(this) {
+        pageHeader("Link a parent") { finish() }
+        card {
+            cardTitle("Linked to a parent")
+            body("This phone is linked. A parent can see today's protection " +
+                "status, screen time and blocked attempts from their phone.")
+        }
     }
 
     private fun codeEntryView(): View = screen(this) {

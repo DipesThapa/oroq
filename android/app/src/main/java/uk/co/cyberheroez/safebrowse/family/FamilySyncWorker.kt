@@ -3,6 +3,8 @@ package uk.co.cyberheroez.safebrowse.family
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -58,12 +60,21 @@ class FamilySyncWorker(
     }.timeInMillis
 }
 
-/** Schedules the ~15-minute periodic summary upload. Safe to call repeatedly. */
+/**
+ * Schedules the ~15-minute periodic summary upload, plus one immediate upload
+ * so a freshly paired parent sees data without waiting for the first cycle.
+ * Safe to call repeatedly.
+ */
 fun scheduleFamilySync(context: Context) {
-    val request = PeriodicWorkRequestBuilder<FamilySyncWorker>(15, TimeUnit.MINUTES).build()
-    WorkManager.getInstance(context).enqueueUniquePeriodicWork(
+    val manager = WorkManager.getInstance(context)
+    manager.enqueueUniquePeriodicWork(
         "family-sync",
         ExistingPeriodicWorkPolicy.KEEP,
-        request,
+        PeriodicWorkRequestBuilder<FamilySyncWorker>(15, TimeUnit.MINUTES).build(),
+    )
+    manager.enqueueUniqueWork(
+        "family-sync-now",
+        ExistingWorkPolicy.REPLACE,
+        OneTimeWorkRequestBuilder<FamilySyncWorker>().build(),
     )
 }
