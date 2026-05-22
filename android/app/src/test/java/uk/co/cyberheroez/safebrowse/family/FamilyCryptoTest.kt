@@ -1,8 +1,10 @@
 package uk.co.cyberheroez.safebrowse.family
 
 import org.junit.Assert.assertArrayEquals
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.security.GeneralSecurityException
 
@@ -30,5 +32,30 @@ class FamilyCryptoTest {
         assertThrows(GeneralSecurityException::class.java) {
             FamilyCrypto.decrypt(mallory.privateKeysetB64, ciphertext)
         }
+    }
+
+    @Test fun sasIsSixDigits() {
+        val parent = FamilyCrypto.generateKeyPair()
+        val child = FamilyCrypto.generateKeyPair()
+        val sas = FamilyCrypto.sas(parent.publicKeysetB64, child.publicKeysetB64)
+        assertTrue(sas.matches(Regex("\\d{6}")))
+    }
+
+    @Test fun sasIsStableForTheSameKeys() {
+        val parent = FamilyCrypto.generateKeyPair()
+        val child = FamilyCrypto.generateKeyPair()
+        assertEquals(
+            FamilyCrypto.sas(parent.publicKeysetB64, child.publicKeysetB64),
+            FamilyCrypto.sas(parent.publicKeysetB64, child.publicKeysetB64),
+        )
+    }
+
+    @Test fun sasDependsOnKeyOrder() {
+        val parent = FamilyCrypto.generateKeyPair()
+        val child = FamilyCrypto.generateKeyPair()
+        assertNotEquals(
+            FamilyCrypto.sas(parent.publicKeysetB64, child.publicKeysetB64),
+            FamilyCrypto.sas(child.publicKeysetB64, parent.publicKeysetB64),
+        )
     }
 }
