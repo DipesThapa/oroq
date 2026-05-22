@@ -1,0 +1,16 @@
+name = "safebrowse-family"
+main = "src/index.ts"
+compatibility_date = "2025-09-06"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "safebrowse-family"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "0000000000000000000000000000000000"
+
+# JWT_SECRET, RESEND_API_KEY and RESEND_FROM are set with `wrangler secret put`,
+# never committed here.
