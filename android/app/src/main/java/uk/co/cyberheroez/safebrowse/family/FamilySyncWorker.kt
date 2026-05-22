@@ -49,6 +49,7 @@ class FamilySyncWorker(
         val uploaded = familyApi().syncUpload(
             link.pairingId, Base64.getEncoder().encodeToString(ciphertext),
         )
+        runCatching { pollAndApplyCommands(applicationContext) }
         return if (uploaded) Result.success() else Result.retry()
     }
 

@@ -14,9 +14,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.R
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
 
 /** Full-screen screen shown when an app is blocked or screen time is up. */
@@ -32,6 +34,26 @@ class BlockActivity : AppCompatActivity() {
         supportActionBar?.hide()
         val reason = intent.getStringExtra(EXTRA_REASON) ?: REASON_APP
         setContentView(if (reason == REASON_TIME) timeUpView() else appBlockedView())
+        if (reason == REASON_TIME) pollForRemoteGrant()
+    }
+
+    /** While the time's-up screen shows, checks for a remote grant every 30s. */
+    private fun pollForRemoteGrant() {
+        lifecycleScope.launch {
+            repeat(40) { // ~20 minutes of polling
+                delay(30_000)
+                val applied = runCatching {
+                    pollAndApplyCommands(applicationContext)
+                }.getOrDefault(0)
+                if (applied > 0) {
+                    Toast.makeText(
+                        this@BlockActivity, "A parent granted more time", Toast.LENGTH_LONG,
+                    ).show()
+                    finish()
+                    return@launch
+                }
+            }
+        }
     }
 
     /** Back returns to the launcher, never to the blocked app. */
