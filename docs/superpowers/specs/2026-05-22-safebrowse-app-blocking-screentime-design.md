@@ -87,6 +87,13 @@ Android's `UsageStatsManager`; no Accessibility Service and no overlay window.
 3. If the result is `BLOCK_APP` or `TIME_UP`, launches `BlockActivity` with that
    reason. `ALLOW` does nothing.
 
+Launching an Activity from a background service is restricted on Android 10+
+(background-activity-launch). The app declares the `SYSTEM_ALERT_WINDOW`
+("display over other apps") permission, which grants the exemption needed to
+show the block screen reliably. The permission is used **only** for that
+exemption — the block screen is a normal full-screen Activity, not a drawn
+overlay window.
+
 The decision function is pure and unit-tested:
 
 ```
@@ -186,11 +193,12 @@ emulator, as in Plans 2-3.
 
 ## 10. Play Store considerations
 
-- The approach uses **`PACKAGE_USAGE_STATS`** and a foreground service. It does
-  **not** use an Accessibility Service or an overlay window — deliberately, to
-  avoid the heavy Play Store review scrutiny that Accessibility-based parental
-  apps face. This was the decisive reason Approach A was chosen over an
-  Accessibility-based design.
+- The approach uses **`PACKAGE_USAGE_STATS`**, a foreground service, and
+  **`SYSTEM_ALERT_WINDOW`** (the latter only for the background-activity-launch
+  exemption — see §5.2 — not to draw overlays). It does **not** use an
+  Accessibility Service — deliberately, to avoid the heavy Play Store review
+  scrutiny that Accessibility-based parental apps face. This was the decisive
+  reason this approach was chosen over an Accessibility-based design.
 - The app must declare the foreground service and its type, and present Usage
   Access honestly to the user.
 - Standard child-safety / UK Children's Code obligations from the MVP spec still
