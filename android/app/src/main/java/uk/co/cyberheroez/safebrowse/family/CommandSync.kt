@@ -47,6 +47,14 @@ suspend fun pollAndApplyCommands(context: Context): Int {
                 config.setEnabledCategories(ids)
                 restartVpnIfActive(context)
             }
+            FamilyCommand.SET_BLOCKED_APPS -> {
+                val pkgs = command.stringValue
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet()
+                config.setBlockedApps(pkgs)
+            }
         }
         applied.markApplied(id)
         appliedCount++
