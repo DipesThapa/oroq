@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.R
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
+import uk.co.cyberheroez.safebrowse.monitor.UsageReader
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
 
 /** Full-screen screen shown when an app is blocked or screen time is up. */
@@ -160,7 +161,8 @@ class BlockActivity : AppCompatActivity() {
             onEntered = { pin ->
                 lifecycleScope.launch {
                     if (config.verifyPin(pin)) {
-                        config.grantExtraMinutes(30)
+                        val today = UsageReader(this@BlockActivity).todayForegroundMinutes()
+                        config.grantExtraMinutes(30, today)
                         Toast.makeText(this@BlockActivity, "30 minutes granted", Toast.LENGTH_SHORT).show()
                         finish()
                     } else {

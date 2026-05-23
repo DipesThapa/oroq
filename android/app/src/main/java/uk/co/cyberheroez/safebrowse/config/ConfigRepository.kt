@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import uk.co.cyberheroez.safebrowse.monitor.effectiveExtraMinutes
+import uk.co.cyberheroez.safebrowse.monitor.newExtraAfterGrant
 import java.time.LocalDate
 
 private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
@@ -102,12 +103,20 @@ class ConfigRepository(context: Context) {
         return effectiveExtraMinutes(minutes, date, LocalDate.now().toString())
     }
 
-    /** Adds [minutes] of bonus time for today (accumulates if granted again). */
-    suspend fun grantExtraMinutes(minutes: Int) {
+    /**
+     * Grants [minutes] of additional headroom from now, given the child's
+     * current screen-time [todayMinutes]. If the child is already past the
+     * limit, the existing overage is absorbed into the baseline so the grant
+     * actually unblocks them for [minutes] of further use (a naive add would
+     * be eaten by the overage and the time-up screen would reappear within
+     * seconds).
+     */
+    suspend fun grantExtraMinutes(minutes: Int, todayMinutes: Int) {
         val today = LocalDate.now().toString()
+        val limit = getDailyLimitMinutes()
         store.edit { prefs ->
             val existing = if (prefs[Keys.EXTRA_DATE] == today) prefs[Keys.EXTRA_MINUTES] ?: 0 else 0
-            prefs[Keys.EXTRA_MINUTES] = existing + minutes
+            prefs[Keys.EXTRA_MINUTES] = newExtraAfterGrant(existing, todayMinutes, limit, minutes)
             prefs[Keys.EXTRA_DATE] = today
         }
     }

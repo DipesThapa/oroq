@@ -2,6 +2,7 @@ package uk.co.cyberheroez.safebrowse.family
 
 import android.content.Context
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.safebrowse.monitor.UsageReader
 import java.util.Base64
 
 /**
@@ -30,7 +31,10 @@ suspend fun pollAndApplyCommands(context: Context): Int {
         }.getOrNull() ?: continue
 
         when (command.type) {
-            FamilyCommand.GRANT_EXTRA_TIME -> config.grantExtraMinutes(command.intValue)
+            FamilyCommand.GRANT_EXTRA_TIME -> {
+                val today = runCatching { UsageReader(context).todayForegroundMinutes() }.getOrDefault(0)
+                config.grantExtraMinutes(command.intValue, today)
+            }
             FamilyCommand.SET_DAILY_LIMIT -> config.setDailyLimitMinutes(command.intValue)
         }
         applied.markApplied(id)
