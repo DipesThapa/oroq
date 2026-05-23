@@ -17,15 +17,17 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import uk.co.cyberheroez.safebrowse.R
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
 
-/** Full-screen screen shown when an app is blocked or screen time is up. */
+/**
+ * Full-screen screen shown when an app is blocked or screen time is up.
+ *
+ * The only action is "Go to home screen" — there is no local PIN escape.
+ * On the time's-up variant, the activity polls the parent every 30 s for a
+ * grant-extra-time command and dismisses itself the moment one is applied.
+ */
 class BlockActivity : AppCompatActivity() {
-
-    private val config by lazy { ConfigRepository(this) }
 
     private val match = ViewGroup.LayoutParams.MATCH_PARENT
     private val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -75,13 +77,11 @@ class BlockActivity : AppCompatActivity() {
         iconRes = R.drawable.ic_clock,
         heading = "Screen time's up",
         message = "Today's screen-time limit has been reached. " +
-            "A parent can grant more time with the PIN.",
+            "A parent can grant more time remotely.",
     ) {
-        whiteButton("Grant 30 more minutes", Style.BLUE) { promptForExtraTime() }
-        textButton("Go to home screen") { goHome() }
+        whiteButton("Go to home screen", Style.BLUE) { goHome() }
     }
 
-    /** A centred, full-bleed coloured screen with an icon, heading and actions. */
     private fun blockScreen(
         bgColor: Int,
         iconRes: Int,
@@ -138,39 +138,6 @@ class BlockActivity : AppCompatActivity() {
             setTextColor(textColor)
             setOnClickListener { onClick() }
         }, LinearLayout.LayoutParams(match, dp(56)).apply { topMargin = dp(30) })
-    }
-
-    /** A flat text-only action for a colour screen. */
-    private fun LinearLayout.textButton(text: String, onClick: () -> Unit) {
-        addView(TextView(this@BlockActivity).apply {
-            this.text = text
-            textSize = 15f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Style.ON_DARK_SOFT)
-            gravity = Gravity.CENTER
-            isClickable = true
-            setPadding(0, dp(20), 0, 0)
-            setOnClickListener { onClick() }
-        }, mw(0))
-    }
-
-    private fun promptForExtraTime() {
-        showPinPrompt(
-            context = this,
-            title = "Enter parent PIN",
-            onEntered = { pin ->
-                lifecycleScope.launch {
-                    if (config.verifyPin(pin)) {
-                        val today = UsageReader(this@BlockActivity).todayForegroundMinutes()
-                        config.grantExtraMinutes(30, today)
-                        Toast.makeText(this@BlockActivity, "30 minutes granted", Toast.LENGTH_SHORT).show()
-                        finish()
-                    } else {
-                        Toast.makeText(this@BlockActivity, "Wrong PIN", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            },
-        )
     }
 
     private fun goHome() {

@@ -39,26 +39,10 @@
         </activity>
 
         <activity
-            android:name=".ui.OnboardingActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.SettingsActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".ui.BlockActivity"
             android:exported="false"
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
-
-        <activity
-            android:name=".ui.AppBlockActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".ui.ScreenTimeActivity"
-            android:exported="false" />
 
         <activity android:name=".ui.RolePickerActivity" android:exported="false" />
         <activity android:name=".ui.ChildOnboardingActivity" android:exported="false" />
