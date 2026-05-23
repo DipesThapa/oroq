@@ -21,6 +21,10 @@ data class FamilySummary(
     val recentEvents: List<BlockEvent> = emptyList(),
     /** Category ids currently enabled (i.e. blocked) on the child. */
     val categories: Set<String> = emptySet(),
+    /** Every user-installed app on the child phone — for the parent picker. */
+    val installedApps: List<InstalledApp> = emptyList(),
+    /** Package names the child currently blocks. Mirror of [installedApps] selection. */
+    val blockedApps: Set<String> = emptySet(),
 )
 
 /** Serialises the summary to its compact JSON wire form. */
@@ -37,6 +41,12 @@ fun FamilySummary.toJson(): String {
     }
     val cats = JSONArray()
     for (id in categories) cats.put(id)
+    val installed = JSONArray()
+    for (app in installedApps) {
+        installed.put(JSONObject().put("pkg", app.packageName).put("label", app.label))
+    }
+    val blocked = JSONArray()
+    for (pkg in blockedApps) blocked.put(pkg)
     return JSONObject()
         .put("ts", ts)
         .put("protectionOn", protectionOn)
@@ -47,6 +57,8 @@ fun FamilySummary.toJson(): String {
         .put("topApps", apps)
         .put("recentEvents", events)
         .put("categories", cats)
+        .put("installedApps", installed)
+        .put("blockedApps", blocked)
         .toString()
 }
 
@@ -74,6 +86,19 @@ fun parseSummary(text: String): FamilySummary {
     if (catsArray != null) {
         for (i in 0 until catsArray.length()) cats.add(catsArray.getString(i))
     }
+    val installed = ArrayList<InstalledApp>()
+    val installedArray = json.optJSONArray("installedApps")
+    if (installedArray != null) {
+        for (i in 0 until installedArray.length()) {
+            val o = installedArray.getJSONObject(i)
+            installed.add(InstalledApp(o.getString("pkg"), o.getString("label")))
+        }
+    }
+    val blocked = HashSet<String>()
+    val blockedArray = json.optJSONArray("blockedApps")
+    if (blockedArray != null) {
+        for (i in 0 until blockedArray.length()) blocked.add(blockedArray.getString(i))
+    }
     return FamilySummary(
         ts = json.getLong("ts"),
         protectionOn = json.getBoolean("protectionOn"),
@@ -84,5 +109,7 @@ fun parseSummary(text: String): FamilySummary {
         appBlockedToday = json.getInt("appBlockedToday"),
         recentEvents = events,
         categories = cats,
+        installedApps = installed,
+        blockedApps = blocked,
     )
 }

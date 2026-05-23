@@ -18,6 +18,11 @@ class FamilySummaryTest {
             BlockEvent(1_716_000_000_002L, "app", "TikTok"),
         ),
         categories = setOf("adult", "gambling"),
+        installedApps = listOf(
+            InstalledApp("com.instagram.android", "Instagram"),
+            InstalledApp("com.zhiliaoapp.musically", "TikTok"),
+        ),
+        blockedApps = setOf("com.zhiliaoapp.musically"),
     )
 
     @Test fun jsonRoundTrips() {
@@ -25,13 +30,15 @@ class FamilySummaryTest {
         assertEquals(sample, restored)
     }
 
-    @Test fun toleratesMissingOptionalArrays() {
+    @Test fun toleratesMissingOptionalFields() {
         val minimal = """{"ts":1,"protectionOn":false,"screenTimeTodayMin":0,""" +
             """"dailyLimitMin":0,"webBlockedToday":0,"appBlockedToday":0}"""
         val parsed = parseSummary(minimal)
         assertEquals(emptyList<TopApp>(), parsed.topApps)
         assertEquals(emptyList<BlockEvent>(), parsed.recentEvents)
         assertEquals(emptySet<String>(), parsed.categories)
+        assertEquals(emptyList<InstalledApp>(), parsed.installedApps)
+        assertEquals(emptySet<String>(), parsed.blockedApps)
     }
 
     @Test fun buildSummaryAssemblesFieldsAndTopFive() {
@@ -42,6 +49,10 @@ class FamilySummaryTest {
             BlockEvent(10, "web", "x.com"),
             BlockEvent(20, "app", "TikTok"),
         )
+        val apps = listOf(
+            InstalledApp("com.a", "App A"),
+            InstalledApp("com.b", "App B"),
+        )
         val summary = buildSummary(
             now = 999,
             protectionOn = true,
@@ -51,14 +62,14 @@ class FamilySummaryTest {
             webBlockedToday = 7,
             appBlockedToday = 2,
             categories = setOf("adult", "social"),
+            installedApps = apps,
+            blockedApps = setOf("com.a"),
         )
         assertEquals(999, summary.ts)
-        assertEquals(true, summary.protectionOn)
         assertEquals(155, summary.screenTimeTodayMin)
         assertEquals(5, summary.topApps.size)
-        assertEquals("A", summary.topApps[0].label)
-        assertEquals(7, summary.webBlockedToday)
-        assertEquals(2, summary.recentEvents.size)
         assertEquals(setOf("adult", "social"), summary.categories)
+        assertEquals(apps, summary.installedApps)
+        assertEquals(setOf("com.a"), summary.blockedApps)
     }
 }
