@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -17,6 +18,7 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.cyberheroez.safebrowse.config.Categories
 import uk.co.cyberheroez.safebrowse.family.FamilyCommand
 import uk.co.cyberheroez.safebrowse.family.FamilySummary
 import uk.co.cyberheroez.safebrowse.ui.Style
@@ -25,10 +27,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Read-only view of one child's latest activity summary. */
+/** Read-only view of one child's latest activity summary, plus remote controls. */
 class ChildDashboardActivity : AppCompatActivity() {
 
     private val repo by lazy { ParentRepository(this) }
+
+    /** The category-id → CheckBox map, populated as the picker is built. */
+    private val categoryBoxes = mutableMapOf<String, CheckBox>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,9 +69,24 @@ class ChildDashboardActivity : AppCompatActivity() {
 
         column.addView(sectionLabel("REMOTE CONTROL"), gap(24))
         column.addView(actionButton("Grant 30 minutes") {
-            sendCommand(FamilyCommand(FamilyCommand.GRANT_EXTRA_TIME, 30), "Granted 30 minutes")
+            sendCommand(
+                FamilyCommand(FamilyCommand.GRANT_EXTRA_TIME, intValue = 30),
+                "Granted 30 minutes",
+            )
         }, gap(10))
-        column.addView(actionButton("Set daily limit") { promptDailyLimit() }, gap(10))
+        column.addView(actionButton("Change daily limit") { promptDailyLimit() }, gap(10))
+        column.addView(
+            caption(
+                if (summary.dailyLimitMin > 0)
+                    "Currently ${formatMinutes(summary.dailyLimitMin)} per day"
+                else "No daily limit set",
+            ),
+            gap(6),
+        )
+
+        column.addView(sectionLabel("BLOCKED CATEGORIES"), gap(24))
+        column.addView(categoryPicker(summary.categories), gap(8))
+        column.addView(actionButton("Save categories") { saveCategories() }, gap(12))
 
         return ScrollView(this).apply {
             setBackgroundColor(Style.BG)
@@ -101,6 +121,45 @@ class ChildDashboardActivity : AppCompatActivity() {
         }
         for (event in summary.recentEvents) {
             addView(blockBody("${event.label}  ·  ${relativeTime(event.ts)}"))
+        }
+    }
+
+    /**
+     * Builds the categories picker. Rendered as plain checkboxes (no coloured
+     * block) so the form action is clearly distinct from the read-only blocks
+     * above it.
+     */
+    private fun categoryPicker(currentlyEnabled: Set<String>): View {
+        categoryBoxes.clear()
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Style.roundRect(Style.WHITE_CHIP, dp(22).toFloat())
+            setPadding(dp(22), dp(18), dp(22), dp(18))
+        }
+        for (category in Categories.SELECTABLE) {
+            val box = CheckBox(this).apply {
+                text = category.label
+                textSize = 15f
+                setTextColor(Style.INK)
+                isChecked = category.id in currentlyEnabled
+            }
+            categoryBoxes[category.id] = box
+            column.addView(box)
+        }
+        return column
+    }
+
+    private fun saveCategories() {
+        val pairingId = intent.getStringExtra(EXTRA_PAIRING_ID) ?: return
+        val chosen = categoryBoxes.filterValues { it.isChecked }.keys.toSet()
+        lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { repo.sendSetCategories(pairingId, chosen) }
+            Toast.makeText(
+                this@ChildDashboardActivity,
+                if (ok) "Sent — the phone updates shortly"
+                else "Couldn't send — check your connection",
+                Toast.LENGTH_LONG,
+            ).show()
         }
     }
 
@@ -145,7 +204,7 @@ class ChildDashboardActivity : AppCompatActivity() {
             .setPositiveButton("Send") { _, _ ->
                 val minutes = input.text.toString().toIntOrNull() ?: 0
                 sendCommand(
-                    FamilyCommand(FamilyCommand.SET_DAILY_LIMIT, minutes),
+                    FamilyCommand(FamilyCommand.SET_DAILY_LIMIT, intValue = minutes),
                     "Daily limit set to ${formatMinutes(minutes)}",
                 )
             }
