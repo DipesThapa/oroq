@@ -53,4 +53,14 @@ class ParentRepository(context: Context) {
                 stringValue = categories.joinToString(","),
             ),
         )
+
+    /** Convenience wrapper: tells the child to block exactly [packageNames]. */
+    fun sendSetBlockedApps(pairingId: String, packageNames: Set<String>): Boolean =
+        sendCommand(
+            pairingId,
+            FamilyCommand(
+                type = FamilyCommand.SET_BLOCKED_APPS,
+                stringValue = packageNames.joinToString(","),
+            ),
+        )
 }
