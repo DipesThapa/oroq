@@ -61,6 +61,7 @@
             android:exported="false" />
 
         <activity android:name=".ui.RolePickerActivity" android:exported="false" />
+        <activity android:name=".ui.ChildOnboardingActivity" android:exported="false" />
         <activity android:name=".parent.ParentActivity" android:exported="false" />
         <activity android:name=".parent.ParentLoginActivity" android:exported="false" />
         <activity android:name=".parent.AddChildActivity" android:exported="false" />
