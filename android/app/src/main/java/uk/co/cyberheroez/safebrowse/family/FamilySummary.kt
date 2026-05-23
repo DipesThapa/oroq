@@ -19,6 +19,8 @@ data class FamilySummary(
     val webBlockedToday: Int = 0,
     val appBlockedToday: Int = 0,
     val recentEvents: List<BlockEvent> = emptyList(),
+    /** Category ids currently enabled (i.e. blocked) on the child. */
+    val categories: Set<String> = emptySet(),
 )
 
 /** Serialises the summary to its compact JSON wire form. */
@@ -33,6 +35,8 @@ fun FamilySummary.toJson(): String {
             JSONObject().put("ts", event.ts).put("type", event.type).put("label", event.label),
         )
     }
+    val cats = JSONArray()
+    for (id in categories) cats.put(id)
     return JSONObject()
         .put("ts", ts)
         .put("protectionOn", protectionOn)
@@ -42,6 +46,7 @@ fun FamilySummary.toJson(): String {
         .put("appBlockedToday", appBlockedToday)
         .put("topApps", apps)
         .put("recentEvents", events)
+        .put("categories", cats)
         .toString()
 }
 
@@ -64,6 +69,11 @@ fun parseSummary(text: String): FamilySummary {
             events.add(BlockEvent(o.getLong("ts"), o.getString("type"), o.getString("label")))
         }
     }
+    val cats = HashSet<String>()
+    val catsArray = json.optJSONArray("categories")
+    if (catsArray != null) {
+        for (i in 0 until catsArray.length()) cats.add(catsArray.getString(i))
+    }
     return FamilySummary(
         ts = json.getLong("ts"),
         protectionOn = json.getBoolean("protectionOn"),
@@ -73,5 +83,6 @@ fun parseSummary(text: String): FamilySummary {
         webBlockedToday = json.getInt("webBlockedToday"),
         appBlockedToday = json.getInt("appBlockedToday"),
         recentEvents = events,
+        categories = cats,
     )
 }

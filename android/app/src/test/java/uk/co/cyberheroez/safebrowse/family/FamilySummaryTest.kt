@@ -17,6 +17,7 @@ class FamilySummaryTest {
             BlockEvent(1_716_000_000_001L, "web", "example-adult-site.com"),
             BlockEvent(1_716_000_000_002L, "app", "TikTok"),
         ),
+        categories = setOf("adult", "gambling"),
     )
 
     @Test fun jsonRoundTrips() {
@@ -30,6 +31,7 @@ class FamilySummaryTest {
         val parsed = parseSummary(minimal)
         assertEquals(emptyList<TopApp>(), parsed.topApps)
         assertEquals(emptyList<BlockEvent>(), parsed.recentEvents)
+        assertEquals(emptySet<String>(), parsed.categories)
     }
 
     @Test fun buildSummaryAssemblesFieldsAndTopFive() {
@@ -48,13 +50,15 @@ class FamilySummaryTest {
             recentEvents = events,
             webBlockedToday = 7,
             appBlockedToday = 2,
+            categories = setOf("adult", "social"),
         )
         assertEquals(999, summary.ts)
         assertEquals(true, summary.protectionOn)
-        assertEquals(155, summary.screenTimeTodayMin) // sum of all usage
-        assertEquals(5, summary.topApps.size)         // capped at 5
+        assertEquals(155, summary.screenTimeTodayMin)
+        assertEquals(5, summary.topApps.size)
         assertEquals("A", summary.topApps[0].label)
         assertEquals(7, summary.webBlockedToday)
         assertEquals(2, summary.recentEvents.size)
+        assertEquals(setOf("adult", "social"), summary.categories)
     }
 }
