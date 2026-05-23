@@ -43,4 +43,14 @@ class ParentRepository(context: Context) {
         )
         return api.cmdSend(token, pairingId, Base64.getEncoder().encodeToString(ciphertext))
     }
+
+    /** Convenience wrapper: tells the child to block exactly [categories]. */
+    fun sendSetCategories(pairingId: String, categories: Set<String>): Boolean =
+        sendCommand(
+            pairingId,
+            FamilyCommand(
+                type = FamilyCommand.SET_CATEGORIES,
+                stringValue = categories.joinToString(","),
+            ),
+        )
 }
