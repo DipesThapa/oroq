@@ -3,24 +3,42 @@ package uk.co.cyberheroez.safebrowse.family
 import org.json.JSONObject
 
 /**
- * A remote-control instruction from the parent. [type] is one of the constants
- * below; [intValue] is its single integer argument (minutes).
+ * A remote-control instruction from the parent.
+ *
+ * [type] is one of the constants below. Different commands carry different
+ * payload shapes, so both an integer and a string payload slot exist; each
+ * command only uses what it needs (the others stay at their default).
+ *
+ *  - [GRANT_EXTRA_TIME] → [intValue] is minutes to grant.
+ *  - [SET_DAILY_LIMIT]  → [intValue] is the new daily limit in minutes.
+ *  - [SET_CATEGORIES]   → [stringValue] is a comma-joined list of category
+ *    ids (e.g. `"adult,gambling"`). Empty string means "no categories
+ *    blocked" — every selectable category is turned off.
  */
-data class FamilyCommand(val type: String, val intValue: Int) {
-    fun toJson(): String =
-        JSONObject().put("type", type).put("intValue", intValue).toString()
+data class FamilyCommand(
+    val type: String,
+    val intValue: Int = 0,
+    val stringValue: String = "",
+) {
+    fun toJson(): String = JSONObject()
+        .put("type", type)
+        .put("intValue", intValue)
+        .put("stringValue", stringValue)
+        .toString()
 
     companion object {
-        /** Add bonus screen-time minutes for today. */
         const val GRANT_EXTRA_TIME = "grant_extra_time"
-
-        /** Set the daily screen-time limit, in minutes (0 = no limit). */
         const val SET_DAILY_LIMIT = "set_daily_limit"
+        const val SET_CATEGORIES = "set_categories"
     }
 }
 
 /** Parses a command from its JSON wire form. */
 fun parseCommand(text: String): FamilyCommand {
     val json = JSONObject(text)
-    return FamilyCommand(json.getString("type"), json.getInt("intValue"))
+    return FamilyCommand(
+        type = json.getString("type"),
+        intValue = json.optInt("intValue", 0),
+        stringValue = json.optString("stringValue", ""),
+    )
 }
