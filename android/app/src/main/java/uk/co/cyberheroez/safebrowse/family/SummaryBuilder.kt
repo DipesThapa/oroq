@@ -13,6 +13,8 @@ fun buildSummary(
     webBlockedToday: Int,
     appBlockedToday: Int,
     categories: Set<String>,
+    installedApps: List<InstalledApp>,
+    blockedApps: Set<String>,
 ): FamilySummary {
     val topApps = usageByApp.entries
         .sortedByDescending { it.value }
@@ -28,5 +30,7 @@ fun buildSummary(
         appBlockedToday = appBlockedToday,
         recentEvents = recentEvents,
         categories = categories,
+        installedApps = installedApps,
+        blockedApps = blockedApps,
     )
 }

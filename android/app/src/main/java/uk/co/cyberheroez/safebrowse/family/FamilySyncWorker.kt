@@ -42,6 +42,8 @@ class FamilySyncWorker(
             webBlockedToday = blockLog.countSince("web", startOfToday),
             appBlockedToday = blockLog.countSince("app", startOfToday),
             categories = config.getEnabledCategories(),
+            installedApps = listUserApps(applicationContext),
+            blockedApps = config.getBlockedApps(),
         )
 
         val ciphertext = FamilyCrypto.encryptFor(
