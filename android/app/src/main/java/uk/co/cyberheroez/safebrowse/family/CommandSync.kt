@@ -1,8 +1,10 @@
 package uk.co.cyberheroez.safebrowse.family
 
 import android.content.Context
+import android.content.Intent
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.monitor.UsageReader
+import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
 import java.util.Base64
 
 /**
@@ -36,6 +38,15 @@ suspend fun pollAndApplyCommands(context: Context): Int {
                 config.grantExtraMinutes(command.intValue, today)
             }
             FamilyCommand.SET_DAILY_LIMIT -> config.setDailyLimitMinutes(command.intValue)
+            FamilyCommand.SET_CATEGORIES -> {
+                val ids = command.stringValue
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet()
+                config.setEnabledCategories(ids)
+                restartVpnIfActive(context)
+            }
         }
         applied.markApplied(id)
         appliedCount++
@@ -45,4 +56,21 @@ suspend fun pollAndApplyCommands(context: Context): Int {
     // server drops them.
     familyApi().cmdAck(link.pairingId, queue.map { it.first })
     return appliedCount
+}
+
+/**
+ * Bounces the VPN service so it re-reads its blocklists. If the service isn't
+ * active, this is a no-op — the next time the child starts protection it will
+ * load the new categories naturally. Any failure here is swallowed; the next
+ * sync's `protectionOn` field tells the parent if something went wrong.
+ */
+private fun restartVpnIfActive(context: Context) {
+    if (!SafeBrowseVpnService.isActive) return
+    runCatching {
+        context.startService(
+            Intent(context, SafeBrowseVpnService::class.java)
+                .setAction(SafeBrowseVpnService.ACTION_STOP)
+        )
+        context.startService(Intent(context, SafeBrowseVpnService::class.java))
+    }
 }
