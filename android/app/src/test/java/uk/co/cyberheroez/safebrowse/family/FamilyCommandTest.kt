@@ -37,4 +37,17 @@ class FamilyCommandTest {
         assertEquals(30, parsed.intValue)
         assertEquals("", parsed.stringValue)
     }
+
+    @Test fun setBlockedAppsRoundTripsWithStringValue() {
+        val command = FamilyCommand(
+            type = FamilyCommand.SET_BLOCKED_APPS,
+            stringValue = "com.instagram.android,com.zhiliaoapp.musically",
+        )
+        assertEquals(command, parseCommand(command.toJson()))
+    }
+
+    @Test fun setBlockedAppsAllowsEmptyString() {
+        val command = FamilyCommand(FamilyCommand.SET_BLOCKED_APPS, stringValue = "")
+        assertEquals(command, parseCommand(command.toJson()))
+    }
 }

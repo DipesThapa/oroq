@@ -9,11 +9,14 @@ import org.json.JSONObject
  * payload shapes, so both an integer and a string payload slot exist; each
  * command only uses what it needs (the others stay at their default).
  *
- *  - [GRANT_EXTRA_TIME] → [intValue] is minutes to grant.
- *  - [SET_DAILY_LIMIT]  → [intValue] is the new daily limit in minutes.
- *  - [SET_CATEGORIES]   → [stringValue] is a comma-joined list of category
+ *  - [GRANT_EXTRA_TIME]  → [intValue] is minutes to grant.
+ *  - [SET_DAILY_LIMIT]   → [intValue] is the new daily limit in minutes.
+ *  - [SET_CATEGORIES]    → [stringValue] is a comma-joined list of category
  *    ids (e.g. `"adult,gambling"`). Empty string means "no categories
- *    blocked" — every selectable category is turned off.
+ *    blocked".
+ *  - [SET_BLOCKED_APPS]  → [stringValue] is a comma-joined list of package
+ *    names (e.g. `"com.instagram.android,com.zhiliaoapp.musically"`). Empty
+ *    string means "no apps blocked".
  */
 data class FamilyCommand(
     val type: String,
@@ -30,6 +33,7 @@ data class FamilyCommand(
         const val GRANT_EXTRA_TIME = "grant_extra_time"
         const val SET_DAILY_LIMIT = "set_daily_limit"
         const val SET_CATEGORIES = "set_categories"
+        const val SET_BLOCKED_APPS = "set_blocked_apps"
     }
 }
 
