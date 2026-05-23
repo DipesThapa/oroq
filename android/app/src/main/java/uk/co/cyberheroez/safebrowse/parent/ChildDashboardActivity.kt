@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.safebrowse.config.Categories
 import uk.co.cyberheroez.safebrowse.family.FamilyCommand
 import uk.co.cyberheroez.safebrowse.family.FamilySummary
+import uk.co.cyberheroez.safebrowse.family.InstalledApp
 import uk.co.cyberheroez.safebrowse.ui.Style
 import uk.co.cyberheroez.safebrowse.ui.Style.dp
 import java.text.SimpleDateFormat
@@ -34,6 +35,9 @@ class ChildDashboardActivity : AppCompatActivity() {
 
     /** The category-id → CheckBox map, populated as the picker is built. */
     private val categoryBoxes = mutableMapOf<String, CheckBox>()
+
+    /** The package-name → CheckBox map for the apps picker. */
+    private val appBoxes = mutableMapOf<String, CheckBox>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -87,6 +91,12 @@ class ChildDashboardActivity : AppCompatActivity() {
         column.addView(sectionLabel("BLOCKED CATEGORIES"), gap(24))
         column.addView(categoryPicker(summary.categories), gap(8))
         column.addView(actionButton("Save categories") { saveCategories() }, gap(12))
+
+        column.addView(sectionLabel("BLOCKED APPS"), gap(24))
+        column.addView(appPicker(summary.installedApps, summary.blockedApps), gap(8))
+        if (summary.installedApps.isNotEmpty()) {
+            column.addView(actionButton("Save blocked apps") { saveBlockedApps() }, gap(12))
+        }
 
         return ScrollView(this).apply {
             setBackgroundColor(Style.BG)
@@ -154,6 +164,53 @@ class ChildDashboardActivity : AppCompatActivity() {
         val chosen = categoryBoxes.filterValues { it.isChecked }.keys.toSet()
         lifecycleScope.launch {
             val ok = withContext(Dispatchers.IO) { repo.sendSetCategories(pairingId, chosen) }
+            Toast.makeText(
+                this@ChildDashboardActivity,
+                if (ok) "Sent — the phone updates shortly"
+                else "Couldn't send — check your connection",
+                Toast.LENGTH_LONG,
+            ).show()
+        }
+    }
+
+    /**
+     * Builds the apps picker. If the child hasn't synced its inventory yet,
+     * shows a single waiting caption instead of an empty box.
+     */
+    private fun appPicker(installed: List<InstalledApp>, blocked: Set<String>): View {
+        appBoxes.clear()
+        val column = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            background = Style.roundRect(Style.WHITE_CHIP, dp(22).toFloat())
+            setPadding(dp(22), dp(18), dp(22), dp(18))
+        }
+        if (installed.isEmpty()) {
+            val waiting = TextView(this).apply {
+                text = "Waiting for the child phone to sync its app list…"
+                textSize = 13.5f
+                setTextColor(Style.MUTED)
+            }
+            column.addView(waiting)
+            return column
+        }
+        for (app in installed) {
+            val box = CheckBox(this).apply {
+                text = app.label
+                textSize = 15f
+                setTextColor(Style.INK)
+                isChecked = app.packageName in blocked
+            }
+            appBoxes[app.packageName] = box
+            column.addView(box)
+        }
+        return column
+    }
+
+    private fun saveBlockedApps() {
+        val pairingId = intent.getStringExtra(EXTRA_PAIRING_ID) ?: return
+        val chosen = appBoxes.filterValues { it.isChecked }.keys.toSet()
+        lifecycleScope.launch {
+            val ok = withContext(Dispatchers.IO) { repo.sendSetBlockedApps(pairingId, chosen) }
             Toast.makeText(
                 this@ChildDashboardActivity,
                 if (ok) "Sent — the phone updates shortly"
