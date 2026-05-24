@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import uk.co.cyberheroez.safebrowse.R
 import uk.co.cyberheroez.safebrowse.config.ConfigRepository
 import uk.co.cyberheroez.safebrowse.family.BlockEventLog
+import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
 import uk.co.cyberheroez.safebrowse.ui.BlockActivity
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -35,6 +36,7 @@ class AppMonitorService : android.app.Service() {
     private fun runLoop() {
         val usage = UsageReader(this)
         val config = ConfigRepository(applicationContext)
+        var tickCount = 0L
         while (running.get()) {
             try {
                 if (usage.hasUsageAccess()) {
@@ -65,6 +67,12 @@ class AppMonitorService : android.app.Service() {
                         }
                     }
                 }
+                // Every 60 ticks (~60 s) also drain the remote-command queue, so
+                // parent actions reach the child far sooner than the 15-min
+                // WorkManager periodic. Runs on a side thread so the 1-s
+                // foreground tick is never blocked by a network call.
+                tickCount++
+                if (tickCount % 60 == 0L) drainCommandsAsync()
             } catch (e: Exception) {
                 Log.w(TAG, "monitor tick failed", e)
             }
@@ -74,6 +82,14 @@ class AppMonitorService : android.app.Service() {
                 break
             }
         }
+    }
+
+    /** Fire-and-forget remote-command poll. */
+    private fun drainCommandsAsync() {
+        Thread {
+            runCatching { runBlocking { pollAndApplyCommands(applicationContext) } }
+                .onFailure { Log.w(TAG, "command poll failed", it) }
+        }.start()
     }
 
     private fun appLabel(pkg: String): String = runCatching {
