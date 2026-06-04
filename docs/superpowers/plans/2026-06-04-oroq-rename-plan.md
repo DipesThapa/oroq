@@ -154,7 +154,7 @@ Pages is a Cloudflare-side resource; no repo state changes here. Task 4 updates 
 - Rename: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/main/java/uk/co/cyberheroez/oroq/`
 - Rename: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/test/java/uk/co/cyberheroez/oroq/`
 
-After the move, the build is broken (every `package uk.co.cyberheroez.safebrowse.…` declaration disagrees with its filesystem location). Task 4 fixes that with a mass sed.
+After the move, the build is broken (every `package uk.co.cyberheroez.oroq.…` declaration disagrees with its filesystem location). Task 4 fixes that with a mass sed.
 
 - [ ] **Step 1: Move the main-source tree**
 
@@ -189,7 +189,7 @@ Task 4 follows immediately with the sed that makes the tree compile. Commit at t
 ## Task 4: Mass package-name string replace + class rename
 
 **Files:**
-- Modify (sed): every file containing `uk.co.cyberheroez.safebrowse` (~82 files)
+- Modify (sed): every file containing `uk.co.cyberheroez.oroq` (~82 files)
 - Rename: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt` → `…/OroQVpnService.kt`
 
 - [ ] **Step 1: Replace the dotted package string everywhere**
@@ -241,7 +241,7 @@ Expected: ≥3 lines (the file itself + at least 2 callers — `MainActivity`, `
 cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
   ./gradlew :app:compileDebugKotlin 2>&1 | tail -10
 ```
-Expected: `BUILD SUCCESSFUL`. If errors mention unresolved `uk.co.cyberheroez.safebrowse.*`, Step 1 missed something — re-run with adjusted globs.
+Expected: `BUILD SUCCESSFUL`. If errors mention unresolved `uk.co.cyberheroez.oroq.*`, Step 1 missed something — re-run with adjusted globs.
 
 - [ ] **Step 7: Commit**
 
@@ -272,10 +272,10 @@ Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/build.gradle.kts`.
 
 ```kotlin
 android {
-    namespace = "uk.co.cyberheroez.safebrowse"
+    namespace = "uk.co.cyberheroez.oroq"
     ...
     defaultConfig {
-        applicationId = "uk.co.cyberheroez.safebrowse"
+        applicationId = "uk.co.cyberheroez.oroq"
 ```
 
 (Task 4's sed already changed both lines.) Verify by:
@@ -406,7 +406,7 @@ Expected: `BUILD SUCCESSFUL`. New APK at `app/build/outputs/apk/debug/app-debug.
 unzip -p /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk \
   AndroidManifest.xml | strings | grep -E "uk\.co\.cyberheroez" | head -3
 ```
-Expected: at least one `uk.co.cyberheroez.oroq` line; **no** `uk.co.cyberheroez.safebrowse` line.
+Expected: at least one `uk.co.cyberheroez.oroq` line; **no** `uk.co.cyberheroez.oroq` line.
 
 - [ ] **Step 5: No commit**
 
@@ -421,7 +421,7 @@ Verification only — Task 5's commit already captured the source changes.
 - Modify: `docs/MVP_OVERVIEW.md`, `docs/MVP_USER_FLOWS.md`, `docs/MVP_ARCHITECTURE.md`, `docs/STORE_LISTING.md`, `docs/PREVENT_DUTY_BRIEFING.md`, `docs/KCSIE_COMPLIANCE_MATRIX.md`, `docs/DPIA_TEMPLATE_UK.md`, `docs/DEPLOYMENT.md`, `docs/DEVLOG.md`, `docs/BROWSER_SUPPORT.md`, `docs/WEBSTORE.md`, `docs/idea-to-store-flow.md`
 - Modify: `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` (future plan, not historical)
 - Modify: `docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md` (future plan)
-- **Leave verbatim:** every `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and earlier (historical record of work done as SafeBrowse). Task 4's sed already touched any `uk.co.cyberheroez.safebrowse` in those files — that's accepted noise; brand strings stay because the work itself happened as SafeBrowse.
+- **Leave verbatim:** every `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and earlier (historical record of work done as SafeBrowse). Task 4's sed already touched any `uk.co.cyberheroez.oroq` in those files — that's accepted noise; brand strings stay because the work itself happened as SafeBrowse.
 
 - [ ] **Step 1: Brand-replace the recent docs**
 
@@ -514,7 +514,7 @@ Expected: emulator + Vivo both `device`. If Vivo offline, reconnect via wireless
 - [ ] **Step 2: Uninstall the old SafeBrowse build on the emulator**
 
 ```bash
-adb -s emulator-5554 uninstall uk.co.cyberheroez.safebrowse 2>&1
+adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq 2>&1
 ```
 Expected: `Success` or `Failure [DELETE_FAILED_INTERNAL_ERROR]` if absent — both fine.
 
@@ -530,7 +530,7 @@ Expected: `Success`. Launcher now shows "OroQ".
 ```bash
 V="$(adb devices | awk '/_adb-tls-connect/ {print $1; exit}')"
 if [ -z "$V" ]; then echo "VIVO SERIAL EMPTY — abort"; exit 1; fi
-adb -s "$V" uninstall uk.co.cyberheroez.safebrowse 2>&1
+adb -s "$V" uninstall uk.co.cyberheroez.oroq 2>&1
 adb -s "$V" install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: both `Success`. If `V` is empty (Vivo offline), reconnect first.

@@ -54,7 +54,7 @@ android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/
 - [ ] **Step 1: Write the failing test — `PairingSupportTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -78,13 +78,13 @@ class PairingSupportTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.PairingSupportTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.PairingSupportTest"`
 Expected: FAIL — `normalizeCode` unresolved.
 
 - [ ] **Step 3: Create `PairingSupport.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /** Cleans a typed pairing code: removes spaces/hyphens and uppercases it. */
 fun normalizeCode(raw: String): String =
@@ -93,7 +93,7 @@ fun normalizeCode(raw: String): String =
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.PairingSupportTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.PairingSupportTest"`
 Expected: all 3 tests PASS.
 
 - [ ] **Step 5: Create `FamilyConfig.kt`**
@@ -101,7 +101,7 @@ Expected: all 3 tests PASS.
 Replace `<account>` with the real `workers.dev` subdomain once Plan A1's Worker is deployed (see `backend/README.md`).
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /** Base URL of the deployed Family Link Worker. */
 const val WORKER_BASE_URL = "https://safebrowse-family.<account>.workers.dev"
@@ -113,7 +113,7 @@ fun familyApi(): FamilyApi = FamilyApi(WORKER_BASE_URL, HttpUrlTransport())
 - [ ] **Step 6: Create `FamilyStore.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
@@ -241,7 +241,7 @@ On first launch the user picks a role; `MainActivity` then routes by role.
 - [ ] **Step 1: Create `RolePickerActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.graphics.Typeface
@@ -254,11 +254,11 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.MainActivity
-import uk.co.cyberheroez.safebrowse.family.DeviceRole
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.parent.ParentActivity
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.oroq.MainActivity
+import uk.co.cyberheroez.oroq.family.DeviceRole
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.parent.ParentActivity
+import uk.co.cyberheroez.oroq.ui.Style.dp
 
 /** First-launch screen: is this the child's phone or the parent's phone? */
 class RolePickerActivity : AppCompatActivity() {
@@ -352,10 +352,10 @@ In `MainActivity.onCreate`, replace the existing `lifecycleScope.launch { ... }`
 Add these imports to `MainActivity.kt`:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.DeviceRole
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.parent.ParentActivity
-import uk.co.cyberheroez.safebrowse.ui.RolePickerActivity
+import uk.co.cyberheroez.oroq.family.DeviceRole
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.parent.ParentActivity
+import uk.co.cyberheroez.oroq.ui.RolePickerActivity
 ```
 
 Add a `FamilyStore` field next to the existing `config`:
@@ -429,7 +429,7 @@ git commit -m "feat(android): add device role picker and role-based routing"
 - [ ] **Step 1: Create `ParentLoginActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.os.Bundle
 import android.text.InputType
@@ -443,16 +443,16 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.familyApi
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.familyApi
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.Style.pageHeader
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Passwordless parent login: email, then a 6-digit OTP. */
 class ParentLoginActivity : AppCompatActivity() {
@@ -539,7 +539,7 @@ class ParentLoginActivity : AppCompatActivity() {
 - [ ] **Step 2: Create `ParentActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.content.Intent
 import android.graphics.Typeface
@@ -551,10 +551,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.PairedChild
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.PairedChild
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.dp
 
 /** Parent home: the list of paired children, with "Add a child". */
 class ParentActivity : AppCompatActivity() {
@@ -668,7 +668,7 @@ git commit -m "feat(android): add parent login and parent home"
 - [ ] **Step 1: Create `AddChildActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.os.Bundle
 import android.view.View
@@ -681,18 +681,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.family.FamilyCrypto
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.PairedChild
-import uk.co.cyberheroez.safebrowse.family.familyApi
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.family.FamilyCrypto
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.PairedChild
+import uk.co.cyberheroez.oroq.family.familyApi
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.Style.pageHeader
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Parent side of pairing: create a pairing, show the code, confirm the SAS. */
 class AddChildActivity : AppCompatActivity() {
@@ -828,7 +828,7 @@ git commit -m "feat(android): add parent-side pairing (Add a child)"
 - [ ] **Step 1: Create `LinkParentActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.os.Bundle
 import android.text.InputType
@@ -842,18 +842,18 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.family.FamilyCrypto
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.ParentLink
-import uk.co.cyberheroez.safebrowse.family.familyApi
-import uk.co.cyberheroez.safebrowse.family.normalizeCode
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.pageHeader
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.family.FamilyCrypto
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.ParentLink
+import uk.co.cyberheroez.oroq.family.familyApi
+import uk.co.cyberheroez.oroq.family.normalizeCode
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.Style.pageHeader
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Child side of pairing: enter the parent's code, confirm the SAS. */
 class LinkParentActivity : AppCompatActivity() {

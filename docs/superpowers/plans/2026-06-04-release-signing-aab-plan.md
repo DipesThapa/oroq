@@ -164,7 +164,7 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "uk.co.cyberheroez.safebrowse"
+    namespace = "uk.co.cyberheroez.oroq"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -172,7 +172,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "uk.co.cyberheroez.safebrowse"
+        applicationId = "uk.co.cyberheroez.oroq"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -302,8 +302,8 @@ Replace the entire contents of `/Users/apple/Desktop/Projects/safebrowse-ai/andr
 
 # --- Our own data classes survive obfuscation enough to be JSON-roundtripped ---
 # Field names are read by reflection inside Tink keyset parsing.
--keep class uk.co.cyberheroez.safebrowse.family.** { *; }
--keep class uk.co.cyberheroez.safebrowse.config.** { *; }
+-keep class uk.co.cyberheroez.oroq.family.** { *; }
+-keep class uk.co.cyberheroez.oroq.config.** { *; }
 
 # --- Crash-stack readability ---
 # Required so Play Console deobfuscates stacks when mapping.txt is uploaded.
@@ -400,7 +400,7 @@ Expected: `emulator-5554  device` present. If absent, start the emulator from An
 - [ ] **Step 5: Uninstall the prior debug build**
 
 ```bash
-adb -s emulator-5554 uninstall uk.co.cyberheroez.safebrowse 2>&1
+adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq 2>&1
 ```
 Expected: `Success`, or `Failure [DELETE_FAILED_INTERNAL_ERROR]` if it was never installed. Both are fine.
 
@@ -416,11 +416,11 @@ Expected: `Installed APKs to device emulator-5554.` If R8 dropped a class the em
 - [ ] **Step 7: Launch and confirm no immediate crash**
 
 ```bash
-adb -s emulator-5554 shell am start -n uk.co.cyberheroez.safebrowse/.MainActivity
+adb -s emulator-5554 shell am start -n uk.co.cyberheroez.oroq/.MainActivity
 sleep 5
 adb -s emulator-5554 shell "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'" | head -3
 ```
-Expected: `mCurrentFocus` points at `uk.co.cyberheroez.safebrowse/...` (RolePickerActivity on fresh install, or MainActivity if previous state was restored — either is fine; what matters is the package is alive, not crashed). If `mCurrentFocus` is empty or points at the launcher, the app crashed — `adb logcat | grep -E "AndroidRuntime|safebrowse"` will show why.
+Expected: `mCurrentFocus` points at `uk.co.cyberheroez.oroq/...` (RolePickerActivity on fresh install, or MainActivity if previous state was restored — either is fine; what matters is the package is alive, not crashed). If `mCurrentFocus` is empty or points at the launcher, the app crashed — `adb logcat | grep -E "AndroidRuntime|safebrowse"` will show why.
 
 - [ ] **Step 8: No commit**
 
@@ -583,13 +583,13 @@ bundletool build-apks \
   --local-testing
 
 # Emulator
-adb -s emulator-5554 uninstall uk.co.cyberheroez.safebrowse
+adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq
 bundletool install-apks --apks=app/build/outputs/bundle/release/app-release.apks \
   --device-id=emulator-5554
 
 # Vivo (paste the wireless serial)
 V="<vivo serial from `adb devices`>"
-adb -s "$V" uninstall uk.co.cyberheroez.safebrowse
+adb -s "$V" uninstall uk.co.cyberheroez.oroq
 bundletool install-apks --apks=app/build/outputs/bundle/release/app-release.apks \
   --device-id="$V"
 ```
@@ -676,6 +676,6 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 - `keystore.properties` is the single source of truth referenced by name in Tasks 2, 3, 7.
 - `safebrowse-upload` alias defined in Task 1, referenced in Tasks 2, 4, 7.
 - `app-release.aab` and `mapping.txt` paths are identical across Tasks 4, 5, 7.
-- R8 keep-rule package globs in Task 4 match the actual `uk.co.cyberheroez.safebrowse.family.*` and `.config.*` packages used by the existing code.
+- R8 keep-rule package globs in Task 4 match the actual `uk.co.cyberheroez.oroq.family.*` and `.config.*` packages used by the existing code.
 
 **Placeholder scan:** the only `<…>` placeholders are in Task 7's runbook (the fingerprint and expiry date) and in the Vivo serial reference in the smoke-install block — both are intentional, filled in by the engineer at runtime using values they recorded in Task 1 Step 3 and the live `adb devices` output respectively. No "TBD"/"TODO"/"implement later" markers anywhere.

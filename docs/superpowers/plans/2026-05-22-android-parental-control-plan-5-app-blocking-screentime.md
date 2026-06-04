@@ -51,7 +51,7 @@ Pure, JVM-testable logic for what the monitor should do.
 Create `BlockDecisionTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.monitor
+package uk.co.cyberheroez.oroq.monitor
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -119,7 +119,7 @@ Expected: FAIL — `BlockDecision` / `decideBlock` unresolved.
 Create `BlockDecision.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.monitor
+package uk.co.cyberheroez.oroq.monitor
 
 /** What the monitor should do for the current foreground state. */
 enum class BlockDecision { ALLOW, BLOCK_APP, TIME_UP }
@@ -178,7 +178,7 @@ In `ConfigRepository.kt`, add to the existing imports:
 
 ```kotlin
 import androidx.datastore.preferences.core.intPreferencesKey
-import uk.co.cyberheroez.safebrowse.monitor.effectiveExtraMinutes
+import uk.co.cyberheroez.oroq.monitor.effectiveExtraMinutes
 import java.time.LocalDate
 ```
 
@@ -260,7 +260,7 @@ Usage Access permission is granted.
 - [ ] **Step 1: Write `UsageReader.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.monitor
+package uk.co.cyberheroez.oroq.monitor
 
 import android.app.AppOpsManager
 import android.app.usage.UsageEvents
@@ -401,7 +401,7 @@ service:
 - [ ] **Step 2: Write `AppMonitorService.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.monitor
+package uk.co.cyberheroez.oroq.monitor
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -411,9 +411,9 @@ import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.runBlocking
-import uk.co.cyberheroez.safebrowse.R
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.ui.BlockActivity
+import uk.co.cyberheroez.oroq.R
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.ui.BlockActivity
 import java.util.concurrent.atomic.AtomicBoolean
 
 /** Foreground service: polls usage and shows the block screen when needed. */
@@ -550,7 +550,7 @@ In `AndroidManifest.xml`, add inside `<application>`, after the
 - [ ] **Step 2: Write `BlockActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -560,13 +560,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.ghostButton
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Full-screen screen shown when an app is blocked or screen time is up. */
 class BlockActivity : AppCompatActivity() {
@@ -666,7 +666,7 @@ alongside the VPN.
 In `MainActivity.kt`, add to the imports:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
+import uk.co.cyberheroez.oroq.monitor.AppMonitorService
 ```
 
 - [ ] **Step 2: Start/stop the monitor alongside the VPN**
@@ -741,17 +741,17 @@ Add this activity inside `<application>`, after `BlockActivity`:
 - [ ] **Step 2: Write `MonitorPermissions.kt` (shared permission screen)**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Context
 import android.view.View
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.ghostButton
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /**
  * A screen asking the parent to grant the two permissions app blocking and
@@ -778,7 +778,7 @@ fun monitorPermissionView(context: Context): View = screen(context) {
 - [ ] **Step 3: Write `AppBlockActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -790,13 +790,13 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Parent screen: choose which installed apps to block. */
 class AppBlockActivity : AppCompatActivity() {
@@ -862,7 +862,7 @@ class AppBlockActivity : AppCompatActivity() {
 In `SettingsActivity.kt`, add to the imports:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.ui.Style.ghostButton
+import uk.co.cyberheroez.oroq.ui.Style.ghostButton
 ```
 
 (if not already imported), and in `buildLayout`, immediately before the
@@ -915,7 +915,7 @@ In `AndroidManifest.xml`, add inside `<application>`, after `AppBlockActivity`:
 - [ ] **Step 2: Write `ScreenTimeActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.os.Bundle
 import android.text.InputType
@@ -927,14 +927,14 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.ui.Style.body
-import uk.co.cyberheroez.safebrowse.ui.Style.card
-import uk.co.cyberheroez.safebrowse.ui.Style.cardTitle
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.ui.Style.primaryButton
-import uk.co.cyberheroez.safebrowse.ui.Style.screen
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.ui.Style.body
+import uk.co.cyberheroez.oroq.ui.Style.card
+import uk.co.cyberheroez.oroq.ui.Style.cardTitle
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.Style.primaryButton
+import uk.co.cyberheroez.oroq.ui.Style.screen
 
 /** Parent screen: today's usage and the daily screen-time limit. */
 class ScreenTimeActivity : AppCompatActivity() {

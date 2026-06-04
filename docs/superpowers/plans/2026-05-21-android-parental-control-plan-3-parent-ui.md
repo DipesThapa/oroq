@@ -107,7 +107,7 @@ Salted PBKDF2 hashing for the parent PIN and the recovery code. Uses
 Create `PinHasherTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.config
+package uk.co.cyberheroez.oroq.config
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -160,7 +160,7 @@ Expected: FAIL — `PinHasher` is unresolved.
 Create `PinHasher.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.config
+package uk.co.cyberheroez.oroq.config
 
 import java.security.SecureRandom
 import java.util.Base64
@@ -235,7 +235,7 @@ PIN, recovery code, and category selection.
 - [ ] **Step 1: Write `Categories.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.config
+package uk.co.cyberheroez.oroq.config
 
 /** The web-content categories a parent can choose to block. */
 object Categories {
@@ -266,7 +266,7 @@ object Categories {
 - [ ] **Step 2: Write `ConfigRepository.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.config
+package uk.co.cyberheroez.oroq.config
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -371,7 +371,7 @@ A numeric PIN dialog used to gate the Settings screen.
 - [ ] **Step 1: Write `PinPrompt.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Context
 import android.text.InputType
@@ -447,7 +447,7 @@ child of `<application>`, immediately after the existing `MainActivity` activity
 - [ ] **Step 2: Write `OnboardingActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.os.Bundle
@@ -465,10 +465,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.MainActivity
-import uk.co.cyberheroez.safebrowse.config.Categories
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.config.PinHasher
+import uk.co.cyberheroez.oroq.MainActivity
+import uk.co.cyberheroez.oroq.config.Categories
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.config.PinHasher
 
 /** First-launch setup: parent PIN, category choice, and recovery code. */
 class OnboardingActivity : AppCompatActivity() {
@@ -611,7 +611,7 @@ onboarding, shows protection status, and starts/stops the VPN.
 - [ ] **Step 1: Replace `MainActivity.kt` entirely**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse
+package uk.co.cyberheroez.oroq
 
 import android.content.Intent
 import android.graphics.Color
@@ -626,10 +626,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.ui.OnboardingActivity
-import uk.co.cyberheroez.safebrowse.ui.SettingsActivity
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.ui.OnboardingActivity
+import uk.co.cyberheroez.oroq.ui.SettingsActivity
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 
 /** Home screen: protection status, start/stop, and a link to Settings. */
 class MainActivity : AppCompatActivity() {
@@ -780,7 +780,7 @@ child of `<application>`, immediately after the `OnboardingActivity` activity:
 - [ ] **Step 2: Write `SettingsActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.os.Bundle
 import android.view.Gravity
@@ -796,8 +796,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.config.Categories
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.oroq.config.Categories
+import uk.co.cyberheroez.oroq.config.ConfigRepository
 
 /** PIN-locked settings: category toggles and change-PIN. */
 class SettingsActivity : AppCompatActivity() {
@@ -980,8 +980,8 @@ In `SafeBrowseVpnService.kt`, add these imports alongside the existing ones:
 
 ```kotlin
 import kotlinx.coroutines.runBlocking
-import uk.co.cyberheroez.safebrowse.config.Categories
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.oroq.config.Categories
+import uk.co.cyberheroez.oroq.config.ConfigRepository
 ```
 
 Then, in `runLoop`, replace this block:
@@ -1024,7 +1024,7 @@ Expected: `BUILD SUCCESSFUL`, `Installed on 1 device`.
 To start from a clean state, clear the app's data first:
 
 ```bash
-adb shell pm clear uk.co.cyberheroez.safebrowse
+adb shell pm clear uk.co.cyberheroez.oroq
 ```
 
 Open **SafeBrowse**. Expected flow:

@@ -258,7 +258,7 @@ The summary that crosses the wire. `buildSummary` (Task 4) produces a `FamilySum
 - [ ] **Step 1: Write the failing test — `FamilySummaryTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -296,13 +296,13 @@ class FamilySummaryTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilySummaryTest"`
 Expected: FAIL — `FamilySummary` unresolved.
 
 - [ ] **Step 3: Create `FamilySummary.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -383,7 +383,7 @@ fun parseSummary(text: String): FamilySummary {
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilySummaryTest"`
 Expected: both tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -406,7 +406,7 @@ A small file-backed rolling log of blocked attempts, shared by the two services 
 - [ ] **Step 1: Write the failing test — `BlockEventLogTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -461,13 +461,13 @@ class BlockEventLogTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.BlockEventLogTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.BlockEventLogTest"`
 Expected: FAIL — `BlockEventLog` unresolved.
 
 - [ ] **Step 3: Create `BlockEventLog.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import org.json.JSONArray
@@ -534,7 +534,7 @@ class BlockEventLog(
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.BlockEventLogTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.BlockEventLogTest"`
 Expected: all 4 tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -556,10 +556,10 @@ Hook `BlockEventLog` into the two places a block happens, de-duplicating consecu
 
 - [ ] **Step 1: Record web blocks in `SafeBrowseVpnService.kt`**
 
-Add the import near the other `uk.co.cyberheroez.safebrowse` imports:
+Add the import near the other `uk.co.cyberheroez.oroq` imports:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.BlockEventLog
+import uk.co.cyberheroez.oroq.family.BlockEventLog
 ```
 
 Add two fields inside the `class SafeBrowseVpnService` body (next to the existing fields):
@@ -583,7 +583,7 @@ In `runLoop`, the DNS-filter result has an `is DnsFilter.Decision.Block` branch 
 Add the import:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.BlockEventLog
+import uk.co.cyberheroez.oroq.family.BlockEventLog
 ```
 
 Add two fields inside the `class AppMonitorService` body:
@@ -675,13 +675,13 @@ Add inside the existing `class FamilySummaryTest`:
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilySummaryTest"`
 Expected: FAIL — `buildSummary` unresolved.
 
 - [ ] **Step 3: Create `SummaryBuilder.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /**
  * Assembles a [FamilySummary] from already-gathered inputs. Pure — the worker
@@ -715,7 +715,7 @@ fun buildSummary(
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilySummaryTest"`
 Expected: all 3 tests PASS.
 
 - [ ] **Step 5: Add `syncUpload` to `FamilyApi.kt`**
@@ -733,7 +733,7 @@ In `FamilyApi`, add this method after `pairGet`:
 - [ ] **Step 6: Create `FamilySyncWorker.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import androidx.work.CoroutineWorker
@@ -741,9 +741,9 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 import java.util.Base64
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -817,7 +817,7 @@ In `MainActivity.kt`, in the `DeviceRole.CHILD` branch of `onCreate` (the `else`
 Add the import to `MainActivity.kt`:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.scheduleFamilySync
+import uk.co.cyberheroez.oroq.family.scheduleFamilySync
 ```
 
 In `LinkParentActivity.kt`, in the `sasView` "They match — finish" handler, after `store.setParentLink(...)`, add `scheduleFamilySync(this@LinkParentActivity)`:
@@ -836,7 +836,7 @@ In `LinkParentActivity.kt`, in the `sasView` "They match — finish" handler, af
 Add the import to `LinkParentActivity.kt`:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.scheduleFamilySync
+import uk.co.cyberheroez.oroq.family.scheduleFamilySync
 ```
 
 - [ ] **Step 8: Verify it builds**
@@ -882,7 +882,7 @@ Add inside the existing `class FamilyApiTest`:
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: FAIL — `syncFetch` unresolved.
 
 - [ ] **Step 3: Add `syncFetch` to `FamilyApi.kt`**
@@ -902,20 +902,20 @@ In `FamilyApi`, add after `syncUpload`:
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: all FamilyApi tests PASS (the original 8 plus the 2 new).
 
 - [ ] **Step 5: Create `ParentRepository.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.content.Context
-import uk.co.cyberheroez.safebrowse.family.FamilyCrypto
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.FamilySummary
-import uk.co.cyberheroez.safebrowse.family.familyApi
-import uk.co.cyberheroez.safebrowse.family.parseSummary
+import uk.co.cyberheroez.oroq.family.FamilyCrypto
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.FamilySummary
+import uk.co.cyberheroez.oroq.family.familyApi
+import uk.co.cyberheroez.oroq.family.parseSummary
 import java.util.Base64
 
 /** Fetches and decrypts a child's latest activity summary for the parent UI. */
@@ -980,7 +980,7 @@ git commit -m "feat(android): add ParentRepository — fetch and decrypt child s
 - [ ] **Step 1: Create `ChildDashboardActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.graphics.Typeface
 import android.os.Bundle
@@ -993,9 +993,9 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.family.FamilySummary
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.oroq.family.FamilySummary
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -1216,7 +1216,7 @@ Expected: BUILD SUCCESSFUL — all unit tests pass.
 
 With the Worker deployed and `WORKER_BASE_URL` set (Plan A2b prerequisite), and a child paired to a parent:
 - On the child phone, turn protection on and use a couple of apps; trigger a block (open a blocked app).
-- Wait for `FamilySyncWorker` to run (or force it: `adb shell cmd jobscheduler run -f uk.co.cyberheroez.safebrowse <jobId>`, or simply wait ~15 min).
+- Wait for `FamilySyncWorker` to run (or force it: `adb shell cmd jobscheduler run -f uk.co.cyberheroez.oroq <jobId>`, or simply wait ~15 min).
 - On the parent phone, open the child card → the dashboard shows protection status, screen time and the blocked feed.
 
 - [ ] **Step 6: Commit**

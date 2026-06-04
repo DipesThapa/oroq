@@ -24,7 +24,7 @@
 
 ```kotlin
 // android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledApp.kt
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /** A single user-installed app on the child phone, as seen by the parent. */
 data class InstalledApp(val packageName: String, val label: String)
@@ -34,7 +34,7 @@ data class InstalledApp(val packageName: String, val label: String)
 
 ```kotlin
 // android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledAppReader.kt
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
@@ -94,7 +94,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 Replace the contents of `FamilySummaryTest.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -175,7 +175,7 @@ class FamilySummaryTest {
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"
+  "uk.co.cyberheroez.oroq.family.FamilySummaryTest"
 ```
 Expected: compile error — `FamilySummary` has no `installedApps`/`blockedApps`, `buildSummary` has no matching overload.
 
@@ -184,7 +184,7 @@ Expected: compile error — `FamilySummary` has no `installedApps`/`blockedApps`
 Replace `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -305,7 +305,7 @@ fun parseSummary(text: String): FamilySummary {
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"
+  "uk.co.cyberheroez.oroq.family.FamilySummaryTest"
 ```
 Expected: still fails — `buildSummary` doesn't accept `installedApps`/`blockedApps` yet (Task 3 fixes it).
 
@@ -333,7 +333,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 Replace `SummaryBuilder.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /**
  * Assembles a [FamilySummary] from already-gathered inputs. Pure — the worker
@@ -438,7 +438,7 @@ Append to the existing `FamilyCommandTest.kt` (inside the class, before the clos
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"
+  "uk.co.cyberheroez.oroq.family.FamilyCommandTest"
 ```
 Expected: compile error — `SET_BLOCKED_APPS` undefined.
 
@@ -480,7 +480,7 @@ Also update the KDoc on the data class to document the new type. Replace the exi
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"
+  "uk.co.cyberheroez.oroq.family.FamilyCommandTest"
 ```
 Expected: all 7 tests pass.
 
@@ -612,10 +612,10 @@ The picker mirrors the categories one — same visual treatment, same Save flow.
 
 - [ ] **Step 1: Add the import**
 
-Open `ChildDashboardActivity.kt`. After the existing `import uk.co.cyberheroez.safebrowse.family.FamilySummary` line, add:
+Open `ChildDashboardActivity.kt`. After the existing `import uk.co.cyberheroez.oroq.family.FamilySummary` line, add:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.InstalledApp
+import uk.co.cyberheroez.oroq.family.InstalledApp
 ```
 
 - [ ] **Step 2: Add a second checkbox map field**
@@ -767,7 +767,7 @@ If you'd rather not wait, force a sync from a terminal:
 
 ```bash
 adb -s emulator-5554 shell am broadcast -a androidx.work.diagnostics.REQUEST_DIAGNOSTICS \
-  -p uk.co.cyberheroez.safebrowse
+  -p uk.co.cyberheroez.oroq
 ```
 
 (This is the WorkManager diagnostic broadcast — it just logs state; the real way to force-run is to simply restart the app, which `scheduleFamilySync` covers.)

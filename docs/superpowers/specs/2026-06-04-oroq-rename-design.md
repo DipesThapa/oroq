@@ -6,7 +6,7 @@
 
 ## Why
 
-The product is being renamed from **SafeBrowse** to **OroQ** before any Play Store submission. Caught just before the first signed AAB would have locked the `uk.co.cyberheroez.safebrowse` package name on Play — Android `applicationId` becomes a permanent identity once published, so this is the last chance to rename without forever-mismatched brand and package.
+The product is being renamed from **SafeBrowse** to **OroQ** before any Play Store submission. Caught just before the first signed AAB would have locked the `uk.co.cyberheroez.oroq` package name on Play — Android `applicationId` becomes a permanent identity once published, so this is the last chance to rename without forever-mismatched brand and package.
 
 ## Scope
 
@@ -29,12 +29,12 @@ This pass executes a coordinated rename across four surfaces:
 | Surface | Old | New |
 |---|---|---|
 | Local repo dir | `/Users/apple/Desktop/Projects/safebrowse-ai` | `/Users/apple/Desktop/Projects/oroq` |
-| Android applicationId | `uk.co.cyberheroez.safebrowse` | `uk.co.cyberheroez.oroq` |
-| Android Kotlin namespace | `uk.co.cyberheroez.safebrowse` | `uk.co.cyberheroez.oroq` |
+| Android applicationId | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
+| Android Kotlin namespace | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
 | App display name | `SafeBrowse` | `OroQ` |
 | In-UI brand string | `SAFEBROWSE` | `OROQ` |
 | VPN service class | `SafeBrowseVpnService` | `OroQVpnService` |
-| VPN STOP intent action | `uk.co.cyberheroez.safebrowse.STOP_VPN` | `uk.co.cyberheroez.oroq.STOP_VPN` |
+| VPN STOP intent action | `uk.co.cyberheroez.oroq.STOP_VPN` | `uk.co.cyberheroez.oroq.STOP_VPN` |
 | Worker name | `safebrowse-family` | `oroq-family` |
 | Worker URL | `safebrowse-family.cyberheroez.workers.dev` | `oroq-family.cyberheroez.workers.dev` |
 | Pages project | `safebrowse-blocklists` | `oroq-blocklists` |
@@ -48,7 +48,7 @@ D1 database ID `6ff2b5f1-…` and KV namespace ID `b101d3dc…` are permanent an
 
 ### Android changes
 
-`uk.co.cyberheroez.safebrowse` exists in 81 files. The mechanical sequence:
+`uk.co.cyberheroez.oroq` exists in 81 files. The mechanical sequence:
 
 ```bash
 # 1. Rename source directories — git tracks moves
@@ -58,7 +58,7 @@ git mv android/app/src/test/java/uk/co/cyberheroez/safebrowse \
        android/app/src/test/java/uk/co/cyberheroez/oroq
 
 # 2. Rewrite every internal reference
-grep -rl "uk.co.cyberheroez.safebrowse" android/ docs/ backend/ \
+grep -rl "uk.co.cyberheroez.oroq" android/ docs/ backend/ \
   | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.oroq/g'
 
 # 3. Replace brand strings, case-aware
@@ -77,7 +77,7 @@ sed -i '' 's/SafeBrowseVpnService/OroQVpnService/g' \
   $(grep -rl "SafeBrowseVpnService" android/)
 ```
 
-**`AndroidManifest.xml`:** the `namespace` is set in `build.gradle.kts`, not the manifest — only the `<service android:name=".vpn.SafeBrowseVpnService" />` reference changes (handled by the class-rename sed above). The intent action constant `ACTION_STOP = "uk.co.cyberheroez.safebrowse.STOP_VPN"` updates as part of the package-name sed.
+**`AndroidManifest.xml`:** the `namespace` is set in `build.gradle.kts`, not the manifest — only the `<service android:name=".vpn.SafeBrowseVpnService" />` reference changes (handled by the class-rename sed above). The intent action constant `ACTION_STOP = "uk.co.cyberheroez.oroq.STOP_VPN"` updates as part of the package-name sed.
 
 **`build.gradle.kts`:**
 
@@ -229,7 +229,7 @@ After 24 hours of clean operation on the new build:
 | Old `safebrowse-blocklists` Pages project | Cloudflare dashboard → Pages → Delete |
 | D1 database | **Keep** (reused) |
 | KV namespace | **Keep** (reused) |
-| Old `uk.co.cyberheroez.safebrowse` APK | `adb uninstall uk.co.cyberheroez.safebrowse` on each device |
+| Old `uk.co.cyberheroez.oroq` APK | `adb uninstall uk.co.cyberheroez.oroq` on each device |
 
 ## Files affected
 

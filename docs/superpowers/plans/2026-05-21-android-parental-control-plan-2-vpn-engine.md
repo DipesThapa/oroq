@@ -57,7 +57,7 @@ the APK assets into a `BlocklistRepository` (Android, verified later on device).
 Create `BlocklistAssetsTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -99,7 +99,7 @@ Expected: FAIL — `parseBlocklistText` is unresolved.
 Create `BlocklistAssets.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import android.content.res.AssetManager
 
@@ -161,7 +161,7 @@ Read-only accessors for the IPv4 header fields the VPN loop needs.
 Create `Ipv4PacketTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.vpn
+package uk.co.cyberheroez.oroq.vpn
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -213,7 +213,7 @@ Expected: FAIL — `Ipv4Packet` is unresolved.
 Create `Ipv4Packet.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.vpn
+package uk.co.cyberheroez.oroq.vpn
 
 /** Read-only accessors for IPv4 packet header fields (RFC 791). */
 object Ipv4Packet {
@@ -269,7 +269,7 @@ Extracts the UDP layer — ports and payload — from an IPv4 packet.
 Create `UdpPacketTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.vpn
+package uk.co.cyberheroez.oroq.vpn
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -326,7 +326,7 @@ Expected: FAIL — `parseUdp` and `UdpPacket` are unresolved.
 Create `UdpPacket.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.vpn
+package uk.co.cyberheroez.oroq.vpn
 
 /** A parsed UDP datagram together with its IPv4 addressing. */
 class UdpPacket(
@@ -526,7 +526,7 @@ query, decide whether to block it (and produce the NXDOMAIN response) or allow i
 Create `DnsFilterTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -589,7 +589,7 @@ Expected: FAIL — `DnsFilter` is unresolved.
 Create `DnsFilter.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 /**
  * Decides whether a DNS query should be blocked. [enabledCategories] is a
@@ -745,7 +745,7 @@ before the closing `</application>` tag:
 Create `SafeBrowseVpnService.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.vpn
+package uk.co.cyberheroez.oroq.vpn
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -755,10 +755,10 @@ import android.content.Context
 import android.content.Intent
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
-import uk.co.cyberheroez.safebrowse.MainActivity
-import uk.co.cyberheroez.safebrowse.R
-import uk.co.cyberheroez.safebrowse.filter.DnsFilter
-import uk.co.cyberheroez.safebrowse.filter.loadBlocklistRepository
+import uk.co.cyberheroez.oroq.MainActivity
+import uk.co.cyberheroez.oroq.R
+import uk.co.cyberheroez.oroq.filter.DnsFilter
+import uk.co.cyberheroez.oroq.filter.loadBlocklistRepository
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.DatagramPacket
@@ -900,7 +900,7 @@ class SafeBrowseVpnService : VpnService() {
     }
 
     companion object {
-        const val ACTION_STOP = "uk.co.cyberheroez.safebrowse.STOP_VPN"
+        const val ACTION_STOP = "uk.co.cyberheroez.oroq.STOP_VPN"
 
         private const val VPN_ADDRESS = "10.111.222.1"
         private const val DNS_SERVER = "10.111.222.2"
@@ -945,7 +945,7 @@ filter works. The real parent UI arrives in Plan 3.
 Replace the entire contents of `MainActivity.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse
+package uk.co.cyberheroez.oroq
 
 import android.content.Intent
 import android.net.VpnService
@@ -965,7 +965,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 
 class MainActivity : ComponentActivity() {
 

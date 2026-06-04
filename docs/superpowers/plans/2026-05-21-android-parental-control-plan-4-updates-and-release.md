@@ -232,7 +232,7 @@ Pure logic for deciding which category lists to download.
 Create `BlocklistManifestTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.update
+package uk.co.cyberheroez.oroq.update
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -275,7 +275,7 @@ Expected: FAIL — `parseManifest` / `planUpdate` unresolved.
 Create `BlocklistManifest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.update
+package uk.co.cyberheroez.oroq.update
 
 /**
  * Parses a manifest of `"<category> <version>"` lines into a category→version
@@ -328,7 +328,7 @@ private storage. Verified on-device, not by unit tests (network + filesystem).
 - [ ] **Step 1: Write `BlocklistUpdater.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.update
+package uk.co.cyberheroez.oroq.update
 
 import android.content.Context
 import android.util.Log
@@ -534,7 +534,7 @@ In `android/app/build.gradle.kts`, add inside `dependencies { }` after
 - [ ] **Step 2: Write `BlocklistUpdateWorker.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.update
+package uk.co.cyberheroez.oroq.update
 
 import android.content.Context
 import androidx.work.Constraints
@@ -582,7 +582,7 @@ fun scheduleBlocklistUpdates(context: Context) {
 In `MainActivity.kt`, add the import:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.update.scheduleBlocklistUpdates
+import uk.co.cyberheroez.oroq.update.scheduleBlocklistUpdates
 ```
 
 In `onCreate`, inside the `else` branch (where onboarding is already complete),
@@ -790,7 +790,7 @@ Expected: `BUILD SUCCESSFUL`, `Installed on 1 device`.
 - [ ] **Step 3: Verify filtering still works after the loader change**
 
 ```bash
-adb shell pm clear uk.co.cyberheroez.safebrowse
+adb shell pm clear uk.co.cyberheroez.oroq
 ```
 
 Open **SafeBrowse**, complete onboarding, and start protection. Confirm a site
@@ -812,7 +812,7 @@ To exercise the download path without waiting a week, find the job id from the
 Step 4 output and run it:
 
 ```bash
-adb shell cmd jobscheduler run -f uk.co.cyberheroez.safebrowse <JOB_ID>
+adb shell cmd jobscheduler run -f uk.co.cyberheroez.oroq <JOB_ID>
 adb logcat -d -s BlocklistUpdater
 ```
 

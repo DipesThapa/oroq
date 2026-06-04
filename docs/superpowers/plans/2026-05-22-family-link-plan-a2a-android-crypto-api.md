@@ -57,7 +57,7 @@ In `android/app/build.gradle.kts`, inside the existing `dependencies { }` block,
 - [ ] **Step 2: Write the failing test — `FamilyCryptoTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertThrows
@@ -95,13 +95,13 @@ class FamilyCryptoTest {
 
 - [ ] **Step 3: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyCryptoTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyCryptoTest"`
 Expected: FAIL — `FamilyCrypto` unresolved (does not compile yet).
 
 - [ ] **Step 4: Create `FamilyCrypto.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import com.google.crypto.tink.HybridDecrypt
 import com.google.crypto.tink.HybridEncrypt
@@ -187,7 +187,7 @@ object FamilyCrypto {
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyCryptoTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyCryptoTest"`
 Expected: all 3 tests PASS.
 
 - [ ] **Step 6: Commit**
@@ -246,7 +246,7 @@ import org.junit.Assert.assertTrue
 
 - [ ] **Step 2: Run the tests to verify they pass**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyCryptoTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyCryptoTest"`
 Expected: all 6 tests PASS (3 from Task 1 + 3 SAS tests).
 
 > Note: `sasDependsOnKeyOrder` could in principle collide once in ~10^6 runs if two distinct inputs hash to the same 6 digits. The two inputs here are different key orders of independently random keys, so a collision is astronomically unlikely in practice; if it ever flakes, re-running generates fresh keys.
@@ -272,7 +272,7 @@ git commit -m "test(android): cover FamilyCrypto SAS derivation"
 - [ ] **Step 1: Write the failing test — `FamilyApiTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -375,13 +375,13 @@ class FamilyApiTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: FAIL — `FamilyApi`, `HttpTransport`, `HttpResponse` unresolved.
 
 - [ ] **Step 3: Create `FamilyModels.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /** Result of `POST /pair/create`. */
 data class CreatePairingResult(
@@ -409,7 +409,7 @@ data class PairingRecord(
 - [ ] **Step 4: Create `FamilyApi.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONObject
 
@@ -499,7 +499,7 @@ class FamilyApi(
 
 - [ ] **Step 5: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: all 8 tests PASS.
 
 - [ ] **Step 6: Commit**
@@ -524,7 +524,7 @@ git commit -m "feat(android): add FamilyApi client and pairing models"
 This test runs a real localhost HTTP server (`com.sun.net.httpserver.HttpServer`, built into the JDK — no dependency) and checks the transport round-trips method, body and status.
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import com.sun.net.httpserver.HttpServer
 import org.junit.After
@@ -591,13 +591,13 @@ class HttpUrlTransportTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.HttpUrlTransportTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.HttpUrlTransportTest"`
 Expected: FAIL — `HttpUrlTransport` unresolved.
 
 - [ ] **Step 3: Create `HttpUrlTransport.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import java.net.HttpURLConnection
 import java.net.URL
@@ -639,7 +639,7 @@ class HttpUrlTransport(
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.HttpUrlTransportTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.HttpUrlTransportTest"`
 Expected: all 3 tests PASS.
 
 - [ ] **Step 5: Run the whole unit-test suite**

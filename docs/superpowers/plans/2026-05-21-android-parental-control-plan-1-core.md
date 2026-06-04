@@ -41,7 +41,7 @@ android/
 └─ (Gradle wrapper + settings, from Android Studio)
 ```
 
-Package: `uk.co.cyberheroez.safebrowse` (the company domain is `cyberheroez.co.uk`).
+Package: `uk.co.cyberheroez.oroq` (the company domain is `cyberheroez.co.uk`).
 
 ---
 
@@ -55,7 +55,7 @@ Package: `uk.co.cyberheroez.safebrowse` (the company domain is `cyberheroez.co.u
 
 In Android Studio: **New Project → Empty Activity** (Compose). Settings:
 - Name: `SafeBrowse`
-- Package name: `uk.co.cyberheroez.safebrowse`
+- Package name: `uk.co.cyberheroez.oroq`
 - Language: Kotlin
 - Minimum SDK: **API 26 (Android 8.0)**
 - Build configuration language: Kotlin DSL (`build.gradle.kts`)
@@ -271,7 +271,7 @@ git commit -m "feat(android): blocklist build script + generated assets"
 Create `DomainNameTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -309,7 +309,7 @@ Expected: FAIL — `normalizeDomain` is unresolved.
 Create `DomainName.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import java.net.IDN
 
@@ -358,7 +358,7 @@ git commit -m "feat(android): domain name normalisation"
 Create `BlocklistMatcherTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -404,7 +404,7 @@ Expected: FAIL — `isDomainBlocked` is unresolved.
 Create `BlocklistMatcher.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 /**
  * Returns true if [domain] (already normalised) is covered by [blocked] —
@@ -456,7 +456,7 @@ JVM; the Android asset loader (Plan 2) supplies the real map.
 Create `BlocklistRepositoryTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -506,7 +506,7 @@ Expected: FAIL — `BlocklistRepository` is unresolved.
 Create `BlocklistRepository.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 /**
  * Holds the per-category blocked-domain sets and answers filtering questions.
@@ -568,7 +568,7 @@ DoH project's `dns-message.js`.
 Create `DnsMessageTest.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -632,7 +632,7 @@ Expected: FAIL — `DnsMessage` is unresolved.
 Create `DnsMessage.kt`:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.filter
+package uk.co.cyberheroez.oroq.filter
 
 /** Parsing and construction of DNS wire-format messages (RFC 1035). */
 object DnsMessage {

@@ -23,7 +23,7 @@
 Edit `FamilyCommandTest.kt`. Replace the entire body with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -71,7 +71,7 @@ Run:
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
   ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"
+  "uk.co.cyberheroez.oroq.family.FamilyCommandTest"
 ```
 Expected: build fails or tests fail — `setCategoriesRoundTripsWithStringValue` and friends reference an unknown `stringValue` arg / `SET_CATEGORIES` const.
 
@@ -80,7 +80,7 @@ Expected: build fails or tests fail — `setCategoriesRoundTripsWithStringValue`
 Replace the contents of `FamilyCommand.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONObject
 
@@ -130,7 +130,7 @@ fun parseCommand(text: String): FamilyCommand {
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"
+  "uk.co.cyberheroez.oroq.family.FamilyCommandTest"
 ```
 Expected: all 5 tests pass.
 
@@ -157,7 +157,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 Replace the contents of `FamilySummaryTest.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -227,7 +227,7 @@ class FamilySummaryTest {
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"
+  "uk.co.cyberheroez.oroq.family.FamilySummaryTest"
 ```
 Expected: compile error — `FamilySummary` has no `categories`, `buildSummary` has no matching overload.
 
@@ -236,7 +236,7 @@ Expected: compile error — `FamilySummary` has no `categories`, `buildSummary` 
 Replace `FamilySummary.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONArray
 import org.json.JSONObject
@@ -331,7 +331,7 @@ fun parseSummary(text: String): FamilySummary {
 Replace `SummaryBuilder.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 /**
  * Assembles a [FamilySummary] from already-gathered inputs. Pure — the worker
@@ -386,7 +386,7 @@ Edit `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWo
 
 ```bash
 ./gradlew :app:testDebugUnitTest --tests \
-  "uk.co.cyberheroez.safebrowse.family.FamilySummaryTest"
+  "uk.co.cyberheroez.oroq.family.FamilySummaryTest"
 ```
 Expected: all 3 tests pass.
 
@@ -420,13 +420,13 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 Replace `CommandSync.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import android.content.Intent
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.config.ConfigRepository
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 import java.util.Base64
 
 /**
@@ -533,15 +533,15 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 Replace `ParentRepository.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.content.Context
-import uk.co.cyberheroez.safebrowse.family.FamilyCommand
-import uk.co.cyberheroez.safebrowse.family.FamilyCrypto
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.FamilySummary
-import uk.co.cyberheroez.safebrowse.family.familyApi
-import uk.co.cyberheroez.safebrowse.family.parseSummary
+import uk.co.cyberheroez.oroq.family.FamilyCommand
+import uk.co.cyberheroez.oroq.family.FamilyCrypto
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.FamilySummary
+import uk.co.cyberheroez.oroq.family.familyApi
+import uk.co.cyberheroez.oroq.family.parseSummary
 import java.util.Base64
 
 /** Fetches and decrypts a child's latest activity summary for the parent UI. */
@@ -618,7 +618,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 This rewrites the activity to add a current-limit caption and a categories picker section. It preserves the existing remote-control buttons.
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.parent
+package uk.co.cyberheroez.oroq.parent
 
 import android.graphics.Typeface
 import android.os.Bundle
@@ -638,11 +638,11 @@ import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.config.Categories
-import uk.co.cyberheroez.safebrowse.family.FamilyCommand
-import uk.co.cyberheroez.safebrowse.family.FamilySummary
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.oroq.config.Categories
+import uk.co.cyberheroez.oroq.family.FamilyCommand
+import uk.co.cyberheroez.oroq.family.FamilySummary
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.dp
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -966,7 +966,7 @@ This is a single Activity that walks through the permissions one at a time, then
 - [ ] **Step 1: Create `ChildOnboardingActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.graphics.Typeface
@@ -985,11 +985,11 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.monitor.AppMonitorService
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 
 /**
  * First-launch guided setup for a child phone:
@@ -1206,7 +1206,7 @@ The Parent and RolePicker routing branches stay identical.
 - [ ] **Step 1: Replace `MainActivity.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse
+package uk.co.cyberheroez.oroq
 
 import android.Manifest
 import android.content.Intent
@@ -1228,18 +1228,18 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.family.DeviceRole
-import uk.co.cyberheroez.safebrowse.family.FamilyStore
-import uk.co.cyberheroez.safebrowse.family.scheduleFamilySync
-import uk.co.cyberheroez.safebrowse.monitor.AppMonitorService
-import uk.co.cyberheroez.safebrowse.monitor.UsageReader
-import uk.co.cyberheroez.safebrowse.parent.ParentActivity
-import uk.co.cyberheroez.safebrowse.ui.ChildOnboardingActivity
-import uk.co.cyberheroez.safebrowse.ui.RolePickerActivity
-import uk.co.cyberheroez.safebrowse.ui.Style
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
-import uk.co.cyberheroez.safebrowse.update.scheduleBlocklistUpdates
-import uk.co.cyberheroez.safebrowse.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.family.DeviceRole
+import uk.co.cyberheroez.oroq.family.FamilyStore
+import uk.co.cyberheroez.oroq.family.scheduleFamilySync
+import uk.co.cyberheroez.oroq.monitor.AppMonitorService
+import uk.co.cyberheroez.oroq.monitor.UsageReader
+import uk.co.cyberheroez.oroq.parent.ParentActivity
+import uk.co.cyberheroez.oroq.ui.ChildOnboardingActivity
+import uk.co.cyberheroez.oroq.ui.RolePickerActivity
+import uk.co.cyberheroez.oroq.ui.Style
+import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.update.scheduleBlocklistUpdates
+import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
 
 /**
  * The child phone's only screen: a single status badge plus a "Linked to a
@@ -1460,7 +1460,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/c
 Replace `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt` with:
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.ui
+package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
 import android.content.res.ColorStateList
@@ -1478,9 +1478,9 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.safebrowse.R
-import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
-import uk.co.cyberheroez.safebrowse.ui.Style.dp
+import uk.co.cyberheroez.oroq.R
+import uk.co.cyberheroez.oroq.family.pollAndApplyCommands
+import uk.co.cyberheroez.oroq.ui.Style.dp
 
 /**
  * Full-screen screen shown when an app is blocked or screen time is up.
@@ -1695,7 +1695,7 @@ Expected: timestamp matches the most recent `assembleDebug` run.
 - [ ] **Step 2: Reinstall on the emulator (child)**
 
 ```bash
-adb -s emulator-5554 uninstall uk.co.cyberheroez.safebrowse
+adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq
 adb -s emulator-5554 install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success` on install. Uninstall may print "Failure [DELETE_FAILED_INTERNAL_ERROR]" on a fresh emulator — that's fine, the install will still proceed.

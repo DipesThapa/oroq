@@ -265,7 +265,7 @@ git commit -m "feat(backend): add remote-command queue routes"
 - [ ] **Step 1: Write the failing test — `FamilyCommandTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -286,13 +286,13 @@ class FamilyCommandTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyCommandTest"`
 Expected: FAIL — `FamilyCommand` unresolved.
 
 - [ ] **Step 3: Create `FamilyCommand.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.json.JSONObject
 
@@ -322,7 +322,7 @@ fun parseCommand(text: String): FamilyCommand {
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyCommandTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyCommandTest"`
 Expected: both tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -374,7 +374,7 @@ Add inside the existing `class FamilyApiTest`:
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: FAIL — `cmdSend`/`cmdFetch`/`cmdAck` unresolved.
 
 - [ ] **Step 3: Add the methods to `FamilyApi.kt`**
@@ -417,7 +417,7 @@ import org.json.JSONArray
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.FamilyApiTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.FamilyApiTest"`
 Expected: all FamilyApi tests PASS.
 
 - [ ] **Step 5: Commit**
@@ -439,7 +439,7 @@ git commit -m "feat(android): add FamilyApi command-queue methods"
 - [ ] **Step 1: Write the failing test — `AppliedCommandLogTest.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -480,13 +480,13 @@ class AppliedCommandLogTest {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.AppliedCommandLogTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.AppliedCommandLogTest"`
 Expected: FAIL — `AppliedCommandLog` unresolved.
 
 - [ ] **Step 3: Create `AppliedCommandLog.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import org.json.JSONArray
@@ -539,16 +539,16 @@ class AppliedCommandLog(
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.safebrowse.family.AppliedCommandLogTest"`
+Run: `cd android && ./gradlew :app:testDebugUnitTest --tests "uk.co.cyberheroez.oroq.family.AppliedCommandLogTest"`
 Expected: all 3 tests PASS.
 
 - [ ] **Step 5: Create `CommandSync.kt`**
 
 ```kotlin
-package uk.co.cyberheroez.safebrowse.family
+package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
-import uk.co.cyberheroez.safebrowse.config.ConfigRepository
+import uk.co.cyberheroez.oroq.config.ConfigRepository
 import java.util.Base64
 
 /**
@@ -635,7 +635,7 @@ In `BlockActivity`, the "time's up" path should poll for commands so a parent's 
 
 ```kotlin
 import kotlinx.coroutines.delay
-import uk.co.cyberheroez.safebrowse.family.pollAndApplyCommands
+import uk.co.cyberheroez.oroq.family.pollAndApplyCommands
 ```
 
 In `onCreate`, after `setContentView(...)`, start the poll when the reason is time's-up:
@@ -706,7 +706,7 @@ In `FamilyStore`, next to `tokenBlocking()` and `keyPairBlocking()`, add:
 Add the imports to `ParentRepository.kt`:
 
 ```kotlin
-import uk.co.cyberheroez.safebrowse.family.FamilyCommand
+import uk.co.cyberheroez.oroq.family.FamilyCommand
 ```
 
 Add the method inside `class ParentRepository`:
@@ -737,7 +737,7 @@ import androidx.appcompat.app.AlertDialog
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import uk.co.cyberheroez.safebrowse.family.FamilyCommand
+import uk.co.cyberheroez.oroq.family.FamilyCommand
 ```
 
 In `dashboardView`, after `column.addView(blockedBlock(summary), gap(14))`, add the controls section:

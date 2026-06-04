@@ -149,8 +149,8 @@ R8 ships disabled in the current `release` configuration; enabling it without ke
 -keep class androidx.datastore.*.** { *; }
 
 # --- Our own data classes survive obfuscation enough to be JSON-roundtripped ---
--keep class uk.co.cyberheroez.safebrowse.family.** { *; }
--keep class uk.co.cyberheroez.safebrowse.config.** { *; }
+-keep class uk.co.cyberheroez.oroq.family.** { *; }
+-keep class uk.co.cyberheroez.oroq.config.** { *; }
 
 # --- Crash-stack readability ---
 -keepattributes SourceFile,LineNumberTable

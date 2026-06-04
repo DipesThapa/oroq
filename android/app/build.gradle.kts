@@ -3,7 +3,7 @@ plugins {
 }
 
 android {
-    namespace = "uk.co.cyberheroez.safebrowse"
+    namespace = "uk.co.cyberheroez.oroq"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -11,7 +11,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "uk.co.cyberheroez.safebrowse"
+        applicationId = "uk.co.cyberheroez.oroq"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
