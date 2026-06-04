@@ -120,7 +120,7 @@ class AppMonitorService : android.app.Service() {
             NotificationChannel(CHANNEL_ID, "App & screen-time limits", NotificationManager.IMPORTANCE_LOW)
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("SafeBrowse limits are active")
+            .setContentTitle("OroQ limits are active")
             .setContentText("App blocking and screen-time limits are running")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
@@ -130,6 +130,6 @@ class AppMonitorService : android.app.Service() {
     companion object {
         private const val TAG = "AppMonitor"
         private const val NOTIFICATION_ID = 2
-        private const val CHANNEL_ID = "safebrowse_monitor"
+        private const val CHANNEL_ID = "oroq_monitor"
     }
 }

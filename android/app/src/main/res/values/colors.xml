@@ -8,7 +8,7 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- SafeBrowse brand palette — calm teal -->
+    <!-- OroQ brand palette — calm teal -->
     <color name="sb_bg">#FFF7F4EF</color>
     <color name="sb_primary">#FF1FB07A</color>
     <color name="sb_primary_dark">#FF18935F</color>

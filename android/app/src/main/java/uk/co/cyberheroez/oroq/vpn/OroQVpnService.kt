@@ -51,7 +51,7 @@ class OroQVpnService : VpnService() {
         if (running.get()) return
         startForeground(NOTIFICATION_ID, buildNotification())
         val descriptor = Builder()
-            .setSession("SafeBrowse")
+            .setSession("OroQ")
             .addAddress(VPN_ADDRESS, 32)
             .addDnsServer(DNS_SERVER)
             .addRoute(DNS_SERVER, 32)
@@ -181,7 +181,7 @@ class OroQVpnService : VpnService() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "SafeBrowse protection",
+                "OroQ protection",
                 NotificationManager.IMPORTANCE_LOW,
             )
         )
@@ -192,7 +192,7 @@ class OroQVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("SafeBrowse is protecting this device")
+            .setContentTitle("OroQ is protecting this device")
             .setContentText("Web filtering is active")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(openApp)
@@ -208,7 +208,7 @@ class OroQVpnService : VpnService() {
         var isActive: Boolean = false
             private set
 
-        private const val TAG = "SafeBrowseVpn"
+        private const val TAG = "OroQVpn"
         private const val VPN_ADDRESS = "10.111.222.1"
         private const val DNS_SERVER = "10.111.222.2"
         private const val UPSTREAM_DNS = "1.1.1.1"
@@ -216,6 +216,6 @@ class OroQVpnService : VpnService() {
         private const val UPSTREAM_TIMEOUT_MS = 5000
         private const val MAX_PACKET = 32767
         private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "safebrowse_vpn"
+        private const val CHANNEL_ID = "oroq_vpn"
     }
 }

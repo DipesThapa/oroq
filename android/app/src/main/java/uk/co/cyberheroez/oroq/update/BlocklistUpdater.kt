@@ -72,6 +72,6 @@ class BlocklistUpdater(private val context: Context) {
     companion object {
         private const val TAG = "BlocklistUpdater"
         private const val TIMEOUT_MS = 15_000
-        const val BASE_URL = "https://safebrowse-blocklists.pages.dev"
+        const val BASE_URL = "https://oroq-blocklists.pages.dev"
     }
 }

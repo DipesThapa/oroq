@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
             setPadding(dp(24), dp(96), dp(24), dp(40))
         }
         column.addView(TextView(this).apply {
-            text = "SAFEBROWSE"
+            text = "OROQ"
             textSize = 13f
             letterSpacing = 0.32f
             setTypeface(typeface, Typeface.BOLD)

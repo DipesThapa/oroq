@@ -14,7 +14,7 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 
 /**
- * SafeBrowse design system — a calm teal palette, a gradient hero, soft
+ * OroQ design system — a calm teal palette, a gradient hero, soft
  * rounded cards and pill buttons. Shared builders keep every screen consistent.
  */
 object Style {

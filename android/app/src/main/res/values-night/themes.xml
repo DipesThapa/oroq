@@ -1,6 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- SafeBrowse uses the same light-surface brand theme in dark mode. -->
-    <style name="Theme.SafeBrowse" parent="Theme.MaterialComponents.Light.DarkActionBar">
+    <!-- OroQ uses the same light-surface brand theme in dark mode. -->
+    <style name="Theme.OroQ" parent="Theme.MaterialComponents.Light.DarkActionBar">
         <item name="colorPrimary">@color/sb_primary</item>
         <item name="colorPrimaryVariant">@color/sb_primary_dark</item>
         <item name="colorOnPrimary">@color/sb_on_primary</item>

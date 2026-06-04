@@ -33,7 +33,7 @@ class RolePickerActivity : AppCompatActivity() {
             setPadding(dp(20), dp(64), dp(20), dp(28))
         }
         column.addView(TextView(this).apply {
-            text = "Welcome to SafeBrowse"
+            text = "Welcome to OroQ"
             textSize = 27f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Style.INK)

@@ -106,7 +106,7 @@ class AddChildActivity : AppCompatActivity() {
         pageHeader("Pairing code") { finish() }
         card {
             cardTitle("On your child's phone")
-            body("Open SafeBrowse, choose \"This is my child's phone\", then " +
+            body("Open OroQ, choose \"This is my child's phone\", then " +
                 "Settings → Link a parent, and enter this code:")
             addView(TextView(context).apply {
                 text = code

@@ -15,7 +15,7 @@ import android.content.Intent
  * (Chrome, Settings, Phone, sideloaded games) while excluding background
  * services that have no UI.
  *
- * SafeBrowse itself is filtered out so the parent picker can't ask the child
+ * OroQ itself is filtered out so the parent picker can't ask the child
  * to block the parental-control app.
  */
 fun listUserApps(context: Context): List<InstalledApp> {

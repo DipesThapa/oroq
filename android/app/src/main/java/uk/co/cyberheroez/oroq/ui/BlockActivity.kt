@@ -67,7 +67,7 @@ class BlockActivity : AppCompatActivity() {
         bgColor = Style.CORAL,
         iconRes = R.drawable.ic_block,
         heading = "App blocked",
-        message = "This app has been blocked by SafeBrowse.",
+        message = "This app has been blocked by OroQ.",
     ) {
         whiteButton("Go to home screen", Style.CORAL) { goHome() }
     }

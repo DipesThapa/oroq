@@ -91,7 +91,7 @@ class ChildOnboardingActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(64), dp(20), dp(28))
         }
-        column.addView(title("Set up SafeBrowse"))
+        column.addView(title("Set up OroQ"))
         column.addView(caption("Step ${step.index} of 5 — ${step.label}"), marginTop(4))
         column.addView(body(step.explanation), marginTop(20))
         column.addView(primaryButton(step.actionLabel) { performStep(step) }, marginTop(28))
@@ -174,19 +174,19 @@ class ChildOnboardingActivity : AppCompatActivity() {
         val actionLabel: String,
     ) {
         VPN(1, "Allow web filtering",
-            "SafeBrowse runs as a local-only VPN to block harmful sites. " +
+            "OroQ runs as a local-only VPN to block harmful sites. " +
                 "Android will ask you to allow it.",
             "Allow VPN"),
         USAGE(2, "Allow usage access",
-            "This is how SafeBrowse measures screen time and detects which " +
+            "This is how OroQ measures screen time and detects which " +
                 "app is open.",
             "Open settings"),
         OVERLAY(3, "Allow display over apps",
-            "Needed so SafeBrowse can show a block screen when a blocked app " +
+            "Needed so OroQ can show a block screen when a blocked app " +
                 "is opened.",
             "Open settings"),
         BATTERY(4, "Stay on in the background",
-            "Exempt SafeBrowse from battery optimisation so protection stays on.",
+            "Exempt OroQ from battery optimisation so protection stays on.",
             "Open settings"),
         PAIR(5, "Link to a parent",
             "Ask your parent for the 8-character pairing code shown on " +

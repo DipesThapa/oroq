@@ -12,7 +12,7 @@ import uk.co.cyberheroez.oroq.monitor.effectiveExtraMinutes
 import uk.co.cyberheroez.oroq.monitor.newExtraAfterGrant
 import java.time.LocalDate
 
-private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
+private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 
 /**
  * Persists parent configuration: the PIN and recovery code (as salted PBKDF2
