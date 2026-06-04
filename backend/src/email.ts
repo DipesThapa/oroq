@@ -18,8 +18,8 @@ export async function sendOtpEmail(env: Env, email: string, otp: string): Promis
     body: JSON.stringify({
       from: env.RESEND_FROM,
       to: email,
-      subject: "Your SafeBrowse code",
-      text: `Your SafeBrowse verification code is ${otp}. It expires in 10 minutes.`,
+      subject: "Your OroQ code",
+      text: `Your OroQ verification code is ${otp}. It expires in 10 minutes.`,
     }),
   });
 }

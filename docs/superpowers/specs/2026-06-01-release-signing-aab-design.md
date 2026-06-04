@@ -54,13 +54,13 @@ android/
 ```
 storeFile=keystore/upload.jks
 storePassword=<from keytool prompt>
-keyAlias=safebrowse-upload
+keyAlias=oroq-upload
 keyPassword=<from keytool prompt>
 ```
 
 Backup, per `docs/RELEASE.md`: three copies, two media:
 
-- 1Password vault entry "SafeBrowse Android upload key" — `upload.jks` attached + both passwords + the keystore.properties values.
+- 1Password vault entry "OroQ Android upload key" — `upload.jks` attached + both passwords + the keystore.properties values.
 - GPG-encrypted USB stick in a physical drawer (`gpg -c upload.jks`).
 - Never email, never iCloud/Dropbox unencrypted, never commit.
 
@@ -163,7 +163,7 @@ The crash-stack attributes matter because Play Console only deobfuscates traces 
 
 A single discoverable document. Sections:
 
-1. **First-time key generation** — exact `keytool` invocation with the identity fields used (CN: CyberHeroez CIC, OU: SafeBrowse, locality: London, country: GB) so any re-issue matches.
+1. **First-time key generation** — exact `keytool` invocation with the identity fields used (CN: CyberHeroez CIC, OU: OroQ, locality: London, country: GB) so any re-issue matches.
 2. **Immediate backup** — the three-copy/two-media rule above with checklist boxes.
 3. **Build a signed AAB** — `cd android && ./gradlew :app:bundleRelease`, output at `app/build/outputs/bundle/release/app-release.aab`.
 4. **Verify** — `jarsigner -verify -verbose -certs app-release.aab`, expected fingerprints recorded.

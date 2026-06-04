@@ -4,7 +4,7 @@ Audience: Designated Safeguarding Leads (DSLs), Prevent leads, senior leadership
 Version: Draft – 0.3.0 (extension), 2025-02-14
 
 ## Purpose
-Summarise how Safeguard (SafeBrowse AI) contributes to your organisation’s compliance with the Prevent Duty (Counter-Terrorism and Security Act 2015) and outline recommended operational practices.
+Summarise how Safeguard (OroQ AI) contributes to your organisation’s compliance with the Prevent Duty (Counter-Terrorism and Security Act 2015) and outline recommended operational practices.
 
 ## Safeguard capabilities relevant to Prevent
 - **Domain filtering** – packaged blocklist covering known adult/illicit domains; can be extended with locally maintained lists (e.g., extremist sites supplied by LA or third-party feeds).

@@ -1,4 +1,4 @@
-# Privacy Policy (Safeguard — SafeBrowse AI)
+# Privacy Policy (Safeguard — OroQ AI)
 
 Safeguard is a privacy‑first browser extension. It processes content locally and does not send your browsing data to external servers. This document describes how we treat personal information when the extension is deployed for individual or organisational use.
 

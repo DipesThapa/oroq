@@ -3,7 +3,7 @@
 Audience: Designated Safeguarding Leads (DSLs), governors, IT managers  
 Version: Draft – 0.3.0 (extension), 2025-02-14
 
-This matrix summarises how Safeguard (SafeBrowse AI) supports the statutory *Keeping Children Safe in Education* (KCSIE) 2024 expectations for “filters and monitoring” in schools and colleges in England. Use it as an annex to your safeguarding policy. Complete the “Action for your school” column with local owners and review dates. Highlighted gaps are areas we plan to enhance – see the roadmap column.
+This matrix summarises how Safeguard (OroQ AI) supports the statutory *Keeping Children Safe in Education* (KCSIE) 2024 expectations for “filters and monitoring” in schools and colleges in England. Use it as an annex to your safeguarding policy. Complete the “Action for your school” column with local owners and review dates. Highlighted gaps are areas we plan to enhance – see the roadmap column.
 
 | KCSIE expectation | Safeguard coverage | Action for your school | Evidencing tips | Roadmap / gaps |
 | --- | --- | --- | --- | --- |

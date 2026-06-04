@@ -1,6 +1,6 @@
 # Safeguard MVP Overview
 
-This document explains the minimum viable product (MVP) behavior of the Safeguard (SafeBrowse AI) browser extension.
+This document explains the minimum viable product (MVP) behavior of the Safeguard (OroQ AI) browser extension.
 
 ## What it is
 Safeguard is a privacy-first safety extension that runs entirely on-device. It blocks unsafe pages, blurs risky media in aggressive mode, and provides parent/teacher controls without sending browsing data to any server.

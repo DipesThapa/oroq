@@ -1,4 +1,4 @@
-# SafeBrowse → OroQ rename — design
+# OroQ → OroQ rename — design
 
 **Date:** 2026-06-04
 **Status:** Approved (brainstorming)
@@ -6,7 +6,7 @@
 
 ## Why
 
-The product is being renamed from **SafeBrowse** to **OroQ** before any Play Store submission. Caught just before the first signed AAB would have locked the `uk.co.cyberheroez.oroq` package name on Play — Android `applicationId` becomes a permanent identity once published, so this is the last chance to rename without forever-mismatched brand and package.
+The product is being renamed from **OroQ** to **OroQ** before any Play Store submission. Caught just before the first signed AAB would have locked the `uk.co.cyberheroez.oroq` package name on Play — Android `applicationId` becomes a permanent identity once published, so this is the last chance to rename without forever-mismatched brand and package.
 
 ## Scope
 
@@ -31,14 +31,14 @@ This pass executes a coordinated rename across four surfaces:
 | Local repo dir | `/Users/apple/Desktop/Projects/safebrowse-ai` | `/Users/apple/Desktop/Projects/oroq` |
 | Android applicationId | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
 | Android Kotlin namespace | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
-| App display name | `SafeBrowse` | `OroQ` |
-| In-UI brand string | `SAFEBROWSE` | `OROQ` |
-| VPN service class | `SafeBrowseVpnService` | `OroQVpnService` |
+| App display name | `OroQ` | `OroQ` |
+| In-UI brand string | `OROQ` | `OROQ` |
+| VPN service class | `OroQVpnService` | `OroQVpnService` |
 | VPN STOP intent action | `uk.co.cyberheroez.oroq.STOP_VPN` | `uk.co.cyberheroez.oroq.STOP_VPN` |
-| Worker name | `safebrowse-family` | `oroq-family` |
-| Worker URL | `safebrowse-family.cyberheroez.workers.dev` | `oroq-family.cyberheroez.workers.dev` |
-| Pages project | `safebrowse-blocklists` | `oroq-blocklists` |
-| Pages URL | `safebrowse-blocklists.pages.dev` | `oroq-blocklists.pages.dev` |
+| Worker name | `oroq-family` | `oroq-family` |
+| Worker URL | `oroq-family.cyberheroez.workers.dev` | `oroq-family.cyberheroez.workers.dev` |
+| Pages project | `oroq-blocklists` | `oroq-blocklists` |
+| Pages URL | `oroq-blocklists.pages.dev` | `oroq-blocklists.pages.dev` |
 | DataStore name (config) | `safebrowse_config` | `oroq_config` |
 | Claude memory dir | `~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai` | `~/.claude/projects/-Users-apple-Desktop-Projects-oroq` |
 
@@ -62,22 +62,22 @@ grep -rl "uk.co.cyberheroez.oroq" android/ docs/ backend/ \
   | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.oroq/g'
 
 # 3. Replace brand strings, case-aware
-grep -rl "SafeBrowse" android/app/src/main/java android/app/src/main/res \
-  | xargs sed -i '' 's/SafeBrowse/OroQ/g'
-grep -rl "SAFEBROWSE" android/app/src/main/java \
-  | xargs sed -i '' 's/SAFEBROWSE/OROQ/g'
+grep -rl "OroQ" android/app/src/main/java android/app/src/main/res \
+  | xargs sed -i '' 's/OroQ/OroQ/g'
+grep -rl "OROQ" android/app/src/main/java \
+  | xargs sed -i '' 's/OROQ/OROQ/g'
 ```
 
-**Class rename:** `SafeBrowseVpnService` → `OroQVpnService`. The file and all 8+ in-code references update via `sed`. After Section 1 finishes, the file at `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt` gets renamed:
+**Class rename:** `OroQVpnService` → `OroQVpnService`. The file and all 8+ in-code references update via `sed`. After Section 1 finishes, the file at `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt` gets renamed:
 
 ```bash
-git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt \
+git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt \
        android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt
-sed -i '' 's/SafeBrowseVpnService/OroQVpnService/g' \
-  $(grep -rl "SafeBrowseVpnService" android/)
+sed -i '' 's/OroQVpnService/OroQVpnService/g' \
+  $(grep -rl "OroQVpnService" android/)
 ```
 
-**`AndroidManifest.xml`:** the `namespace` is set in `build.gradle.kts`, not the manifest — only the `<service android:name=".vpn.SafeBrowseVpnService" />` reference changes (handled by the class-rename sed above). The intent action constant `ACTION_STOP = "uk.co.cyberheroez.oroq.STOP_VPN"` updates as part of the package-name sed.
+**`AndroidManifest.xml`:** the `namespace` is set in `build.gradle.kts`, not the manifest — only the `<service android:name=".vpn.OroQVpnService" />` reference changes (handled by the class-rename sed above). The intent action constant `ACTION_STOP = "uk.co.cyberheroez.oroq.STOP_VPN"` updates as part of the package-name sed.
 
 **`build.gradle.kts`:**
 
@@ -92,9 +92,9 @@ android {
 }
 ```
 
-**`strings.xml`:** `<string name="app_name">SafeBrowse</string>` → `OroQ`.
+**`strings.xml`:** `<string name="app_name">OroQ</string>` → `OroQ`.
 
-**UI brand strings** living in Kotlin source files (`MainActivity` "SAFEBROWSE" badge, `BlockActivity` "blocked by SafeBrowse", `AppMonitorService` notification "SafeBrowse limits are active", `RolePickerActivity` welcome copy) are caught by the case-aware `SafeBrowse` → `OroQ` and `SAFEBROWSE` → `OROQ` sweeps.
+**UI brand strings** living in Kotlin source files (`MainActivity` "OROQ" badge, `BlockActivity` "blocked by OroQ", `AppMonitorService` notification "OroQ limits are active", `RolePickerActivity` welcome copy) are caught by the case-aware `OroQ` → `OroQ` and `OROQ` → `OROQ` sweeps.
 
 **DataStore file names** change automatically because the dataStore delegate uses literal strings:
 
@@ -130,7 +130,7 @@ binding = "KV"
 id = "b101d3dc0103425cb8ca29b7ed102d1a"
 ```
 
-`npx wrangler deploy` produces a **new** Worker at `oroq-family.cyberheroez.workers.dev`. The old `safebrowse-family` Worker remains alive at its old URL until explicitly deleted in Section 5.
+`npx wrangler deploy` produces a **new** Worker at `oroq-family.cyberheroez.workers.dev`. The old `oroq-family` Worker remains alive at its old URL until explicitly deleted in Section 5.
 
 Both Workers bind the same D1 + KV via shared IDs. Pairings, sessions, OTP state, command queues — all single-source.
 
@@ -179,9 +179,9 @@ const val BASE_URL = "https://oroq-blocklists.pages.dev"
 
 In-repo docs string-replace (case-aware sed across all `.md` files outside the historical record):
 
-- `PRIVACY.md`, `README.md`, all `docs/*.md` except `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and any pre-`2026-06-04` superpowers files — those are historical records of work done as SafeBrowse and stay verbatim.
+- `PRIVACY.md`, `README.md`, all `docs/*.md` except `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and any pre-`2026-06-04` superpowers files — those are historical records of work done as OroQ and stay verbatim.
 - `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` — this is a paused future plan; sed updates it.
-- `docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md` — same; alias `safebrowse-upload` → `oroq-upload` plus all path references.
+- `docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md` — same; alias `oroq-upload` → `oroq-upload` plus all path references.
 
 The `project_native_app_direction.md` memory file gets a header line:
 
@@ -212,10 +212,10 @@ After each section commits, before claiming done:
 4. **Android compile** — `./gradlew :app:compileDebugKotlin` succeeds.
 5. **Android tests** — `./gradlew :app:testDebugUnitTest` — all unit tests pass.
 6. **Android debug APK builds** — `./gradlew :app:assembleDebug` succeeds.
-7. **Install fresh** on emulator — `adb install -r app-debug.apk` succeeds; launcher shows the new "OroQ" icon alongside (or replacing, if old uninstalled) the old "SafeBrowse" icon. Different applicationId means side-by-side install.
+7. **Install fresh** on emulator — `adb install -r app-debug.apk` succeeds; launcher shows the new "OroQ" icon alongside (or replacing, if old uninstalled) the old "OroQ" icon. Different applicationId means side-by-side install.
 8. **Onboarding + pair** — open OroQ on emulator, walk through ChildOnboarding, pair with parent on Vivo (also OroQ). New build talks to new Worker — verify via `npx wrangler tail --name oroq-family` showing `POST /pair/join - Ok`.
 9. **Family-link round-trip** — the same 4 flows from release-signing plan Task 6: categories, daily limit + grant, blocked apps, state sync. All complete on the new Worker.
-10. **Old build verification** — confirm the old SafeBrowse install on emulator (if kept side-by-side) still talks to the old Worker — rollback path intact.
+10. **Old build verification** — confirm the old OroQ install on emulator (if kept side-by-side) still talks to the old Worker — rollback path intact.
 
 If step 9 fails most likely due to mismatched JWT_SECRET; re-set it from Section "Backend" instructions.
 
@@ -225,8 +225,8 @@ After 24 hours of clean operation on the new build:
 
 | Resource | Action |
 |---|---|
-| Old `safebrowse-family` Worker | `npx wrangler delete safebrowse-family` |
-| Old `safebrowse-blocklists` Pages project | Cloudflare dashboard → Pages → Delete |
+| Old `oroq-family` Worker | `npx wrangler delete oroq-family` |
+| Old `oroq-blocklists` Pages project | Cloudflare dashboard → Pages → Delete |
 | D1 database | **Keep** (reused) |
 | KV namespace | **Keep** (reused) |
 | Old `uk.co.cyberheroez.oroq` APK | `adb uninstall uk.co.cyberheroez.oroq` on each device |
@@ -248,7 +248,7 @@ After 24 hours of clean operation on the new build:
 
 - `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `…/oroq/`
 - Same under `src/test/`
-- `SafeBrowseVpnService.kt` → `OroQVpnService.kt` (file + class)
+- `OroQVpnService.kt` → `OroQVpnService.kt` (file + class)
 
 **Created:**
 
@@ -270,5 +270,5 @@ After 24 hours of clean operation on the new build:
 ## Open items (not blocking)
 
 - Logo / icon rebrand — kept for a later visual pass.
-- After rename, the paused release-signing plan resumes; that plan's alias `safebrowse-upload` is part of this rename's sed pass and becomes `oroq-upload`.
+- After rename, the paused release-signing plan resumes; that plan's alias `oroq-upload` is part of this rename's sed pass and becomes `oroq-upload`.
 - A future memory cleanup pass to update `[[project-business-model]]` and other indirect references to the brand.

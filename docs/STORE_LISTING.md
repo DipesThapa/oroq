@@ -3,7 +3,7 @@
 Use this content for the Chrome Web Store listing. Replace screenshots with real PNGs before submission.
 
 ## Title
-Safeguard (SafeBrowse AI) — CyberHeroez CIC
+Safeguard (OroQ AI) — CyberHeroez CIC
 
 ## Short Description
 Privacy-first web safety from CyberHeroez CIC. Block adult sites, blur risky media, lock overrides behind a PIN, and send HTTPS-only alerts — all on-device.

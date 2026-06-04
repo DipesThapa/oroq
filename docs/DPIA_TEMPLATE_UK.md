@@ -1,4 +1,4 @@
-# Safeguard (SafeBrowse AI) DPIA Template – UK Schools
+# Safeguard (OroQ AI) DPIA Template – UK Schools
 
 > Draft for use by DSLs, Data Protection Officers, and IT leads. Adapt to your setting and merge with existing GDPR documentation.
 
@@ -9,7 +9,7 @@
 4. Share with your DPO for review and sign-off; keep version history in your DPIA register.
 
 ## 1. Project overview
-- **Product**: Safeguard (SafeBrowse AI) Chrome extension  
+- **Product**: Safeguard (OroQ AI) Chrome extension  
 - **Purpose**: Provide client-side filtering and safeguarding controls to reduce exposure to explicit or extremist content.  
 - **Controller**: \<School/Trust name\>  
 - **Processor(s)**: None – extension processes data locally on the device; no vendor-operated backend.  

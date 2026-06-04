@@ -1,4 +1,4 @@
-# SafeBrowse Family Link — Backend
+# OroQ Family Link — Backend
 
 A Cloudflare Worker for passwordless parent accounts and device pairing.
 It stores only ciphertext and minimal metadata (see the design spec,
@@ -38,7 +38,7 @@ Set the secrets:
 
     npx wrangler secret put JWT_SECRET        # a long random string
     npx wrangler secret put RESEND_API_KEY    # from resend.com
-    npx wrangler secret put RESEND_FROM       # e.g. "SafeBrowse <code@yourdomain>"
+    npx wrangler secret put RESEND_FROM       # e.g. "OroQ <code@yourdomain>"
 
 `RESEND_FROM` must be on a domain verified in the Resend dashboard.
 

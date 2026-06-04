@@ -32,14 +32,14 @@ Expected: directory exists, empty.
 cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
   keytool -genkeypair -v -keystore keystore/upload.jks \
     -keyalg RSA -keysize 2048 -validity 10000 \
-    -alias safebrowse-upload
+    -alias oroq-upload
 ```
 
 `keytool` will prompt for:
 - **Keystore password** (twice) — pick a strong password, write it down immediately.
 - **Key password** (twice) — use the **same** password as the keystore password (Gradle reads them separately but they may match).
 - **Your first and last name** → `CyberHeroez CIC`
-- **Organizational unit** → `SafeBrowse`
+- **Organizational unit** → `OroQ`
 - **Organization** → `CyberHeroez CIC`
 - **City or Locality** → `London`
 - **State or Province** → `England`
@@ -54,7 +54,7 @@ Expected output ends with:
 - [ ] **Step 3: Record the key fingerprint**
 
 ```bash
-keytool -list -v -keystore keystore/upload.jks -alias safebrowse-upload
+keytool -list -v -keystore keystore/upload.jks -alias oroq-upload
 ```
 
 Enter the keystore password when prompted. The output prints the SHA-256 fingerprint and validity (~27 years from today). Copy both lines — Task 7's runbook references them.
@@ -107,7 +107,7 @@ Write to `/Users/apple/Desktop/Projects/safebrowse-ai/android/keystore.propertie
 # keystore.properties is gitignored — never commit the real one.
 storeFile=keystore/upload.jks
 storePassword=REPLACE_WITH_KEYSTORE_PASSWORD
-keyAlias=safebrowse-upload
+keyAlias=oroq-upload
 keyPassword=REPLACE_WITH_KEY_PASSWORD
 ```
 
@@ -480,7 +480,7 @@ Untick `Chrome` + Save; wait 60 s; Chrome opens normally.
 
 - [ ] **Step 5: Flow D — inventory + state sync**
 
-Trigger a child→parent sync by relaunching SafeBrowse on the emulator (`scheduleFamilySync` fires an immediate one-time worker).
+Trigger a child→parent sync by relaunching OroQ on the emulator (`scheduleFamilySync` fires an immediate one-time worker).
 
 On the parent: refresh the child dashboard. Expect the BLOCKED CATEGORIES checkboxes, the "Currently … per day" caption, the BLOCKED APPS list, and the screen-time block to reflect whatever was last set.
 
@@ -507,7 +507,7 @@ This task verifies behaviour; the artefact is the AAB from Task 4, the mapping f
 Create `/Users/apple/Desktop/Projects/safebrowse-ai/docs/RELEASE.md` with the following content. Replace `<SHA-256 from Task 1 Step 3>` with the actual fingerprint you recorded, and `<expiry date>` with the validity end-date from the same step.
 
 ```markdown
-# Release runbook — SafeBrowse Android
+# Release runbook — OroQ Android
 
 This is the canonical instruction sheet for producing a Play-Store-ready AAB.
 Follow every step in order for every release. The spec lives at
@@ -518,10 +518,10 @@ Follow every step in order for every release. The spec lives at
 | Field | Value |
 |---|---|
 | Path | `android/keystore/upload.jks` |
-| Alias | `safebrowse-upload` |
+| Alias | `oroq-upload` |
 | Algorithm | RSA 2048 |
 | Validity | 27 years (`-validity 10000`) — expires <expiry date> |
-| Identity | CN=CyberHeroez CIC, OU=SafeBrowse, O=CyberHeroez CIC, L=London, ST=England, C=GB |
+| Identity | CN=CyberHeroez CIC, OU=OroQ, O=CyberHeroez CIC, L=London, ST=England, C=GB |
 | SHA-256 fingerprint | `<SHA-256 from Task 1 Step 3>` |
 
 ## First-time setup (already done — listed for reference)
@@ -531,7 +531,7 @@ mkdir -p android/keystore
 cd android
 keytool -genkeypair -v -keystore keystore/upload.jks \
   -keyalg RSA -keysize 2048 -validity 10000 \
-  -alias safebrowse-upload
+  -alias oroq-upload
 ```
 
 Then copy `keystore.properties.example` to `keystore.properties` and fill in the
@@ -539,7 +539,7 @@ two passwords.
 
 ## Backup checklist (do this NOW if you haven't)
 
-- [ ] 1Password vault entry "SafeBrowse Android upload key" with:
+- [ ] 1Password vault entry "OroQ Android upload key" with:
   - `upload.jks` attached as a file
   - keystore password
   - key password (same as keystore password if you followed the prompt)
@@ -636,8 +636,8 @@ https://support.google.com/googleplay/android-developer/answer/7384423
 Summary of the flow:
 
 1. Generate a new RSA-2048 keypair locally (same `keytool` command, new alias
-   `safebrowse-upload-v2`).
-2. Export the public certificate: `keytool -export -alias safebrowse-upload-v2
+   `oroq-upload-v2`).
+2. Export the public certificate: `keytool -export -alias oroq-upload-v2
    -keystore <new>.jks -file upload_certificate.pem`.
 3. In Play Console → App integrity → Upload key, request reset and attach
    `upload_certificate.pem`.
@@ -674,7 +674,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 
 **Type / name consistency:**
 - `keystore.properties` is the single source of truth referenced by name in Tasks 2, 3, 7.
-- `safebrowse-upload` alias defined in Task 1, referenced in Tasks 2, 4, 7.
+- `oroq-upload` alias defined in Task 1, referenced in Tasks 2, 4, 7.
 - `app-release.aab` and `mapping.txt` paths are identical across Tasks 4, 5, 7.
 - R8 keep-rule package globs in Task 4 match the actual `uk.co.cyberheroez.oroq.family.*` and `.config.*` packages used by the existing code.
 

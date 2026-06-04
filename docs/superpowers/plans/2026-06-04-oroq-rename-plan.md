@@ -1,8 +1,8 @@
-# SafeBrowse → OroQ Rename Implementation Plan
+# OroQ → OroQ Rename Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rename the product from SafeBrowse to OroQ across Android, backend, blocklists hosting, in-repo docs, repo dir, and Claude memory — preserving D1/KV data, JWT_SECRET, and git history.
+**Goal:** Rename the product from OroQ to OroQ across Android, backend, blocklists hosting, in-repo docs, repo dir, and Claude memory — preserving D1/KV data, JWT_SECRET, and git history.
 
 **Architecture:** Backend gets a new Worker name (`oroq-family`) that re-binds the same D1 database and KV namespace by ID — no data migration. Pages gets a new project (`oroq-blocklists`). Android gets a coordinated `git mv` of the Kotlin package directories + mass sed across package strings, brand strings, applicationId, namespace, URL constants, and DataStore literal. Build + manual round-trip on real devices is the gate.
 
@@ -23,7 +23,7 @@ The Worker rename is independent of any Android change. Deploying it first means
 
 Open `backend/wrangler.toml`. Change:
 ```toml
-name = "safebrowse-family"
+name = "oroq-family"
 ```
 to:
 ```toml
@@ -31,7 +31,7 @@ name = "oroq-family"
 ```
 And change:
 ```toml
-database_name = "safebrowse-family"
+database_name = "oroq-family"
 ```
 to:
 ```toml
@@ -66,7 +66,7 @@ Expected: all Vitest cases pass (~27). The rename touches only the `name` field;
 
 We need the **same** JWT_SECRET on the new Worker so existing parent JWTs verify. There's no `wrangler secret read`; print from a temporary `wrangler` invocation against the old Worker by adding a one-off `/debug/jwt-hint` endpoint, or rely on the value being recorded in 1Password/`.env` from the original setup.
 
-If the value is in 1Password: open the "SafeBrowse Worker secrets" entry, copy `JWT_SECRET`.
+If the value is in 1Password: open the "OroQ Worker secrets" entry, copy `JWT_SECRET`.
 
 If it isn't recorded anywhere: this is a rotation. Acknowledge that every paired parent must re-login. Generate a new value: `openssl rand -hex 32`.
 
@@ -75,7 +75,7 @@ If it isn't recorded anywhere: this is a rotation. Acknowledge that every paired
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && npx wrangler deploy 2>&1 | tail -15
 ```
-Expected output ends with `Deployed oroq-family triggers (… ms)` and prints the URL `https://oroq-family.cyberheroez.workers.dev`. A new Worker is created; the old `safebrowse-family` remains alive.
+Expected output ends with `Deployed oroq-family triggers (… ms)` and prints the URL `https://oroq-family.cyberheroez.workers.dev`. A new Worker is created; the old `oroq-family` remains alive.
 
 - [ ] **Step 5: Set secrets on the new Worker**
 
@@ -103,7 +103,7 @@ Expected: `400` (bad request — empty email). A `0` or `5xx` indicates DNS/depl
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git add backend/wrangler.toml && \
-  git commit -m "rename(backend): worker safebrowse-family -> oroq-family"
+  git commit -m "rename(backend): worker oroq-family -> oroq-family"
 ```
 
 Secrets aren't repo-tracked; nothing else to stage.
@@ -190,7 +190,7 @@ Task 4 follows immediately with the sed that makes the tree compile. Commit at t
 
 **Files:**
 - Modify (sed): every file containing `uk.co.cyberheroez.oroq` (~82 files)
-- Rename: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt` → `…/OroQVpnService.kt`
+- Rename: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt` → `…/OroQVpnService.kt`
 
 - [ ] **Step 1: Replace the dotted package string everywhere**
 
@@ -211,7 +211,7 @@ Expected: no output. If any line prints, sed missed it (likely a different quote
 - [ ] **Step 3: Rename the VPN service file + class**
 
 ```bash
-git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt \
+git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt \
        android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt
 ```
 
@@ -219,14 +219,14 @@ git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  grep -rl 'SafeBrowseVpnService' android 2>/dev/null \
-  | xargs sed -i '' 's/SafeBrowseVpnService/OroQVpnService/g'
+  grep -rl 'OroQVpnService' android 2>/dev/null \
+  | xargs sed -i '' 's/OroQVpnService/OroQVpnService/g'
 ```
 
 - [ ] **Step 5: Confirm the class is consistent**
 
 ```bash
-grep -rn 'SafeBrowseVpnService' android 2>/dev/null
+grep -rn 'OroQVpnService' android 2>/dev/null
 ```
 Expected: no output.
 
@@ -263,8 +263,8 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 - Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`
 - Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`
 - Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt` (DataStore name)
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt` (the one `SAFEBROWSE` literal)
-- Modify (sed): any remaining file with `SafeBrowse` brand string
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt` (the one `OROQ` literal)
+- Modify (sed): any remaining file with `OroQ` brand string
 
 - [ ] **Step 1: Update `build.gradle.kts`**
 
@@ -290,29 +290,29 @@ Expected: both lines now reference `uk.co.cyberheroez.oroq`. If not, Task 4 miss
 Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/res/values/strings.xml`. Change:
 
 ```xml
-<string name="app_name">SafeBrowse</string>
+<string name="app_name">OroQ</string>
 ```
 to:
 ```xml
 <string name="app_name">OroQ</string>
 ```
 
-- [ ] **Step 3: Mass-replace `SafeBrowse` and `SAFEBROWSE` brand strings**
+- [ ] **Step 3: Mass-replace `OroQ` and `OROQ` brand strings**
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  grep -rl 'SafeBrowse' android backend 2>/dev/null \
-  | xargs sed -i '' 's/SafeBrowse/OroQ/g'
-grep -rl 'SAFEBROWSE' android 2>/dev/null \
-  | xargs sed -i '' 's/SAFEBROWSE/OROQ/g'
+  grep -rl 'OroQ' android backend 2>/dev/null \
+  | xargs sed -i '' 's/OroQ/OroQ/g'
+grep -rl 'OROQ' android 2>/dev/null \
+  | xargs sed -i '' 's/OROQ/OROQ/g'
 ```
 
-These pick up `MainActivity` ("SAFEBROWSE" badge), `BlockActivity` ("blocked by SafeBrowse"), `AppMonitorService` ("SafeBrowse limits are active"), `RolePickerActivity` ("Welcome to SafeBrowse"), the themes, the colors comment, etc.
+These pick up `MainActivity` ("OROQ" badge), `BlockActivity` ("blocked by OroQ"), `AppMonitorService` ("OroQ limits are active"), `RolePickerActivity` ("Welcome to OroQ"), the themes, the colors comment, etc.
 
-- [ ] **Step 4: Sanity-check no `SafeBrowse` / `SAFEBROWSE` remain in source**
+- [ ] **Step 4: Sanity-check no `OroQ` / `OROQ` remain in source**
 
 ```bash
-grep -rln 'SafeBrowse\|SAFEBROWSE' android backend 2>/dev/null
+grep -rln 'OroQ\|OROQ' android backend 2>/dev/null
 ```
 Expected: no output. (If the historical specs/plans under `docs/` still contain references, leave them — Task 7 handles docs deliberately.)
 
@@ -321,7 +321,7 @@ Expected: no output. (If the historical specs/plans under `docs/` still contain 
 Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`. Find:
 
 ```kotlin
-const val WORKER_BASE_URL = "https://safebrowse-family.cyberheroez.workers.dev"
+const val WORKER_BASE_URL = "https://oroq-family.cyberheroez.workers.dev"
 ```
 Change to:
 ```kotlin
@@ -333,7 +333,7 @@ const val WORKER_BASE_URL = "https://oroq-family.cyberheroez.workers.dev"
 Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`. Find:
 
 ```kotlin
-const val BASE_URL = "https://safebrowse-blocklists.pages.dev"
+const val BASE_URL = "https://oroq-blocklists.pages.dev"
 ```
 Change to:
 ```kotlin
@@ -421,7 +421,7 @@ Verification only — Task 5's commit already captured the source changes.
 - Modify: `docs/MVP_OVERVIEW.md`, `docs/MVP_USER_FLOWS.md`, `docs/MVP_ARCHITECTURE.md`, `docs/STORE_LISTING.md`, `docs/PREVENT_DUTY_BRIEFING.md`, `docs/KCSIE_COMPLIANCE_MATRIX.md`, `docs/DPIA_TEMPLATE_UK.md`, `docs/DEPLOYMENT.md`, `docs/DEVLOG.md`, `docs/BROWSER_SUPPORT.md`, `docs/WEBSTORE.md`, `docs/idea-to-store-flow.md`
 - Modify: `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` (future plan, not historical)
 - Modify: `docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md` (future plan)
-- **Leave verbatim:** every `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and earlier (historical record of work done as SafeBrowse). Task 4's sed already touched any `uk.co.cyberheroez.oroq` in those files — that's accepted noise; brand strings stay because the work itself happened as SafeBrowse.
+- **Leave verbatim:** every `docs/superpowers/specs/2026-05-*.md` and `docs/superpowers/plans/2026-05-*.md` and earlier (historical record of work done as OroQ). Task 4's sed already touched any `uk.co.cyberheroez.oroq` in those files — that's accepted noise; brand strings stay because the work itself happened as OroQ.
 
 - [ ] **Step 1: Brand-replace the recent docs**
 
@@ -432,30 +432,30 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   RECENT_SP="docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
              docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md" && \
   for f in $FILES $RECENT_SP; do
-    sed -i '' 's/SafeBrowse/OroQ/g; s/SAFEBROWSE/OROQ/g; s/safebrowse-family/oroq-family/g; s/safebrowse-blocklists/oroq-blocklists/g' "$f"
+    sed -i '' 's/OroQ/OroQ/g; s/OROQ/OROQ/g; s/oroq-family/oroq-family/g; s/oroq-blocklists/oroq-blocklists/g' "$f"
   done
 ```
 
 - [ ] **Step 2: Update the paused release-signing plan's keystore alias**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `safebrowse-upload` with `oroq-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
+Edit `/Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `oroq-upload` with `oroq-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
 
 ```bash
-sed -i '' 's/safebrowse-upload/oroq-upload/g' \
+sed -i '' 's/oroq-upload/oroq-upload/g' \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md
 ```
 
 Also update the same alias in `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` if it appears there:
 
 ```bash
-sed -i '' 's/safebrowse-upload/oroq-upload/g' \
+sed -i '' 's/oroq-upload/oroq-upload/g' \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md
 ```
 
 - [ ] **Step 3: Spot-check**
 
 ```bash
-grep -n "SafeBrowse\|safebrowse-upload\|safebrowse-family\|safebrowse-blocklists" \
+grep -n "OroQ\|oroq-upload\|oroq-family\|oroq-blocklists" \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
   /Users/apple/Desktop/Projects/safebrowse-ai/PRIVACY.md \
@@ -468,7 +468,7 @@ Expected: no output.
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git add -A docs PRIVACY.md README.md 2>/dev/null; \
-  git commit -m "rename(docs): SafeBrowse -> OroQ in recent docs, leave historical record"
+  git commit -m "rename(docs): OroQ -> OroQ in recent docs, leave historical record"
 ```
 
 ---
@@ -511,7 +511,7 @@ adb devices
 ```
 Expected: emulator + Vivo both `device`. If Vivo offline, reconnect via wireless ADB first.
 
-- [ ] **Step 2: Uninstall the old SafeBrowse build on the emulator**
+- [ ] **Step 2: Uninstall the old OroQ build on the emulator**
 
 ```bash
 adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq 2>&1
@@ -597,7 +597,7 @@ Expected: no output. Any line here means something broke during the rename — f
 
 - [ ] **Step 12: Negative check — old build (optional)**
 
-If you still have a SafeBrowse install somewhere (e.g. a second emulator AVD), confirm it still pairs against `safebrowse-family` Worker. This proves the rollback path is intact. Skip if no second device is handy.
+If you still have a OroQ install somewhere (e.g. a second emulator AVD), confirm it still pairs against `oroq-family` Worker. This proves the rollback path is intact. Skip if no second device is handy.
 
 - [ ] **Step 13: No commit**
 
@@ -666,23 +666,23 @@ Quick spot-check: open OroQ on the Vivo, see the child dashboard refresh correct
 
 ```bash
 cd /Users/apple/Desktop/Projects/oroq/backend && \
-  npx wrangler delete --name safebrowse-family
+  npx wrangler delete --name oroq-family
 ```
-Type `yes` to confirm. Expected: `Deleted safebrowse-family.`
+Type `yes` to confirm. Expected: `Deleted oroq-family.`
 
 - [ ] **Step 3: Delete the old Pages project**
 
-Cloudflare dashboard → Workers & Pages → `safebrowse-blocklists` → Settings → Delete project. Confirm.
+Cloudflare dashboard → Workers & Pages → `oroq-blocklists` → Settings → Delete project. Confirm.
 
-(There's no `wrangler pages project delete` CLI as of writing; if it's been added in your wrangler version, use it: `npx wrangler pages project delete safebrowse-blocklists`.)
+(There's no `wrangler pages project delete` CLI as of writing; if it's been added in your wrangler version, use it: `npx wrangler pages project delete oroq-blocklists`.)
 
 - [ ] **Step 4: Confirm the old URLs return 404 / not-found**
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://safebrowse-family.cyberheroez.workers.dev/auth/request
+  https://oroq-family.cyberheroez.workers.dev/auth/request
 curl -s -o /dev/null -w "%{http_code}\n" \
-  https://safebrowse-blocklists.pages.dev/manifest.txt
+  https://oroq-blocklists.pages.dev/manifest.txt
 ```
 Expected: `404` for both (or `522` / similar for the Worker). A `200` means the resource is still alive — re-check Steps 2 and 3.
 
@@ -712,7 +712,7 @@ Cloudflare-side resource changes only.
 - `OroQVpnService` class (Task 4).
 - `oroq_config` DataStore name (Task 5).
 - `OroQ` (with space) for human-facing display (Task 5 strings.xml, brand strings sed; Task 7 docs).
-- `OROQ` (all caps) for in-UI badge (Task 5's `SAFEBROWSE` sed).
+- `OROQ` (all caps) for in-UI badge (Task 5's `OROQ` sed).
 - `oroq-upload` keystore alias (Task 7 — fed back into the paused release-signing plan).
 - `/Users/apple/Desktop/Projects/oroq` and `-Users-apple-Desktop-Projects-oroq` (Task 10).
 
