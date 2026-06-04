@@ -1,4 +1,4 @@
-// Minimal pairing relay for Safeguard device pairing (development use only).
+// Minimal pairing relay for OroQ device pairing (development use only).
 // Stores only encrypted payloads in memory. Deploy behind HTTPS for production.
 //
 // Endpoints (all require Authorization: Bearer <secret>):
@@ -142,5 +142,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   // eslint-disable-next-line no-console
-  console.log(`Safeguard relay listening on http://localhost:${PORT}`);
+  console.log(`OroQ relay listening on http://localhost:${PORT}`);
 });

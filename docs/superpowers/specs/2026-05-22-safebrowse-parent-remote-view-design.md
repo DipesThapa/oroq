@@ -1,12 +1,12 @@
-# SafeBrowse — Parent Remote View (Family Link) Design
+# OroQ — Parent Remote View (Family Link) Design
 
 > Status: approved design — 2026-05-22
 > Supersedes the "v3+" placeholder in
-> `2026-05-21-safebrowse-android-parental-control-design.md`.
+> `2026-05-21-oroq-android-parental-control-design.md`.
 
 ## 1. Purpose
 
-Today SafeBrowse is a single-device app: a parent installs it on the child's
+Today OroQ is a single-device app: a parent installs it on the child's
 phone and configures everything on that phone behind a PIN. There is no way to
 see or manage the child's device from the parent's own phone.
 
@@ -34,7 +34,7 @@ server-side mailbox).
 
 ## 3. Architecture overview
 
-SafeBrowse becomes mode-aware. On first launch the user picks a role, stored in
+OroQ becomes mode-aware. On first launch the user picks a role, stored in
 DataStore (`device_role`):
 
 - **Child mode** — the existing app (onboarding PIN, web filter, app blocking,
@@ -42,11 +42,11 @@ DataStore (`device_role`):
   encrypted summary, and polls for encrypted commands.
 - **Parent mode** — a different UI: email login, a list of paired children, a
   per-child dashboard, and remote-control screens. Parent mode does **not** run
-  `SafeBrowseVpnService` or `AppMonitorService`.
+  `OroQVpnService` or `AppMonitorService`.
 
 ```
 [Child phone]               [Cloudflare Worker]            [Parent phone]
- SafeBrowse (child mode)     D1: accounts, pairings          SafeBrowse (parent mode)
+ OroQ (child mode)     D1: accounts, pairings          OroQ (parent mode)
  + FamilySync module   ──>   KV: encrypted blobs only   <──  ParentRepository + UI
  encrypt summary,            (ciphertext + metadata,         login, decrypt & show,
  poll commands               never decryptable)              send encrypted commands

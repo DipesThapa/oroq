@@ -28,7 +28,7 @@ This pass executes a coordinated rename across four surfaces:
 
 | Surface | Old | New |
 |---|---|---|
-| Local repo dir | `/Users/apple/Desktop/Projects/safebrowse-ai` | `/Users/apple/Desktop/Projects/oroq` |
+| Local repo dir | `/Users/apple/Desktop/Projects/oroq` | `/Users/apple/Desktop/Projects/oroq` |
 | Android applicationId | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
 | Android Kotlin namespace | `uk.co.cyberheroez.oroq` | `uk.co.cyberheroez.oroq` |
 | App display name | `OroQ` | `OroQ` |
@@ -39,8 +39,8 @@ This pass executes a coordinated rename across four surfaces:
 | Worker URL | `oroq-family.cyberheroez.workers.dev` | `oroq-family.cyberheroez.workers.dev` |
 | Pages project | `oroq-blocklists` | `oroq-blocklists` |
 | Pages URL | `oroq-blocklists.pages.dev` | `oroq-blocklists.pages.dev` |
-| DataStore name (config) | `safebrowse_config` | `oroq_config` |
-| Claude memory dir | `~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai` | `~/.claude/projects/-Users-apple-Desktop-Projects-oroq` |
+| DataStore name (config) | `oroq_config` | `oroq_config` |
+| Claude memory dir | `~/.claude/projects/-Users-apple-Desktop-Projects-oroq` | `~/.claude/projects/-Users-apple-Desktop-Projects-oroq` |
 
 D1 database ID `6ff2b5f1-…` and KV namespace ID `b101d3dc…` are permanent and reused via binding from the new Worker — same data, same JWT_SECRET, no migration.
 
@@ -52,14 +52,14 @@ D1 database ID `6ff2b5f1-…` and KV namespace ID `b101d3dc…` are permanent an
 
 ```bash
 # 1. Rename source directories — git tracks moves
-git mv android/app/src/main/java/uk/co/cyberheroez/safebrowse \
+git mv android/app/src/main/java/uk/co/cyberheroez/oroq \
        android/app/src/main/java/uk/co/cyberheroez/oroq
-git mv android/app/src/test/java/uk/co/cyberheroez/safebrowse \
+git mv android/app/src/test/java/uk/co/cyberheroez/oroq \
        android/app/src/test/java/uk/co/cyberheroez/oroq
 
 # 2. Rewrite every internal reference
 grep -rl "uk.co.cyberheroez.oroq" android/ docs/ backend/ \
-  | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.oroq/g'
+  | xargs sed -i '' 's/uk\.co\.cyberheroez\.oroq/uk.co.cyberheroez.oroq/g'
 
 # 3. Replace brand strings, case-aware
 grep -rl "OroQ" android/app/src/main/java android/app/src/main/res \
@@ -99,7 +99,7 @@ android {
 **DataStore file names** change automatically because the dataStore delegate uses literal strings:
 
 ```kotlin
-private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
+private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 ```
 
 →
@@ -108,7 +108,7 @@ private val Context.dataStore by preferencesDataStore(name = "safebrowse_config"
 private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 ```
 
-Done via targeted sed `safebrowse_config` → `oroq_config`. The `family_config` DataStore name has no brand and stays.
+Done via targeted sed `oroq_config` → `oroq_config`. The `family_config` DataStore name has no brand and stays.
 
 ### Backend (Cloudflare Worker)
 
@@ -194,9 +194,9 @@ The `project_native_app_direction.md` memory file gets a header line:
 **Repo directory move** (last, after all in-repo work committed):
 
 ```bash
-mv /Users/apple/Desktop/Projects/safebrowse-ai \
+mv /Users/apple/Desktop/Projects/oroq \
    /Users/apple/Desktop/Projects/oroq
-mv ~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai \
+mv ~/.claude/projects/-Users-apple-Desktop-Projects-oroq \
    ~/.claude/projects/-Users-apple-Desktop-Projects-oroq
 ```
 
@@ -246,7 +246,7 @@ After 24 hours of clean operation on the new build:
 
 **Renamed (git mv):**
 
-- `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `…/oroq/`
+- `android/app/src/main/java/uk/co/cyberheroez/oroq/` → `…/oroq/`
 - Same under `src/test/`
 - `OroQVpnService.kt` → `OroQVpnService.kt` (file + class)
 

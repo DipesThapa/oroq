@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-01
 **Status:** Approved (brainstorming)
-**Predecessors:** All feature work for the Android parental-control app (see [project memory](../../../../.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md)).
+**Predecessors:** All feature work for the Android parental-control app (see [project memory](../../../../.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/project_native_app_direction.md)).
 
 ## Why
 

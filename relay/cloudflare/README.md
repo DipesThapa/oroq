@@ -1,6 +1,6 @@
 # Pairing relay (Cloudflare Workers + Durable Objects)
 
-This is a small HTTPS relay for Safeguard device pairing. It stores **only encrypted blobs** (plus minimal metadata) and supports the same endpoints as `relay/server.js`.
+This is a small HTTPS relay for OroQ device pairing. It stores **only encrypted blobs** (plus minimal metadata) and supports the same endpoints as `relay/server.js`.
 
 ## Deploy
 

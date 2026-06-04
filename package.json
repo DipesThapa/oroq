@@ -1,5 +1,5 @@
 {
-  "name": "safebrowse-ai",
+  "name": "oroq",
   "version": "1.0.0",
   "description": "Privacy-first web safety extension with on-device heuristics, PIN-locked overrides, HTTPS alerts, and encrypted logs.",
   "private": true,

@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the SafeBrowse Android `family/` package — end-to-end encryption and the HTTP client for the Family Link Worker — with no UI, fully JVM-unit-tested.
+**Goal:** Build the OroQ Android `family/` package — end-to-end encryption and the HTTP client for the Family Link Worker — with no UI, fully JVM-unit-tested.
 
 **Architecture:** A `family/` package with three concerns: `FamilyCrypto` wraps Tink hybrid encryption (HPKE / X25519) so a device encrypts for a peer's public key; `FamilyApi` talks to the Worker over an injectable `HttpTransport` (a fake transport in tests, an `HttpURLConnection` adapter in the app); plain data classes carry the request/response shapes. All keys cross the boundary as base64 strings, so every unit is testable on the JVM.
 
 **Tech Stack:** Kotlin, Google Tink (`tink-android` in the app, `tink` in JVM tests), `org.json` (Android built-in; `org.json:json` in tests), `java.net.HttpURLConnection`, `java.util.Base64`, JUnit 4.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`, sections 4 (pairing) and 8 (security).
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`, sections 4 (pairing) and 8 (security).
 
 **Depends on:** Plan A1 (the Worker) — `FamilyApi` calls its `/auth/*` and `/pair/*` routes. No A1 *code* is imported; only its HTTP contract.
 
@@ -22,12 +22,12 @@
 android/app/
 ├─ build.gradle.kts                                    + Tink & org.json deps
 └─ src/
-   ├─ main/java/uk/co/cyberheroez/safebrowse/family/
+   ├─ main/java/uk/co/cyberheroez/oroq/family/
    │  ├─ FamilyCrypto.kt     Tink hybrid encrypt/decrypt + SAS
    │  ├─ FamilyModels.kt     request/response data classes
    │  ├─ FamilyApi.kt        HttpTransport interface + FamilyApi client
    │  └─ HttpUrlTransport.kt HttpURLConnection adapter
-   └─ test/java/uk/co/cyberheroez/safebrowse/family/
+   └─ test/java/uk/co/cyberheroez/oroq/family/
       ├─ FamilyCryptoTest.kt
       ├─ FamilyApiTest.kt
       └─ HttpUrlTransportTest.kt
@@ -41,8 +41,8 @@ android/app/
 
 **Files:**
 - Modify: `android/app/build.gradle.kts` (the `dependencies { }` block)
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCrypto.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCryptoTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCrypto.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCryptoTest.kt`
 
 - [ ] **Step 1: Add the dependencies**
 
@@ -193,7 +193,7 @@ Expected: all 3 tests PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/build.gradle.kts android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCrypto.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCryptoTest.kt
+git add android/app/build.gradle.kts android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCrypto.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCryptoTest.kt
 git commit -m "feat(android): add FamilyCrypto — Tink hybrid encryption"
 ```
 
@@ -204,7 +204,7 @@ git commit -m "feat(android): add FamilyCrypto — Tink hybrid encryption"
 The SAS function is already written inside `FamilyCrypto` (Task 1, Step 4). This task adds its dedicated tests.
 
 **Files:**
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCryptoTest.kt` (add to the existing file)
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCryptoTest.kt` (add to the existing file)
 
 - [ ] **Step 1: Add SAS tests to `FamilyCryptoTest.kt`**
 
@@ -254,7 +254,7 @@ Expected: all 6 tests PASS (3 from Task 1 + 3 SAS tests).
 - [ ] **Step 3: Commit**
 
 ```bash
-git add android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCryptoTest.kt
+git add android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCryptoTest.kt
 git commit -m "test(android): cover FamilyCrypto SAS derivation"
 ```
 
@@ -265,9 +265,9 @@ git commit -m "test(android): cover FamilyCrypto SAS derivation"
 `FamilyApi` builds JSON requests, calls the Worker through an injectable `HttpTransport`, and parses responses into data classes.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyModels.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyModels.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt`
 
 - [ ] **Step 1: Write the failing test — `FamilyApiTest.kt`**
 
@@ -505,7 +505,7 @@ Expected: all 8 tests PASS.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyModels.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyModels.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt
 git commit -m "feat(android): add FamilyApi client and pairing models"
 ```
 
@@ -516,8 +516,8 @@ git commit -m "feat(android): add FamilyApi client and pairing models"
 `HttpUrlTransport` is the production `HttpTransport`, backed by `HttpURLConnection` — the same approach the existing `update/BlocklistUpdater` uses.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/HttpUrlTransport.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/HttpUrlTransportTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/HttpUrlTransport.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/HttpUrlTransportTest.kt`
 
 - [ ] **Step 1: Write the failing test — `HttpUrlTransportTest.kt`**
 
@@ -650,7 +650,7 @@ Expected: BUILD SUCCESSFUL — the existing 52 tests plus the new `family` tests
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/HttpUrlTransport.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/HttpUrlTransportTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/HttpUrlTransport.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/HttpUrlTransportTest.kt
 git commit -m "feat(android): add HttpURLConnection transport for FamilyApi"
 ```
 

@@ -6,7 +6,7 @@
 
 **Architecture:** Re-uses the existing Family Link transport — encrypted commands via Cloudflare Worker `/cmd/:pairingId`, encrypted summaries via `/sync/:pairingId`. No Worker change. `FamilyCommand` gets a third type and an optional `stringValue` field; `FamilySummary` gets a new `categories` field so the parent UI can show what's currently set on the child.
 
-**Tech Stack:** Android Views (Kotlin, no Compose), Preferences DataStore, WorkManager, JUnit4 + org.json for tests. Build with `./gradlew` from `/Users/apple/Desktop/Projects/safebrowse-ai/android`.
+**Tech Stack:** Android Views (Kotlin, no Compose), Preferences DataStore, WorkManager, JUnit4 + org.json for tests. Build with `./gradlew` from `/Users/apple/Desktop/Projects/oroq/android`.
 
 **Spec:** `docs/superpowers/specs/2026-05-23-child-slim-parent-full-design.md`
 
@@ -15,8 +15,8 @@
 ## Task 1: Extend `FamilyCommand` with `stringValue` + `SET_CATEGORIES`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt`
 
 - [ ] **Step 1: Add failing tests for the new shape**
 
@@ -69,7 +69,7 @@ class FamilyCommandTest {
 
 Run:
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:testDebugUnitTest --tests \
   "uk.co.cyberheroez.oroq.family.FamilyCommandTest"
 ```
@@ -137,9 +137,9 @@ Expected: all 5 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt \
-          android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt \
+          android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt && \
   git commit -m "feat(family): add SET_CATEGORIES command with stringValue payload"
 ```
 
@@ -148,9 +148,9 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 2: Add `categories` field to `FamilySummary` + `buildSummary`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt`
 
 - [ ] **Step 1: Update the failing tests**
 
@@ -367,12 +367,12 @@ fun buildSummary(
 
 - [ ] **Step 5: Update the existing caller in `FamilySyncWorker`**
 
-Edit `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt`. Find the call to `buildSummary(...)` and add a new line for `categories`:
+Edit `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt`. Find the call to `buildSummary(...)` and add a new line for `categories`:
 
 ```kotlin
         val summary = buildSummary(
             now = System.currentTimeMillis(),
-            protectionOn = SafeBrowseVpnService.isActive,
+            protectionOn = OroQVpnService.isActive,
             dailyLimitMinutes = config.getDailyLimitMinutes(),
             usageByApp = if (usage.hasUsageAccess()) usage.todayUsageByApp() else emptyMap(),
             recentEvents = blockLog.recent(20),
@@ -400,11 +400,11 @@ Expected: BUILD SUCCESSFUL, every test in the suite passes.
 - [ ] **Step 8: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt \
-          android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt \
-          android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt \
-          android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt \
+          android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt \
+          android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt \
+          android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt && \
   git commit -m "feat(family): include enabled categories in the activity summary"
 ```
 
@@ -413,7 +413,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 3: Apply `SET_CATEGORIES` on the child (with VPN restart)
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt`
 
 - [ ] **Step 1: Add the branch + restart helper**
 
@@ -426,7 +426,7 @@ import android.content.Context
 import android.content.Intent
 import uk.co.cyberheroez.oroq.config.ConfigRepository
 import uk.co.cyberheroez.oroq.monitor.UsageReader
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 import java.util.Base64
 
 /**
@@ -487,13 +487,13 @@ suspend fun pollAndApplyCommands(context: Context): Int {
  * sync's `protectionOn` field tells the parent if something went wrong.
  */
 private fun restartVpnIfActive(context: Context) {
-    if (!SafeBrowseVpnService.isActive) return
+    if (!OroQVpnService.isActive) return
     runCatching {
         context.startService(
-            Intent(context, SafeBrowseVpnService::class.java)
-                .setAction(SafeBrowseVpnService.ACTION_STOP)
+            Intent(context, OroQVpnService::class.java)
+                .setAction(OroQVpnService.ACTION_STOP)
         )
-        context.startService(Intent(context, SafeBrowseVpnService::class.java))
+        context.startService(Intent(context, OroQVpnService::class.java))
     }
 }
 ```
@@ -501,7 +501,7 @@ private fun restartVpnIfActive(context: Context) {
 - [ ] **Step 2: Verify it compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin
 ```
 Expected: BUILD SUCCESSFUL.
@@ -516,8 +516,8 @@ Expected: every test passes (no new tests added — CommandSync depends on Andro
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt && \
   git commit -m "feat(family): apply SET_CATEGORIES on child and bounce the VPN tunnel"
 ```
 
@@ -526,7 +526,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 4: Parent sends `SET_CATEGORIES`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt`
 
 - [ ] **Step 1: Add `sendSetCategories`**
 
@@ -601,8 +601,8 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt && \
   git commit -m "feat(parent): sendSetCategories convenience wrapper"
 ```
 
@@ -611,7 +611,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 5: Parent dashboard — categories picker + current limit caption
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt`
 
 - [ ] **Step 1: Replace `ChildDashboardActivity.kt`**
 
@@ -948,8 +948,8 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt && \
   git commit -m "feat(parent): categories picker and current-limit caption on dashboard"
 ```
 
@@ -958,7 +958,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 6: New `ChildOnboardingActivity` — guided permissions + pair
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/ChildOnboardingActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/ChildOnboardingActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 This is a single Activity that walks through the permissions one at a time, then routes to `LinkParentActivity`. The activity is re-runnable: every time `onResume` fires it recomputes what is still needed and shows the first missing step. When everything is granted *and* a parent is linked, it `finish()`es back to the home.
@@ -989,7 +989,7 @@ import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.monitor.AppMonitorService
 import uk.co.cyberheroez.oroq.monitor.UsageReader
 import uk.co.cyberheroez.oroq.ui.Style.dp
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 
 /**
  * First-launch guided setup for a child phone:
@@ -1049,7 +1049,7 @@ class ChildOnboardingActivity : AppCompatActivity() {
 
     /** Starts the VPN + monitor and routes back to the home. */
     private fun startServicesAndFinish() {
-        startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, OroQVpnService::class.java))
         startService(Intent(this, AppMonitorService::class.java))
         finish()
     }
@@ -1059,7 +1059,7 @@ class ChildOnboardingActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(64), dp(20), dp(28))
         }
-        column.addView(title("Set up SafeBrowse"))
+        column.addView(title("Set up OroQ"))
         column.addView(caption("Step ${step.index} of 5 — ${step.label}"), marginTop(4))
         column.addView(body(step.explanation), marginTop(20))
         column.addView(primaryButton(step.actionLabel) { performStep(step) }, marginTop(28))
@@ -1142,19 +1142,19 @@ class ChildOnboardingActivity : AppCompatActivity() {
         val actionLabel: String,
     ) {
         VPN(1, "Allow web filtering",
-            "SafeBrowse runs as a local-only VPN to block harmful sites. " +
+            "OroQ runs as a local-only VPN to block harmful sites. " +
                 "Android will ask you to allow it.",
             "Allow VPN"),
         USAGE(2, "Allow usage access",
-            "This is how SafeBrowse measures screen time and detects which " +
+            "This is how OroQ measures screen time and detects which " +
                 "app is open.",
             "Open settings"),
         OVERLAY(3, "Allow display over apps",
-            "Needed so SafeBrowse can show a block screen when a blocked app " +
+            "Needed so OroQ can show a block screen when a blocked app " +
                 "is opened.",
             "Open settings"),
         BATTERY(4, "Stay on in the background",
-            "Exempt SafeBrowse from battery optimisation so protection stays on.",
+            "Exempt OroQ from battery optimisation so protection stays on.",
             "Open settings"),
         PAIR(5, "Link to a parent",
             "Ask your parent for the 8-character pairing code shown on " +
@@ -1178,7 +1178,7 @@ Edit `android/app/src/main/AndroidManifest.xml`. Inside `<application>`, just af
 - [ ] **Step 3: Verify it compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin
 ```
 Expected: BUILD SUCCESSFUL.
@@ -1186,8 +1186,8 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/ChildOnboardingActivity.kt \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/ui/ChildOnboardingActivity.kt \
           android/app/src/main/AndroidManifest.xml && \
   git commit -m "feat(child): guided onboarding for permissions and pairing"
 ```
@@ -1197,7 +1197,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 7: Replace `MainActivity` with the slim child home
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 
 This rewrites the child home as a single status block with one optional "Linked" caption underneath, removing every settings/screen-time/categories entry point. The badge is interactive only when `NOT PROTECTED` — tapping it relaunches `ChildOnboardingActivity`, which finds the next missing piece and shows it.
 
@@ -1239,7 +1239,7 @@ import uk.co.cyberheroez.oroq.ui.RolePickerActivity
 import uk.co.cyberheroez.oroq.ui.Style
 import uk.co.cyberheroez.oroq.ui.Style.dp
 import uk.co.cyberheroez.oroq.update.scheduleBlocklistUpdates
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 
 /**
  * The child phone's only screen: a single status badge plus a "Linked to a
@@ -1298,7 +1298,7 @@ class MainActivity : AppCompatActivity() {
         requestNotificationPermissionIfNeeded()
         // Ensure the services are running on every cold start. They no-op if
         // already up.
-        startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, OroQVpnService::class.java))
         startService(Intent(this, AppMonitorService::class.java))
         setContentView(buildLayout())
         updateStatus()
@@ -1380,7 +1380,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatus() {
-        val protectedOn = SafeBrowseVpnService.isActive && permissionsGranted()
+        val protectedOn = OroQVpnService.isActive && permissionsGranted()
         if (protectedOn) {
             badge.background = Style.roundRect(Style.GREEN, dp(28).toFloat())
             badgeTitle.text = "✓ Protected"
@@ -1405,7 +1405,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onBadgeTapped() {
-        if (SafeBrowseVpnService.isActive && permissionsGranted()) return
+        if (OroQVpnService.isActive && permissionsGranted()) return
         startActivity(Intent(this, ChildOnboardingActivity::class.java))
     }
 }
@@ -1413,12 +1413,12 @@ class MainActivity : AppCompatActivity() {
 
 - [ ] **Step 2: Update `RolePickerActivity` routing**
 
-`RolePickerActivity` already routes Child → `MainActivity`, which now handles the gate itself. No change needed there; just confirm by reading the existing `choose(role)` function in `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/RolePickerActivity.kt` and verifying the Child branch points at `MainActivity::class.java`. If it does, skip this step.
+`RolePickerActivity` already routes Child → `MainActivity`, which now handles the gate itself. No change needed there; just confirm by reading the existing `choose(role)` function in `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/RolePickerActivity.kt` and verifying the Child branch points at `MainActivity::class.java`. If it does, skip this step.
 
 - [ ] **Step 3: Verify the project still compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin
 ```
 Expected: BUILD SUCCESSFUL.
@@ -1428,8 +1428,8 @@ If you see "unresolved reference" errors mentioning `OnboardingActivity`, `Setti
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt && \
   git commit -m "feat(child): slim home — single status badge, no menus"
 ```
 
@@ -1438,12 +1438,12 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 8: Strip the no-longer-used files + the time's-up PIN button
 
 **Files:**
-- Delete: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/OnboardingActivity.kt`
-- Delete: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
-- Delete: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/AppBlockActivity.kt`
-- Delete: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/ScreenTimeActivity.kt`
-- Delete: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/PinPrompt.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt`
+- Delete: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/OnboardingActivity.kt`
+- Delete: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
+- Delete: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/AppBlockActivity.kt`
+- Delete: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/ScreenTimeActivity.kt`
+- Delete: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/PinPrompt.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/BlockActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 `BlockActivity` is the only remaining caller of `PinPrompt`; once its PIN-grant action is removed, the file can go.
@@ -1451,13 +1451,13 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 - [ ] **Step 1: Delete the now-orphan activities**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui && \
+cd /Users/apple/Desktop/Projects/oroq/android/app/src/main/java/uk/co/cyberheroez/oroq/ui && \
   rm OnboardingActivity.kt SettingsActivity.kt AppBlockActivity.kt ScreenTimeActivity.kt PinPrompt.kt
 ```
 
 - [ ] **Step 2: Remove the PIN-grant action from `BlockActivity`**
 
-Replace `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt` with:
+Replace `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/BlockActivity.kt` with:
 
 ```kotlin
 package uk.co.cyberheroez.oroq.ui
@@ -1529,7 +1529,7 @@ class BlockActivity : AppCompatActivity() {
         bgColor = Style.CORAL,
         iconRes = R.drawable.ic_block,
         heading = "App blocked",
-        message = "This app has been blocked by SafeBrowse.",
+        message = "This app has been blocked by OroQ.",
     ) {
         whiteButton("Go to home screen", Style.CORAL) { goHome() }
     }
@@ -1646,7 +1646,7 @@ Leave the `MainActivity`, `BlockActivity`, `RolePickerActivity`, `ChildOnboardin
 - [ ] **Step 4: Verify the full project compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:assembleDebug
 ```
 Expected: BUILD SUCCESSFUL. APK at `app/build/outputs/apk/debug/app-debug.apk`.
@@ -1654,7 +1654,7 @@ Expected: BUILD SUCCESSFUL. APK at `app/build/outputs/apk/debug/app-debug.apk`.
 If you see "unresolved reference" errors, find the stale import and remove it. The most likely candidates: any file that still imports `OnboardingActivity`, `SettingsActivity`, `AppBlockActivity`, `ScreenTimeActivity`, or `showPinPrompt`. Use:
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   grep -rn "OnboardingActivity\|SettingsActivity\|AppBlockActivity\|ScreenTimeActivity\|showPinPrompt\|PinPrompt" app/src/main app/src/test
 ```
 
@@ -1670,7 +1670,7 @@ Expected: BUILD SUCCESSFUL, all tests pass. If any reference the deleted UI clas
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add -A android/app && \
   git commit -m "refactor(child): delete settings/onboarding/pin-prompt and the local PIN escape"
 ```
@@ -1688,7 +1688,7 @@ This task is "did the change behave as advertised". No code changes.
 - [ ] **Step 1: Confirm the assembled APK is current**
 
 ```bash
-ls -la /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+ls -la /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: timestamp matches the most recent `assembleDebug` run.
 
@@ -1696,7 +1696,7 @@ Expected: timestamp matches the most recent `assembleDebug` run.
 
 ```bash
 adb -s emulator-5554 uninstall uk.co.cyberheroez.oroq
-adb -s emulator-5554 install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5554 install /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success` on install. Uninstall may print "Failure [DELETE_FAILED_INTERNAL_ERROR]" on a fresh emulator — that's fine, the install will still proceed.
 
@@ -1705,7 +1705,7 @@ Expected: `Success` on install. Uninstall may print "Failure [DELETE_FAILED_INTE
 Open the app. Expected flow, in order:
 1. Welcome / "Which phone is this?" — pick "This is my child's phone".
 2. Onboarding step 1 of 5: VPN consent — Allow.
-3. Step 2: Usage access — toggle on for SafeBrowse, then back.
+3. Step 2: Usage access — toggle on for OroQ, then back.
 4. Step 3: Display over apps — toggle on, then back.
 5. Step 4: Battery exemption — Allow.
 6. Step 5: Open pairing — enter the parent's 8-character code, confirm the 6-digit SAS.
@@ -1721,13 +1721,13 @@ Confirm the Vivo serial (e.g. `adb-10AE6K1G5L001AY-Y7XA1M (2)._adb-tls-connect._
 ```bash
 V="<paste the Vivo serial>"
 if [ -z "$V" ]; then echo "VIVO SERIAL EMPTY — abort"; exit 1; fi
-adb -s "$V" install -r /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+adb -s "$V" install -r /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success`. If Vivo is offline, reconnect first via wireless ADB (`adb mdns services` → `adb connect …`).
 
 - [ ] **Step 5: Verify the parent dashboard shows the new sections**
 
-Open SafeBrowse on the Vivo (already in parent mode from the previous session). Tap the child's card → child dashboard.
+Open OroQ on the Vivo (already in parent mode from the previous session). Tap the child's card → child dashboard.
 
 Expected:
 - Existing protection / screen-time / blocked-feed blocks unchanged.
@@ -1759,7 +1759,7 @@ Reset the daily limit to a sensible value (e.g. 90) from the parent.
 
 - [ ] **Step 8: Update the memory file**
 
-Append a paragraph to `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md` recording:
+Append a paragraph to `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/project_native_app_direction.md` recording:
 - Date 2026-05-23.
 - "Child-slim, parent-full" iteration complete — child UI is one status badge, all configuration on parent.
 - Remote app blocking still deferred (needs inventory sync).

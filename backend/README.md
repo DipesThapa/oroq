@@ -2,7 +2,7 @@
 
 A Cloudflare Worker for passwordless parent accounts and device pairing.
 It stores only ciphertext and minimal metadata (see the design spec,
-`docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`).
+`docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`).
 
 ## Routes
 
@@ -25,14 +25,14 @@ instead of being sent.
 
 ## Provisioning (one-time)
 
-    npx wrangler d1 create safebrowse-family
+    npx wrangler d1 create oroq-family
     npx wrangler kv namespace create KV
 
 Copy the printed `database_id` and KV `id` into `wrangler.toml`.
 
 Apply the schema:
 
-    npx wrangler d1 migrations apply safebrowse-family --remote
+    npx wrangler d1 migrations apply oroq-family --remote
 
 Set the secrets:
 

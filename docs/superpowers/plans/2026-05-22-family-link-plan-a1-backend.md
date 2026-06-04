@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Cloudflare Worker backend for SafeBrowse Family Link — passwordless email-OTP parent accounts and device pairing — storing only ciphertext and minimal metadata.
+**Goal:** Build the Cloudflare Worker backend for OroQ Family Link — passwordless email-OTP parent accounts and device pairing — storing only ciphertext and minimal metadata.
 
 **Architecture:** A single TypeScript Cloudflare Worker routes requests by URL path. Parent accounts and pairing records live in D1 (SQL); one-time codes, OTP hashes and rate-limit counters live in KV with TTLs. All cryptographic payloads from devices are opaque to the Worker. Tests run inside the Workers runtime via `@cloudflare/vitest-pool-workers` (Miniflare) with D1 migrations applied before each file.
 
 **Tech Stack:** TypeScript, Cloudflare Workers, D1, KV, WebCrypto (HMAC JWT, SHA-256), Vitest + `@cloudflare/vitest-pool-workers`.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`, sections 5 (backend) and 8 (security).
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`, sections 5 (backend) and 8 (security).
 
 **Depends on:** nothing — this is the foundation. Plan A2 (Android pairing client) consumes this Worker.
 
@@ -71,7 +71,7 @@ Set up the project, the D1 schema, and a single passing test.
 
 ```json
 {
-  "name": "safebrowse-family-backend",
+  "name": "oroq-family-backend",
   "private": true,
   "type": "module",
   "scripts": {
@@ -114,13 +114,13 @@ Set up the project, the D1 schema, and a single passing test.
 The `database_id` and KV `id` are filled in after `wrangler d1 create` / `wrangler kv namespace create` (see Task 6); placeholder values are fine for tests because Miniflare provisions local stores.
 
 ```toml
-name = "safebrowse-family"
+name = "oroq-family"
 main = "src/index.ts"
 compatibility_date = "2026-05-01"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "safebrowse-family"
+database_name = "oroq-family"
 database_id = "00000000-0000-0000-0000-000000000000"
 migrations_dir = "migrations"
 
@@ -631,8 +631,8 @@ export async function sendOtpEmail(env: Env, email: string, otp: string): Promis
     body: JSON.stringify({
       from: env.RESEND_FROM,
       to: email,
-      subject: "Your SafeBrowse code",
-      text: `Your SafeBrowse verification code is ${otp}. It expires in 10 minutes.`,
+      subject: "Your OroQ code",
+      text: `Your OroQ verification code is ${otp}. It expires in 10 minutes.`,
     }),
   });
 }
@@ -1016,11 +1016,11 @@ The Worker is complete; document how to provision and deploy it. No code, no tes
 - [ ] **Step 1: Create `backend/README.md`**
 
 ```markdown
-# SafeBrowse Family Link — Backend
+# OroQ Family Link — Backend
 
 A Cloudflare Worker for passwordless parent accounts and device pairing.
 It stores only ciphertext and minimal metadata (see the design spec,
-`docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`).
+`docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`).
 
 ## Routes
 
@@ -1043,20 +1043,20 @@ instead of being sent.
 
 ## Provisioning (one-time)
 
-    npx wrangler d1 create safebrowse-family
+    npx wrangler d1 create oroq-family
     npx wrangler kv namespace create KV
 
 Copy the printed `database_id` and KV `id` into `wrangler.toml`.
 
 Apply the schema:
 
-    npx wrangler d1 migrations apply safebrowse-family --remote
+    npx wrangler d1 migrations apply oroq-family --remote
 
 Set the secrets:
 
     npx wrangler secret put JWT_SECRET        # a long random string
     npx wrangler secret put RESEND_API_KEY    # from resend.com
-    npx wrangler secret put RESEND_FROM       # e.g. "SafeBrowse <code@yourdomain>"
+    npx wrangler secret put RESEND_FROM       # e.g. "OroQ <code@yourdomain>"
 
 `RESEND_FROM` must be on a domain verified in the Resend dashboard.
 

@@ -296,7 +296,7 @@ async function handleFocusTick(){
     }
     await updateBadge();
   } catch(err){
-    console.error('[SafeBrowse] Focus timer error', err);
+    console.error('[OroQ] Focus timer error', err);
   }
 }
 
@@ -304,7 +304,7 @@ async function handleFocusTick(){
 chrome.alarms.onAlarm.addListener((alarm)=>{
   if (alarm && alarm.name === HEARTBEAT_ALARM){
     handleHeartbeat().catch((err)=>{
-      console.error('[SafeBrowse] Heartbeat error', err);
+      console.error('[OroQ] Heartbeat error', err);
     });
   }
   if (alarm && alarm.name === FOCUS_ALARM){
@@ -312,7 +312,7 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
   }
   if (alarm && alarm.name === WEEKLY_TIP_ALARM){
     rotateWeeklyTip().catch((err)=>{
-      console.error('[SafeBrowse] Weekly tip rotation failed', err);
+      console.error('[OroQ] Weekly tip rotation failed', err);
     });
   }
   if (alarm && alarm.name === PARENT_POLL_ALARM){ fbPollParentRequests().catch(()=>{}); return; }
@@ -369,7 +369,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
       const nowEnabled = Boolean(changes.enabled.newValue);
       if (nowEnabled) { enableDnsFiltering(); } else { disableDnsFiltering(); }
       handleProtectionToggle(nowEnabled).catch((err)=>{
-        console.error('[SafeBrowse] Protection toggle alert failed', err);
+        console.error('[OroQ] Protection toggle alert failed', err);
       });
       if (changes.enabled && changes.enabled.newValue === true && changes.enabled.oldValue !== true){
         trackOnceEvent('protection_enabled').catch(()=>{});
@@ -442,19 +442,19 @@ recoverFocusSession().catch(()=>{});
 scheduleWeeklyTipAlarm();
 // Rebuild dynamic rules on service worker start to ensure rules are present
 rebuildDynamicRules().catch((err)=>{
-  console.error('[SafeBrowse] Initial DNR rebuild failed', err);
+  console.error('[OroQ] Initial DNR rebuild failed', err);
 });
 rotateWeeklyTip().catch((_e)=>{});
 // Enable DNS filtering on startup if protection is on
 chrome.storage.sync.get({ enabled: true }, ({ enabled }) => { if (enabled !== false) enableDnsFiltering(); });
 handleHeartbeat({ startup: true }).catch((err)=>{
-  console.error('[SafeBrowse] Heartbeat startup check failed', err);
+  console.error('[OroQ] Heartbeat startup check failed', err);
 });
 
 chrome.runtime.onStartup.addListener(()=>{
   scheduleHeartbeat();
   handleHeartbeat({ startup: true }).catch((err)=>{
-    console.error('[SafeBrowse] Heartbeat startup check failed', err);
+    console.error('[OroQ] Heartbeat startup check failed', err);
   });
   recoverFocusSession().catch(()=>{});
 });
@@ -913,19 +913,19 @@ async function rebuildDynamicRules(){
         });
       }
       if (uniq.length > take.length){
-        console.warn('[SafeBrowse] Blocklist truncated for DNR capacity:', take.length, '/', uniq.length);
+        console.warn('[OroQ] Blocklist truncated for DNR capacity:', take.length, '/', uniq.length);
       }
 
       const existing = await chrome.declarativeNetRequest.getDynamicRules();
       const removeRuleIds = existing.map(r => r.id);
       await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules: rules });
-      console.log('[SafeBrowse] DNR dynamic rules updated:', rules.length);
+      console.log('[OroQ] DNR dynamic rules updated:', rules.length);
     }catch(e){
-      console.error('[SafeBrowse] Failed to rebuild DNR rules', e);
+      console.error('[OroQ] Failed to rebuild DNR rules', e);
     }
   }catch(e){
     // unexpected lock failure
-    console.error('[SafeBrowse] DNR rebuild mutex error', e);
+    console.error('[OroQ] DNR rebuild mutex error', e);
   } finally {
     release();
   }
@@ -997,7 +997,7 @@ async function fsPost(collection, docId, data) {
   const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: fsToFields(data) }) });
   if (!resp.ok) {
     const body = await resp.json().catch(() => ({}));
-    console.error('[SafeBrowse] fsPost failed', resp.status, body?.error?.message || body);
+    console.error('[OroQ] fsPost failed', resp.status, body?.error?.message || body);
   }
   return resp.ok;
 }
@@ -1211,7 +1211,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
         }
       });
     }).catch((err)=>{
-      console.error('[SafeBrowse] Focus state fetch failed', err);
+      console.error('[OroQ] Focus state fetch failed', err);
       sendResponse({ ok: false, error: 'failed-focus-state' });
     });
     return true;
@@ -1228,7 +1228,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
         }
       });
     }).catch((err)=>{
-      console.error('[SafeBrowse] Focus start failed', err);
+      console.error('[OroQ] Focus start failed', err);
       sendResponse({ ok: false, error: 'failed-focus-start' });
     });
     return true;
@@ -1237,21 +1237,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     stopFocusSession().then((state)=>{
       sendResponse({ ok: true, state });
     }).catch((err)=>{
-      console.error('[SafeBrowse] Focus stop failed', err);
+      console.error('[OroQ] Focus stop failed', err);
       sendResponse({ ok: false, error: 'failed-focus-stop' });
     });
     return true;
   }
   if (message && message.type === 'sg-log-conversation-topic'){
     recordConversationTopic(message.topic).then(()=>sendResponse({ ok: true })).catch((err)=>{
-      console.error('[SafeBrowse] conversation topic log failed', err);
+      console.error('[OroQ] conversation topic log failed', err);
       sendResponse({ ok: false });
     });
     return true;
   }
   if (message && message.type === 'sg-kid-report'){
     recordKidReport({ tone: message.tone, host: message.host, note: message.note }).then(()=>sendResponse({ ok: true })).catch((err)=>{
-      console.error('[SafeBrowse] kid report log failed', err);
+      console.error('[OroQ] kid report log failed', err);
       sendResponse({ ok: false });
     });
     return true;
@@ -1264,7 +1264,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
       }
       sendResponse({ ok: true, request: entry });
     }).catch((err)=>{
-      console.error('[SafeBrowse] access request log failed', err);
+      console.error('[OroQ] access request log failed', err);
       sendResponse({ ok: false });
     });
     return true;
@@ -1451,7 +1451,7 @@ async function handleHeartbeat(options = {}){
     const lastAlert = Number(lastTamperAlertAt) || 0;
     if (lastAlert && (now - lastAlert) < HEARTBEAT_SNOOZE_MIN * 60000) return;
     const payload = {
-      text: `SafeBrowse heartbeat gap detected. Extension was offline for ~${Math.round(gapMinutes)} minute(s).`,
+      text: `OroQ heartbeat gap detected. Extension was offline for ~${Math.round(gapMinutes)} minute(s).`,
       gapMinutes: Math.round(gapMinutes),
       lastSeenAt: new Date(last).toISOString(),
       detectedAt: new Date(now).toISOString()
@@ -1462,7 +1462,7 @@ async function handleHeartbeat(options = {}){
       lastTamperAlertAt
     }, now);
   } catch(err){
-    console.error('[SafeBrowse] Tamper alert failed', err);
+    console.error('[OroQ] Tamper alert failed', err);
   }
 }
 
@@ -1476,12 +1476,12 @@ async function handleProtectionToggle(enabled){
       lastTamperAlertAt: 0
     });
     await sendTamperAlert({
-      text: 'SafeBrowse protection was paused. If this was unexpected, re-enable filtering immediately.',
+      text: 'OroQ protection was paused. If this was unexpected, re-enable filtering immediately.',
       trigger: 'protection-disabled',
       detectedAt: new Date(now).toISOString()
     }, cfg, now, { force: true });
   } catch(err){
-    console.error('[SafeBrowse] Protection toggle alert failed', err);
+    console.error('[OroQ] Protection toggle alert failed', err);
   }
 }
 
@@ -1513,7 +1513,7 @@ async function handleOverrideAlert(entry){
     if (!webhook) return;
     const ts = entry.timestamp ? new Date(entry.timestamp).toISOString() : new Date().toISOString();
     const lines = [];
-    lines.push(`SafeBrowse override approved${entry.approver ? ` by ${entry.approver}` : ''}`);
+    lines.push(`OroQ override approved${entry.approver ? ` by ${entry.approver}` : ''}`);
     if (entry.host) lines.push(`Host: ${entry.host}`);
     if (entry.reason) lines.push(`Reason: ${entry.reason}`);
     if (entry.url) lines.push(`URL: ${entry.url}`);
@@ -1548,6 +1548,6 @@ async function handleOverrideAlert(entry){
       body: JSON.stringify(payload)
     });
   } catch(err){
-    console.error('[SafeBrowse] Override alert failed', err);
+    console.error('[OroQ] Override alert failed', err);
   }
 }

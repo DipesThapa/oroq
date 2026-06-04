@@ -1,6 +1,6 @@
-# Safeguard Deployment Guide
+# OroQ Deployment Guide
 
-This playbook is intended for IT administrators rolling out Safeguard across a business or school fleet.
+This playbook is intended for IT administrators rolling out OroQ across a business or school fleet.
 
 ## 1. Package & verify
 
@@ -40,14 +40,14 @@ If you want rollout metrics beyond the Chrome Web Store dashboard, you can enabl
 - `telemetryEndpoint`: HTTPS URL to receive JSON events (POST)
 - `telemetryBearerToken` (optional): bearer token added as `Authorization: Bearer ...`
 
-Safeguard sends only event names (install/onboarding/protection/first block/weekly active), timestamps, the extension version, and a random on-device client ID — not browsing URLs or page content.
+OroQ sends only event names (install/onboarding/protection/first block/weekly active), timestamps, the extension version, and a random on-device client ID — not browsing URLs or page content.
 
 ## 3. Host customer-facing pages
 
-Safeguard ships with static HTML pages in `/site` for privacy, support, and product overview.
+OroQ ships with static HTML pages in `/site` for privacy, support, and product overview.
 
 1. In GitHub, enable **Pages** → Build from branch → `main` / `/site` directory.
-2. GitHub will publish at `https://&lt;username&gt;.github.io/safebrowse-ai/`. Update the Chrome Web Store listing and in-extension footer links if you use a custom domain.
+2. GitHub will publish at `https://&lt;username&gt;.github.io/oroq/`. Update the Chrome Web Store listing and in-extension footer links if you use a custom domain.
 3. For alternative hosts (Netlify, Vercel, Cloudflare Pages) deploy the `site/` folder as a static site.
 
 ## 4. Post-deployment checklist

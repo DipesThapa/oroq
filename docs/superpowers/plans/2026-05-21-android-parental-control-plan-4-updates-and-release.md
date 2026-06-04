@@ -4,11 +4,11 @@
 
 **Goal:** Make the blocklists real and keep them fresh — augment the curated seed lists with large maintained open-source lists, host them on Cloudflare, have the app pull updates periodically, and complete the release-preparation steps for a Play Store MVP.
 
-**Architecture:** A build-time step merges the curated SafeBrowse lists with category-aligned open-source lists (the BlockListProject) and emits both the bundled APK assets and a flat `manifest.txt` of per-category versions. The same files are deployed to Cloudflare Pages. On the device, a `BlocklistUpdater` compares the hosted `manifest.txt` against what is installed and downloads only the changed category files into the app's private storage; the filter prefers those over the bundled copies. A weekly `WorkManager` job runs the updater. Release prep adds the notification-permission request and reliability guidance.
+**Architecture:** A build-time step merges the curated OroQ lists with category-aligned open-source lists (the BlockListProject) and emits both the bundled APK assets and a flat `manifest.txt` of per-category versions. The same files are deployed to Cloudflare Pages. On the device, a `BlocklistUpdater` compares the hosted `manifest.txt` against what is installed and downloads only the changed category files into the app's private storage; the filter prefers those over the bundled copies. A weekly `WorkManager` job runs the updater. Release prep adds the notification-permission request and reliability guidance.
 
 **Tech Stack:** Kotlin, Android Views, WorkManager, Preferences DataStore, Node.js (build script), Cloudflare Pages, JUnit 4.
 
-**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-safebrowse-android-parental-control-design.md` (§6, §8).
+**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-oroq-android-parental-control-design.md` (§6, §8).
 
 **Depends on:** Plans 1-3.
 
@@ -26,16 +26,16 @@ android/
 ├─ app/src/main/
 │  ├─ AndroidManifest.xml                + ACCESS_NETWORK_STATE
 │  ├─ assets/blocklists/                 regenerated: bigger .txt + manifest.txt
-│  └─ java/uk/co/cyberheroez/safebrowse/
+│  └─ java/uk/co/cyberheroez/oroq/
 │     ├─ MainActivity.kt                 + notification permission, schedule updates
 │     ├─ filter/BlocklistAssets.kt       loadBlocklistRepository prefers filesDir
-│     ├─ vpn/SafeBrowseVpnService.kt     loadBlocklistRepository(context)
+│     ├─ vpn/OroQVpnService.kt     loadBlocklistRepository(context)
 │     ├─ ui/SettingsActivity.kt          + reliability guidance section
 │     └─ update/
 │        ├─ BlocklistManifest.kt         parseManifest + planUpdate (pure)
 │        ├─ BlocklistUpdater.kt          downloads changed lists
 │        └─ BlocklistUpdateWorker.kt     WorkManager periodic worker
-└─ app/src/test/java/uk/co/cyberheroez/safebrowse/update/
+└─ app/src/test/java/uk/co/cyberheroez/oroq/update/
    └─ BlocklistManifestTest.kt
 ```
 
@@ -224,8 +224,8 @@ git commit -m "feat(android): merge open-source blocklists + emit manifest.txt"
 Pure logic for deciding which category lists to download.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/update/BlocklistManifest.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/update/BlocklistManifestTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistManifest.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/update/BlocklistManifestTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -323,7 +323,7 @@ Downloads changed category lists from the hosted Cloudflare site into the app's
 private storage. Verified on-device, not by unit tests (network + filesystem).
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/update/BlocklistUpdater.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`
 
 - [ ] **Step 1: Write `BlocklistUpdater.kt`**
 
@@ -402,7 +402,7 @@ class BlocklistUpdater(private val context: Context) {
     companion object {
         private const val TAG = "BlocklistUpdater"
         private const val TIMEOUT_MS = 15_000
-        const val BASE_URL = "https://safebrowse-blocklists.pages.dev"
+        const val BASE_URL = "https://oroq-blocklists.pages.dev"
     }
 }
 ```
@@ -431,8 +431,8 @@ git commit -m "feat(android): blocklist updater"
 `filesDir` when present, falling back to the bundled asset.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/filter/BlocklistAssets.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/SafeBrowseVpnService.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/filter/BlocklistAssets.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt`
 
 - [ ] **Step 1: Replace `loadBlocklistRepository` in `BlocklistAssets.kt`**
 
@@ -468,7 +468,7 @@ fun loadBlocklistRepository(context: Context): BlocklistRepository {
 The import line at the top of the file changes from `import android.content.res.AssetManager`
 to `import android.content.Context`.
 
-- [ ] **Step 2: Update the call site in `SafeBrowseVpnService.kt`**
+- [ ] **Step 2: Update the call site in `OroQVpnService.kt`**
 
 In `runLoop`, change:
 
@@ -479,7 +479,7 @@ In `runLoop`, change:
 to:
 
 ```kotlin
-            val repository = loadBlocklistRepository(this@SafeBrowseVpnService)
+            val repository = loadBlocklistRepository(this@OroQVpnService)
 ```
 
 - [ ] **Step 3: Verify the project builds**
@@ -507,8 +507,8 @@ A weekly `WorkManager` job runs the updater.
 **Files:**
 - Modify: `android/gradle/libs.versions.toml`
 - Modify: `android/app/build.gradle.kts`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/update/BlocklistUpdateWorker.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdateWorker.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 
 - [ ] **Step 1: Add the WorkManager dependency**
 
@@ -623,25 +623,25 @@ Wrangler CLI, which is already authenticated against the Cloudflare account.
 - [ ] **Step 1: Create the Pages project**
 
 ```bash
-npx wrangler pages project create safebrowse-blocklists --production-branch=main
+npx wrangler pages project create oroq-blocklists --production-branch=main
 ```
 
 - [ ] **Step 2: Deploy the blocklist files**
 
 ```bash
 npx wrangler pages deploy android/app/src/main/assets/blocklists \
-  --project-name=safebrowse-blocklists --branch=main --commit-dirty=true
+  --project-name=oroq-blocklists --branch=main --commit-dirty=true
 ```
 
 Expected: a deployment URL. The production URL is
-`https://safebrowse-blocklists.pages.dev` — this must match
+`https://oroq-blocklists.pages.dev` — this must match
 `BlocklistUpdater.BASE_URL`.
 
 - [ ] **Step 3: Smoke-check the hosted files**
 
 ```bash
-curl -s -o /dev/null -w "%{http_code}\n" https://safebrowse-blocklists.pages.dev/manifest.txt
-curl -s -o /dev/null -w "%{http_code}\n" https://safebrowse-blocklists.pages.dev/adult.txt
+curl -s -o /dev/null -w "%{http_code}\n" https://oroq-blocklists.pages.dev/manifest.txt
+curl -s -o /dev/null -w "%{http_code}\n" https://oroq-blocklists.pages.dev/adult.txt
 ```
 
 Expected: `200` for both. (If the deployment is seconds old, retry once — the
@@ -660,8 +660,8 @@ and reliability guidance for the parent.
 
 **Files:**
 - Modify: `android/app/src/main/AndroidManifest.xml`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
 
 - [ ] **Step 1: Add the network-state permission**
 
@@ -730,8 +730,8 @@ In `buildLayout`, add this block after the "Change PIN" button is added to
         })
         column.addView(TextView(this).apply {
             text = "For protection that cannot be switched off easily, exempt " +
-                "SafeBrowse from battery optimisation and enable Always-on VPN " +
-                "for SafeBrowse in Android's VPN settings."
+                "OroQ from battery optimisation and enable Always-on VPN " +
+                "for OroQ in Android's VPN settings."
         })
         column.addView(Button(this).apply {
             text = "Battery settings"
@@ -793,7 +793,7 @@ Expected: `BUILD SUCCESSFUL`, `Installed on 1 device`.
 adb shell pm clear uk.co.cyberheroez.oroq
 ```
 
-Open **SafeBrowse**, complete onboarding, and start protection. Confirm a site
+Open **OroQ**, complete onboarding, and start protection. Confirm a site
 in an enabled category fails to load and a normal site works. This is the key
 regression check — Task 4 changed `loadBlocklistRepository`'s signature, so this
 proves the filter still loads its lists correctly.
@@ -801,10 +801,10 @@ proves the filter still loads its lists correctly.
 - [ ] **Step 4: Confirm the update worker is scheduled**
 
 ```bash
-adb shell dumpsys jobscheduler | grep -i safebrowse | head -5
+adb shell dumpsys jobscheduler | grep -i oroq | head -5
 ```
 
-Expected: a scheduled job for the SafeBrowse package — the periodic update.
+Expected: a scheduled job for the OroQ package — the periodic update.
 
 - [ ] **Step 5: (Optional) Trigger the update worker immediately**
 
@@ -831,7 +831,7 @@ Only if Steps 1-5 required changes. Otherwise Plan 4 is complete.
 The blocklists are now real (curated lists merged with large open-source lists),
 hosted on Cloudflare, and refreshed weekly on-device without an app release. The
 notification permission and reliability guidance complete the release-prep work.
-With Plans 1-4 done, the SafeBrowse Android parental-control MVP is
+With Plans 1-4 done, the OroQ Android parental-control MVP is
 feature-complete and ready for Play Store submission.
 
 **Growing the blocklists post-launch:** re-run `node android/blocklist/build-blocklist.mjs`

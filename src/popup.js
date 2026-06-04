@@ -214,7 +214,7 @@ const TOUR_STEPS = [
   {
     target: document.getElementById('cardProtection'),
     title: 'Enable core protection',
-    body: 'Use the master toggle and aggressive mode to decide how SafeBrowse protects each site.'
+    body: 'Use the master toggle and aggressive mode to decide how OroQ protects each site.'
   },
   {
     target: document.getElementById('parentAllowlistRow'),
@@ -336,7 +336,7 @@ const CONVERSATION_SCRIPTS = {
   mature: 'A site looked grown-up or violent, so we blocked it. Can you show me what you were trying to do? Let\'s find a safer source together.',
   phishing: 'A page looked like it might steal passwords. If anything asks for codes or logins, stop and ask me before typing.',
   wellbeing: 'Something looked unsafe, so we paused it. How were you feeling when it popped up? Let\'s pick a trusted site instead.',
-  general: 'SafeBrowse blocked a page to keep things safe. Show me what you needed, and we\'ll find a safer option.'
+  general: 'OroQ blocked a page to keep things safe. Show me what you needed, and we\'ll find a safer option.'
 };
 if (parentAlertsSectionEl){
   parentAlertsSectionEl.dataset.expanded = parentAlertsSectionEl.dataset.expanded || '0';
@@ -835,7 +835,7 @@ function updateAlertAvailability(){
   }
   const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
   setAlertMessage(overrideAlertsEnabled ? (hasWebhook ? 'Alerts enabled. Overrides will notify your webhook.' : 'Alerts enabled. Add a HTTPS webhook to deliver notifications.') : 'Alerts stay on-device until you enable them.', overrideAlertsEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
-  setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. SafeBrowse will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
+  setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. OroQ will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
   updateParentSummaries();
 }
 
@@ -1562,7 +1562,7 @@ function ensurePinAfterOnboarding(){
     if (storedPin) return;
     const newPin = await promptForNewPin();
     if (!newPin){
-      setPinMessage('SafeBrowse needs a PIN to secure overrides. You can set one anytime from the Protection card.', 'error');
+      setPinMessage('OroQ needs a PIN to secure overrides. You can set one anytime from the Protection card.', 'error');
       pinSetupPrompted = false;
       setTimeout(()=>ensurePinAfterOnboarding(), 4000);
       return;
@@ -1578,7 +1578,7 @@ function ensurePinAfterOnboarding(){
       requirePinEl.checked = true;
     }
     syncPinControls();
-    setPinMessage('PIN saved. SafeBrowse will request it for protection controls and overrides.', 'success');
+    setPinMessage('PIN saved. OroQ will request it for protection controls and overrides.', 'success');
   }, 250);
 }
 
@@ -2460,7 +2460,7 @@ chrome.storage.local.get({
   }
   tamperAlertEnabled = Boolean(cfg.tamperAlertEnabled);
   if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
-  setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. SafeBrowse will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
+  setTamperMessage(tamperAlertEnabled ? 'Tamper alerts enabled. OroQ will send a webhook if it goes offline.' : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? 'success' : 'muted');
   approverPromptEnabled = Boolean(cfg.approverPromptEnabled);
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
@@ -2502,7 +2502,7 @@ enabledEl.addEventListener('change', async ()=>{
       setStatus(true);
       return;
     }
-    const { ok, cancelled } = await requestPinConfirmation('Enter your PIN to pause SafeBrowse protection');
+    const { ok, cancelled } = await requestPinConfirmation('Enter your PIN to pause OroQ protection');
     if (!ok){
       enabledEl.checked = true;
       setStatus(true);
@@ -3835,7 +3835,7 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     tamperAlertEnabled = Boolean(changes.tamperAlertEnabled.newValue);
     if (tamperAlertEnabledEl) tamperAlertEnabledEl.checked = tamperAlertEnabled;
     const hasWebhook = Boolean(normalizeWebhookInput(overrideAlertWebhook));
-    setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. SafeBrowse will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
+    setTamperMessage(tamperAlertEnabled ? (hasWebhook ? 'Tamper alerts enabled. OroQ will send a webhook if it goes offline.' : 'Tamper alerts need a HTTPS webhook to deliver notifications.') : 'Tamper alerts monitor for missed heartbeats.', tamperAlertEnabled ? (hasWebhook ? 'success' : 'error') : 'muted');
     updateAlertAvailability();
   }
   if (area === 'local' && changes.approverPromptEnabled){
@@ -3900,7 +3900,7 @@ function buildDigestCsv(){
   const now = new Date();
   const rows = [];
   const appliedProfile = appliedProfileId ? findProfile(appliedProfileId) : null;
-  rows.push(['SafeBrowse digest generated', now.toISOString()]);
+  rows.push(['OroQ digest generated', now.toISOString()]);
   rows.push([]);
   rows.push(['Settings']);
   rows.push(['Profile', appliedProfile ? appliedProfile.label || appliedProfile.id : 'Custom']);

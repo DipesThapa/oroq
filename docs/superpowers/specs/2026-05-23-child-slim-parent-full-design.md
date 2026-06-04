@@ -2,7 +2,7 @@
 
 **Date:** 2026-05-23
 **Status:** Approved (brainstorming)
-**Predecessors:** [Family Link spec](2026-05-22-safebrowse-parent-remote-view-design.md), Plans A1/A2a/A2b/B/C all implemented.
+**Predecessors:** [Family Link spec](2026-05-22-oroq-parent-remote-view-design.md), Plans A1/A2a/A2b/B/C all implemented.
 
 ## Why
 
@@ -41,7 +41,7 @@ This pass:
    Linked to mom@x.com
 ```
 
-- Status badge is `PROTECTED` when both: (a) `SafeBrowseVpnService.isActive` is true, and (b) all monitoring permissions still granted. Otherwise `NOT PROTECTED` in red — tapping it opens the relevant system-permission screen so the child can restore it.
+- Status badge is `PROTECTED` when both: (a) `OroQVpnService.isActive` is true, and (b) all monitoring permissions still granted. Otherwise `NOT PROTECTED` in red — tapping it opens the relevant system-permission screen so the child can restore it.
 - Linked-parent line shows the parent email captured during pairing. Non-interactive.
 - No menu, no buttons, no PIN prompt anywhere in child mode.
 
@@ -50,7 +50,7 @@ This pass:
 1. Intro: "This is the child's phone."
 2. Walk through system permissions one by one — VPN consent, Usage Access, Display over other apps, Battery exemption. Each step is "Open settings" → returns → "Granted, next".
 3. `LinkParentActivity` (existing, unchanged) — pair with a parent via the short code.
-4. Start `SafeBrowseVpnService` + `AppMonitorService`.
+4. Start `OroQVpnService` + `AppMonitorService`.
 5. Arrive at `ChildHomeActivity`.
 
 If permissions are revoked or pairing lost later, `ChildHomeActivity` shows the corresponding red status and tap-to-fix. No need to re-onboard.
@@ -120,12 +120,12 @@ FamilyCommand.SET_CATEGORIES -> {
 `restartVpnIfActive` does:
 
 ```kotlin
-if (SafeBrowseVpnService.isActive) {
+if (OroQVpnService.isActive) {
     context.startService(
-        Intent(context, SafeBrowseVpnService::class.java)
-            .setAction(SafeBrowseVpnService.ACTION_STOP)
+        Intent(context, OroQVpnService::class.java)
+            .setAction(OroQVpnService.ACTION_STOP)
     )
-    context.startService(Intent(context, SafeBrowseVpnService::class.java))
+    context.startService(Intent(context, OroQVpnService::class.java))
 }
 ```
 

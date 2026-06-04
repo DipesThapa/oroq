@@ -6,7 +6,7 @@
 
 **Architecture:** Local upload key (RSA-2048 via `keytool`) signs the AAB; Google's Play App Signing then re-signs for distribution. Gradle reads passwords from a gitignored `keystore.properties`. R8 enabled on the `release` build type with explicit keep rules for every reflection-using dependency in the project (Tink, org.json, WorkManager, DataStore, Kotlin coroutines). A release-only smoke pass — full family-link round-trip on a release-signed install — gates every Play upload.
 
-**Tech Stack:** Android Gradle Plugin (Kotlin DSL), R8, `keytool`, `bundletool`, Tink 1.15.0. Build with `./gradlew` from `/Users/apple/Desktop/Projects/safebrowse-ai/android`.
+**Tech Stack:** Android Gradle Plugin (Kotlin DSL), R8, `keytool`, `bundletool`, Tink 1.15.0. Build with `./gradlew` from `/Users/apple/Desktop/Projects/oroq/android`.
 
 **Spec:** `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md`
 
@@ -22,14 +22,14 @@ This task is the only one that produces a secret. The keystore is **not committe
 - [ ] **Step 1: Make the keystore directory**
 
 ```bash
-mkdir -p /Users/apple/Desktop/Projects/safebrowse-ai/android/keystore
+mkdir -p /Users/apple/Desktop/Projects/oroq/android/keystore
 ```
 Expected: directory exists, empty.
 
 - [ ] **Step 2: Generate the upload key**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   keytool -genkeypair -v -keystore keystore/upload.jks \
     -keyalg RSA -keysize 2048 -validity 10000 \
     -alias oroq-upload
@@ -80,7 +80,7 @@ Expected: a file of ~2-3 KB. (If 0 bytes, repeat Step 2.)
 
 - [ ] **Step 1: Extend `.gitignore`**
 
-Open `/Users/apple/Desktop/Projects/safebrowse-ai/android/.gitignore`. After the existing `local.properties` line, append:
+Open `/Users/apple/Desktop/Projects/oroq/android/.gitignore`. After the existing `local.properties` line, append:
 
 ```
 # Release signing — secrets, never commit
@@ -93,14 +93,14 @@ The whole file should now end with those four new lines.
 - [ ] **Step 2: Verify the rule covers the keystore**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git check-ignore -v android/keystore/upload.jks
 ```
 Expected: a line citing `android/.gitignore:<lineno>:keystore/*.jks` followed by the file path. (If no output, the rule isn't matching — re-check Step 1.)
 
 - [ ] **Step 3: Create the properties template**
 
-Write to `/Users/apple/Desktop/Projects/safebrowse-ai/android/keystore.properties.example`:
+Write to `/Users/apple/Desktop/Projects/oroq/android/keystore.properties.example`:
 
 ```
 # Copy this file to keystore.properties and fill in the real values.
@@ -116,8 +116,8 @@ keyPassword=REPLACE_WITH_KEY_PASSWORD
 Copy the template and edit:
 
 ```bash
-cp /Users/apple/Desktop/Projects/safebrowse-ai/android/keystore.properties.example \
-   /Users/apple/Desktop/Projects/safebrowse-ai/android/keystore.properties
+cp /Users/apple/Desktop/Projects/oroq/android/keystore.properties.example \
+   /Users/apple/Desktop/Projects/oroq/android/keystore.properties
 ```
 
 Open `android/keystore.properties` in an editor and replace both `REPLACE_WITH_…` lines with the actual passwords from Task 1 Step 2.
@@ -125,7 +125,7 @@ Open `android/keystore.properties` in an editor and replace both `REPLACE_WITH_�
 - [ ] **Step 5: Verify the real file is also gitignored**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git check-ignore -v android/keystore.properties
 ```
 Expected: a line citing `keystore.properties`. (If no output, fix Step 1 immediately — the file would otherwise leak on the next commit.)
@@ -133,7 +133,7 @@ Expected: a line citing `keystore.properties`. (If no output, fix Step 1 immedia
 - [ ] **Step 6: Commit the gitignore + template only**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add android/.gitignore android/keystore.properties.example && \
   git commit -m "build(android): gitignore release keystore + add properties template"
 ```
@@ -149,7 +149,7 @@ Run `git status` after. Expected output: clean — no `upload.jks`, no real `key
 
 - [ ] **Step 1: Replace `build.gradle.kts`**
 
-Replace the entire contents of `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/build.gradle.kts` with:
+Replace the entire contents of `/Users/apple/Desktop/Projects/oroq/android/app/build.gradle.kts` with:
 
 ```kotlin
 import java.util.Properties
@@ -238,7 +238,7 @@ Everything else is preserved.
 - [ ] **Step 2: Sync / parse the build script**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:tasks --quiet 2>&1 | tail -5
 ```
 Expected: tasks listing, no `BUILD FAILED`. If a "configuration error" mentions `keystore.properties`, re-check Task 2 Step 4.
@@ -253,7 +253,7 @@ Expected: `BUILD SUCCESSFUL`. (Debug is unaffected by the new signing block.)
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add android/app/build.gradle.kts && \
   git commit -m "build(android): wire release signing config + enable R8"
 ```
@@ -267,7 +267,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 
 - [ ] **Step 1: Replace `proguard-rules.pro`**
 
-Replace the entire contents of `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/proguard-rules.pro` with:
+Replace the entire contents of `/Users/apple/Desktop/Projects/oroq/android/app/proguard-rules.pro` with:
 
 ```proguard
 # --- Tink (HPKE / hybrid encryption) ---
@@ -314,7 +314,7 @@ Replace the entire contents of `/Users/apple/Desktop/Projects/safebrowse-ai/andr
 - [ ] **Step 2: Run a release build to confirm R8 doesn't choke on the rules**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:bundleRelease 2>&1 | tail -15
 ```
 
@@ -329,7 +329,7 @@ If you see `Missing class …` warnings, that's R8 flagging a class the rules do
 
 ```bash
 jarsigner -verify -verbose -certs \
-  /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/bundle/release/app-release.aab \
+  /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/bundle/release/app-release.aab \
   2>&1 | tail -20
 ```
 
@@ -338,14 +338,14 @@ Expected: a line `jar verified.` Cross-check the fingerprint shown against the o
 - [ ] **Step 4: Confirm mapping.txt was produced**
 
 ```bash
-ls -la /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/mapping/release/mapping.txt
+ls -la /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/mapping/release/mapping.txt
 ```
 Expected: a file of >10 KB. (If absent, R8 didn't run — check Task 3's `isMinifyEnabled = true`.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add android/app/proguard-rules.pro && \
   git commit -m "build(android): R8 keep rules for Tink, WorkManager, DataStore, our data classes"
 ```
@@ -381,7 +381,7 @@ Expected: a version number (e.g. `1.18.x`). Any error → see the Homebrew fallb
 - [ ] **Step 3: Build the .apks set from the AAB**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   bundletool build-apks \
     --bundle=app/build/outputs/bundle/release/app-release.aab \
     --output=app/build/outputs/bundle/release/app-release.apks \
@@ -420,7 +420,7 @@ adb -s emulator-5554 shell am start -n uk.co.cyberheroez.oroq/.MainActivity
 sleep 5
 adb -s emulator-5554 shell "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'" | head -3
 ```
-Expected: `mCurrentFocus` points at `uk.co.cyberheroez.oroq/...` (RolePickerActivity on fresh install, or MainActivity if previous state was restored — either is fine; what matters is the package is alive, not crashed). If `mCurrentFocus` is empty or points at the launcher, the app crashed — `adb logcat | grep -E "AndroidRuntime|safebrowse"` will show why.
+Expected: `mCurrentFocus` points at `uk.co.cyberheroez.oroq/...` (RolePickerActivity on fresh install, or MainActivity if previous state was restored — either is fine; what matters is the package is alive, not crashed). If `mCurrentFocus` is empty or points at the launcher, the app crashed — `adb logcat | grep -E "AndroidRuntime|oroq"` will show why.
 
 - [ ] **Step 8: No commit**
 
@@ -504,7 +504,7 @@ This task verifies behaviour; the artefact is the AAB from Task 4, the mapping f
 
 - [ ] **Step 1: Write the runbook**
 
-Create `/Users/apple/Desktop/Projects/safebrowse-ai/docs/RELEASE.md` with the following content. Replace `<SHA-256 from Task 1 Step 3>` with the actual fingerprint you recorded, and `<expiry date>` with the validity end-date from the same step.
+Create `/Users/apple/Desktop/Projects/oroq/docs/RELEASE.md` with the following content. Replace `<SHA-256 from Task 1 Step 3>` with the actual fingerprint you recorded, and `<expiry date>` with the validity end-date from the same step.
 
 ```markdown
 # Release runbook — OroQ Android
@@ -556,7 +556,7 @@ because losing this key is otherwise fatal.
 ## Build a signed AAB
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android
+cd /Users/apple/Desktop/Projects/oroq/android
 ./gradlew :app:bundleRelease
 ```
 
@@ -654,7 +654,7 @@ strands the app.
 - [ ] **Step 2: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add docs/RELEASE.md && \
   git commit -m "docs(release): runbook for signed AAB build + recovery"
 ```

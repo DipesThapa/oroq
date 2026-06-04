@@ -58,7 +58,7 @@ id = "b101d3dc0103425cb8ca29b7ed102d1a"
 - [ ] **Step 2: Run the backend tests**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && npm run test 2>&1 | tail -10
+cd /Users/apple/Desktop/Projects/oroq/backend && npm run test 2>&1 | tail -10
 ```
 Expected: all Vitest cases pass (~27). The rename touches only the `name` field; Miniflare doesn't care.
 
@@ -73,7 +73,7 @@ If it isn't recorded anywhere: this is a rotation. Acknowledge that every paired
 - [ ] **Step 4: Deploy the new Worker**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && npx wrangler deploy 2>&1 | tail -15
+cd /Users/apple/Desktop/Projects/oroq/backend && npx wrangler deploy 2>&1 | tail -15
 ```
 Expected output ends with `Deployed oroq-family triggers (… ms)` and prints the URL `https://oroq-family.cyberheroez.workers.dev`. A new Worker is created; the old `oroq-family` remains alive.
 
@@ -101,7 +101,7 @@ Expected: `400` (bad request — empty email). A `0` or `5xx` indicates DNS/depl
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add backend/wrangler.toml && \
   git commit -m "rename(backend): worker oroq-family -> oroq-family"
 ```
@@ -118,7 +118,7 @@ Secrets aren't repo-tracked; nothing else to stage.
 - [ ] **Step 1: Create the Pages project**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && \
+cd /Users/apple/Desktop/Projects/oroq/backend && \
   npx wrangler pages project create oroq-blocklists --production-branch=main 2>&1 | tail -5
 ```
 Expected: `✨ Successfully created the 'oroq-blocklists' project.`
@@ -126,7 +126,7 @@ Expected: `✨ Successfully created the 'oroq-blocklists' project.`
 - [ ] **Step 2: Deploy the existing blocklist assets**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   npx wrangler pages deploy app/src/main/assets/blocklists \
     --project-name=oroq-blocklists --branch=main --commit-dirty=true 2>&1 | tail -10
 ```
@@ -151,16 +151,16 @@ Pages is a Cloudflare-side resource; no repo state changes here. Task 4 updates 
 ## Task 3: `git mv` Kotlin package directories
 
 **Files:**
-- Rename: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/main/java/uk/co/cyberheroez/oroq/`
-- Rename: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/test/java/uk/co/cyberheroez/oroq/`
+- Rename: `android/app/src/main/java/uk/co/cyberheroez/oroq/` → `android/app/src/main/java/uk/co/cyberheroez/oroq/`
+- Rename: `android/app/src/test/java/uk/co/cyberheroez/oroq/` → `android/app/src/test/java/uk/co/cyberheroez/oroq/`
 
 After the move, the build is broken (every `package uk.co.cyberheroez.oroq.…` declaration disagrees with its filesystem location). Task 4 fixes that with a mass sed.
 
 - [ ] **Step 1: Move the main-source tree**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git mv android/app/src/main/java/uk/co/cyberheroez/safebrowse \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git mv android/app/src/main/java/uk/co/cyberheroez/oroq \
          android/app/src/main/java/uk/co/cyberheroez/oroq
 ```
 Expected: no output (success).
@@ -168,7 +168,7 @@ Expected: no output (success).
 - [ ] **Step 2: Move the test-source tree**
 
 ```bash
-git mv android/app/src/test/java/uk/co/cyberheroez/safebrowse \
+git mv android/app/src/test/java/uk/co/cyberheroez/oroq \
        android/app/src/test/java/uk/co/cyberheroez/oroq
 ```
 Expected: no output.
@@ -178,7 +178,7 @@ Expected: no output.
 ```bash
 git status --short | head -10
 ```
-Expected: dozens of `R  …/safebrowse/<file>.kt -> …/oroq/<file>.kt` lines. Git detected the rename and the diff is just the directory change.
+Expected: dozens of `R  …/oroq/<file>.kt -> …/oroq/<file>.kt` lines. Git detected the rename and the diff is just the directory change.
 
 - [ ] **Step 4: Do not commit yet**
 
@@ -195,16 +195,16 @@ Task 4 follows immediately with the sed that makes the tree compile. Commit at t
 - [ ] **Step 1: Replace the dotted package string everywhere**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  grep -rl 'uk\.co\.cyberheroez\.safebrowse' android backend docs 2>/dev/null \
-  | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.oroq/g'
+cd /Users/apple/Desktop/Projects/oroq && \
+  grep -rl 'uk\.co\.cyberheroez\.oroq' android backend docs 2>/dev/null \
+  | xargs sed -i '' 's/uk\.co\.cyberheroez\.oroq/uk.co.cyberheroez.oroq/g'
 ```
 This replaces in `.kt`, `.kts`, `.xml`, `.toml`, `.md`, `.json` — anywhere the dotted form appears, including the historical superpowers spec/plan files (we accept the noise; those files are append-only history but the rename is global). Backend `wrangler.toml` is untouched because it doesn't contain the dotted form — only the Worker name was changed in Task 1.
 
 - [ ] **Step 2: Sanity-check no occurrences remain**
 
 ```bash
-grep -rln 'uk\.co\.cyberheroez\.safebrowse' android backend docs 2>/dev/null
+grep -rln 'uk\.co\.cyberheroez\.oroq' android backend docs 2>/dev/null
 ```
 Expected: no output. If any line prints, sed missed it (likely a different quote style) — handle manually.
 
@@ -218,7 +218,7 @@ git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt \
 - [ ] **Step 4: Replace the class name across the codebase**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   grep -rl 'OroQVpnService' android 2>/dev/null \
   | xargs sed -i '' 's/OroQVpnService/OroQVpnService/g'
 ```
@@ -238,7 +238,7 @@ Expected: ≥3 lines (the file itself + at least 2 callers — `MainActivity`, `
 - [ ] **Step 6: Verify the source still compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin 2>&1 | tail -10
 ```
 Expected: `BUILD SUCCESSFUL`. If errors mention unresolved `uk.co.cyberheroez.oroq.*`, Step 1 missed something — re-run with adjusted globs.
@@ -246,9 +246,9 @@ Expected: `BUILD SUCCESSFUL`. If errors mention unresolved `uk.co.cyberheroez.or
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add -A android docs backend && \
-  git commit -m "rename(android): kotlin package safebrowse -> oroq, OroQVpnService"
+  git commit -m "rename(android): kotlin package oroq -> oroq, OroQVpnService"
 ```
 
 ---
@@ -268,7 +268,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 
 - [ ] **Step 1: Update `build.gradle.kts`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/build.gradle.kts`. Find:
+Edit `/Users/apple/Desktop/Projects/oroq/android/app/build.gradle.kts`. Find:
 
 ```kotlin
 android {
@@ -281,13 +281,13 @@ android {
 (Task 4's sed already changed both lines.) Verify by:
 
 ```bash
-grep -n "namespace\|applicationId" /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build.gradle.kts
+grep -n "namespace\|applicationId" /Users/apple/Desktop/Projects/oroq/android/app/build.gradle.kts
 ```
 Expected: both lines now reference `uk.co.cyberheroez.oroq`. If not, Task 4 missed them — replace manually.
 
 - [ ] **Step 2: Update the display name in `strings.xml`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/res/values/strings.xml`. Change:
+Edit `/Users/apple/Desktop/Projects/oroq/android/app/src/main/res/values/strings.xml`. Change:
 
 ```xml
 <string name="app_name">OroQ</string>
@@ -300,7 +300,7 @@ to:
 - [ ] **Step 3: Mass-replace `OroQ` and `OROQ` brand strings**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   grep -rl 'OroQ' android backend 2>/dev/null \
   | xargs sed -i '' 's/OroQ/OroQ/g'
 grep -rl 'OROQ' android 2>/dev/null \
@@ -318,7 +318,7 @@ Expected: no output. (If the historical specs/plans under `docs/` still contain 
 
 - [ ] **Step 5: Update `FamilyConfig.WORKER_BASE_URL`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/oroq/android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`. Find:
 
 ```kotlin
 const val WORKER_BASE_URL = "https://oroq-family.cyberheroez.workers.dev"
@@ -330,7 +330,7 @@ const val WORKER_BASE_URL = "https://oroq-family.cyberheroez.workers.dev"
 
 - [ ] **Step 6: Update `BlocklistUpdater.BASE_URL`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/oroq/android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`. Find:
 
 ```kotlin
 const val BASE_URL = "https://oroq-blocklists.pages.dev"
@@ -340,12 +340,12 @@ Change to:
 const val BASE_URL = "https://oroq-blocklists.pages.dev"
 ```
 
-- [ ] **Step 7: Update the `safebrowse_config` DataStore name**
+- [ ] **Step 7: Update the `oroq_config` DataStore name**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/oroq/android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt`. Find:
 
 ```kotlin
-private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
+private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 ```
 Change to:
 ```kotlin
@@ -354,19 +354,19 @@ private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 
 (The `family_config` DataStore name in `FamilyStore.kt` has no brand and stays.)
 
-- [ ] **Step 8: Verify no stray `safebrowse` lowercase remains in main source**
+- [ ] **Step 8: Verify no stray `oroq` lowercase remains in main source**
 
 ```bash
-grep -rn 'safebrowse' /Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main 2>/dev/null
+grep -rn 'oroq' /Users/apple/Desktop/Projects/oroq/android/app/src/main 2>/dev/null
 ```
 Expected: no output (the directory path itself has been renamed; constants and DataStore are now `oroq`; package strings done in Task 4).
 
-If a match appears under `assets/blocklists/<category>.txt` mentioning `safebrowse-` as a domain, that's fine — they're just unrelated blocked domains, not brand references.
+If a match appears under `assets/blocklists/<category>.txt` mentioning `oroq-` as a domain, that's fine — they're just unrelated blocked domains, not brand references.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add -A android && \
   git commit -m "rename(android): applicationId, display name, URLs, DataStore, brand strings"
 ```
@@ -381,7 +381,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 - [ ] **Step 1: Compile**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin 2>&1 | tail -8
 ```
 Expected: `BUILD SUCCESSFUL`. If errors mention an unresolved reference, Task 4 or 5 missed it — `grep` the unresolved symbol and fix.
@@ -403,7 +403,7 @@ Expected: `BUILD SUCCESSFUL`. New APK at `app/build/outputs/apk/debug/app-debug.
 - [ ] **Step 4: Confirm the new applicationId is baked in**
 
 ```bash
-unzip -p /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk \
+unzip -p /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk \
   AndroidManifest.xml | strings | grep -E "uk\.co\.cyberheroez" | head -3
 ```
 Expected: at least one `uk.co.cyberheroez.oroq` line; **no** `uk.co.cyberheroez.oroq` line.
@@ -426,7 +426,7 @@ Verification only — Task 5's commit already captured the source changes.
 - [ ] **Step 1: Brand-replace the recent docs**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   FILES=$(find . -maxdepth 2 -name '*.md' -not -path './node_modules/*' -not -path './.git/*' \
             -not -path './docs/superpowers/*' 2>/dev/null) && \
   RECENT_SP="docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
@@ -438,35 +438,35 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 
 - [ ] **Step 2: Update the paused release-signing plan's keystore alias**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `oroq-upload` with `oroq-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
+Edit `/Users/apple/Desktop/Projects/oroq/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `oroq-upload` with `oroq-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
 
 ```bash
 sed -i '' 's/oroq-upload/oroq-upload/g' \
-  /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md
+  /Users/apple/Desktop/Projects/oroq/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md
 ```
 
 Also update the same alias in `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` if it appears there:
 
 ```bash
 sed -i '' 's/oroq-upload/oroq-upload/g' \
-  /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md
+  /Users/apple/Desktop/Projects/oroq/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md
 ```
 
 - [ ] **Step 3: Spot-check**
 
 ```bash
 grep -n "OroQ\|oroq-upload\|oroq-family\|oroq-blocklists" \
-  /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md \
-  /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
-  /Users/apple/Desktop/Projects/safebrowse-ai/PRIVACY.md \
-  /Users/apple/Desktop/Projects/safebrowse-ai/docs/STORE_LISTING.md 2>/dev/null
+  /Users/apple/Desktop/Projects/oroq/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md \
+  /Users/apple/Desktop/Projects/oroq/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
+  /Users/apple/Desktop/Projects/oroq/PRIVACY.md \
+  /Users/apple/Desktop/Projects/oroq/docs/STORE_LISTING.md 2>/dev/null
 ```
 Expected: no output.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
+cd /Users/apple/Desktop/Projects/oroq && \
   git add -A docs PRIVACY.md README.md 2>/dev/null; \
   git commit -m "rename(docs): OroQ -> OroQ in recent docs, leave historical record"
 ```
@@ -476,13 +476,13 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 8: Update memory file `project_native_app_direction.md`
 
 **Files:**
-- Modify: `~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md`
+- Modify: `~/.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/project_native_app_direction.md`
 
 The rename-record memory file (`project_shield_pilot_rename.md`) was already created earlier in this conversation. The `project_native_app_direction.md` file gets a header note pointing at it.
 
 - [ ] **Step 1: Add the header note**
 
-Open `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md`. After the frontmatter (the line `---` that closes the metadata block at line ~7), insert this paragraph before the first bullet:
+Open `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/project_native_app_direction.md`. After the frontmatter (the line `---` that closes the metadata block at line ~7), insert this paragraph before the first bullet:
 
 ```
 **Note (2026-06-04):** Renamed to OroQ. Paragraphs below describing
@@ -521,7 +521,7 @@ Expected: `Success` or `Failure [DELETE_FAILED_INTERNAL_ERROR]` if absent — bo
 - [ ] **Step 3: Install the new OroQ build on the emulator**
 
 ```bash
-adb -s emulator-5554 install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+adb -s emulator-5554 install /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success`. Launcher now shows "OroQ".
 
@@ -531,7 +531,7 @@ Expected: `Success`. Launcher now shows "OroQ".
 V="$(adb devices | awk '/_adb-tls-connect/ {print $1; exit}')"
 if [ -z "$V" ]; then echo "VIVO SERIAL EMPTY — abort"; exit 1; fi
 adb -s "$V" uninstall uk.co.cyberheroez.oroq 2>&1
-adb -s "$V" install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+adb -s "$V" install /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: both `Success`. If `V` is empty (Vivo offline), reconnect first.
 
@@ -540,7 +540,7 @@ Expected: both `Success`. If `V` is empty (Vivo offline), reconnect first.
 In a separate terminal:
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && \
+cd /Users/apple/Desktop/Projects/oroq/backend && \
   npx wrangler tail --name oroq-family
 ```
 Leave it streaming. Steps below should produce log lines on it.
@@ -612,14 +612,14 @@ Only run after Task 9 is fully green.
 - [ ] **Step 1: Confirm git status is clean**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && git status --short
+cd /Users/apple/Desktop/Projects/oroq && git status --short
 ```
 Expected: empty (all rename commits already landed).
 
 - [ ] **Step 2: Move the repo directory**
 
 ```bash
-mv /Users/apple/Desktop/Projects/safebrowse-ai \
+mv /Users/apple/Desktop/Projects/oroq \
    /Users/apple/Desktop/Projects/oroq
 ```
 Expected: no output.
@@ -634,7 +634,7 @@ Expected: the three most recent commits print — git history intact.
 - [ ] **Step 4: Move the Claude memory directory**
 
 ```bash
-mv ~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai \
+mv ~/.claude/projects/-Users-apple-Desktop-Projects-oroq \
    ~/.claude/projects/-Users-apple-Desktop-Projects-oroq
 ```
 Expected: no output.

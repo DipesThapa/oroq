@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>SafeBrowse</title>
+  <title>OroQ</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
@@ -11,10 +11,10 @@
 <header class="header">
   <div class="header__brand">
     <div class="header__logo">
-      <img src="../assets/icons/icon48.png" alt="SafeBrowse logo">
+      <img src="../assets/icons/icon48.png" alt="OroQ logo">
     </div>
     <div>
-      <h1 class="header__title">SafeBrowse</h1>
+      <h1 class="header__title">OroQ</h1>
       <p class="header__by">by <a href="https://cyberheroez.co.uk/" target="_blank" rel="noopener noreferrer">CyberHeroez CIC</a></p>
     </div>
   </div>
@@ -67,7 +67,7 @@
         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
       </svg>
     </div>
-    <h2 class="sg-view__title">Welcome to SafeBrowse</h2>
+    <h2 class="sg-view__title">Welcome to OroQ</h2>
     <p class="sg-view__body">Are you a parent setting up protection, or a child with an invite code?</p>
     <div id="sgOnboardingHome" class="sg-view__actions">
       <button id="onboardParentBtn" class="btn btn--primary" type="button">Set up as Parent</button>
@@ -100,7 +100,7 @@
   <!-- ─────────────────────── PARENT / CLASSROOM CARD ─── -->
   <section class="card" id="cardParent" hidden>
     <h2 class="card__title">Parent mode</h2>
-    <p class="card__subtitle">Safeguarding controls for guardians and DSLs.</p>
+    <p class="card__subtitle">OroQing controls for guardians and DSLs.</p>
 
     <div class="parent-panel">
 
@@ -231,7 +231,7 @@
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
         </div>
         <div class="panel-row__body">
-          <span class="panel-row__title">Safeguarding digest</span>
+          <span class="panel-row__title">OroQing digest</span>
           <span id="parentDigestStatus" class="panel-row__meta">Loading…</span>
         </div>
         <button id="parentDigestBtn" class="btn btn--ghost btn--xs" type="button">Download</button>
@@ -367,7 +367,7 @@
           <span class="toggle__switch" aria-hidden="true"></span>
           <span class="toggle__content">
             <span class="toggle__label">Tamper alerts</span>
-            <span class="toggle__hint">Alert if SafeBrowse goes offline or is disabled for a while.</span>
+            <span class="toggle__hint">Alert if OroQ goes offline or is disabled for a while.</span>
           </span>
         </label>
         <small id="tamperMessage" class="message">Tamper alerts monitor for missed heartbeats.</small>
@@ -376,7 +376,7 @@
     </div>
 
     <div class="subsection" id="parentDigestSection" hidden>
-      <h3 class="subsection__title">Safeguarding digest</h3>
+      <h3 class="subsection__title">OroQing digest</h3>
       <p class="subsection__desc">Generate a CSV summary for safeguarding meetings or audit trails.</p>
       <button id="digestDownload" class="btn btn--primary" type="button">Download weekly digest</button>
       <small id="digestMessage" class="message">Highlights settings, allow/block counts and recent overrides.</small>
@@ -820,8 +820,8 @@
 <div id="tour" class="tour tour--hidden" role="dialog" aria-modal="true" aria-labelledby="tourTitle">
   <div class="tour__panel">
     <div class="tour__progress" id="tourProgress">Step 1 of 3</div>
-    <h2 id="tourTitle" class="tour__title">Welcome to SafeBrowse</h2>
-    <p id="tourBody" class="tour__body">SafeBrowse blocks adult content and risky ads before they appear.</p>
+    <h2 id="tourTitle" class="tour__title">Welcome to OroQ</h2>
+    <p id="tourBody" class="tour__body">OroQ blocks adult content and risky ads before they appear.</p>
     <div class="tour__actions">
       <button type="button" id="tourSkip" class="btn btn--ghost">Skip tour</button>
       <button type="button" id="tourNext" class="btn btn--primary">Next</button>

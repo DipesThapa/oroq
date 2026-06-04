@@ -1,4 +1,4 @@
-# Safeguard MVP User Flows
+# OroQ MVP User Flows
 
 This document outlines the MVP flows the UI/UX designer should cover.
 

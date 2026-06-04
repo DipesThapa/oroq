@@ -1,4 +1,4 @@
-# SafeBrowse Android v2 — App Blocking & Screen Time Design
+# OroQ Android v2 — App Blocking & Screen Time Design
 
 > **For agentic workers:** the next step after this spec is the `superpowers:writing-plans`
 > skill — turn this design into Plan 5. Do not start implementation from this document.
@@ -17,7 +17,7 @@ Add the two parental-control capabilities deliberately deferred from the MVP:
   enforce a daily limit; when the limit is reached the device locks until the
   parent grants more time or the next day begins.
 
-This is **v2** of the SafeBrowse Android app. The MVP (Plans 1-4) shipped web
+This is **v2** of the OroQ Android app. The MVP (Plans 1-4) shipped web
 content filtering only; that scope note explicitly listed app blocking and
 screen-time limits as v2.
 
@@ -56,7 +56,7 @@ screen-time limits as v2.
    `UsageStatsManager`; it is shown to the parent on the child's device and is
    never transmitted or persisted long-term. Only the parent's *configuration*
    (blocked apps, the limit) is stored locally.
-2. **Non-covert.** The child can see SafeBrowse and its block screens.
+2. **Non-covert.** The child can see OroQ and its block screens.
 3. The app must remain **Play Store-publishable** — see §10.
 
 ## 5. Architecture — UsageStats polling
@@ -109,7 +109,7 @@ decide(foregroundApp, todayMinutes, blockedApps, limitMinutes, extraMinutes):
 The monitor runs **alongside web protection** — the Home screen's "Start
 protection" starts both the `VpnService` and the `AppMonitorService`; "Stop"
 stops both. The user sees a single protection toggle. `AppMonitorService` and
-`SafeBrowseVpnService` are separate service classes (separation of concerns —
+`OroQVpnService` are separate service classes (separation of concerns —
 DNS filtering vs usage polling) but share that one on/off state.
 
 ### 5.4 Trade-offs

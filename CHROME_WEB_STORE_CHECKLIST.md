@@ -1,7 +1,7 @@
 # Chrome Web Store Checklist
 
 - Listing basics
-  - Title: Safeguard (SafeBrowse AI)
+  - Title: OroQ
   - Short description: Privacy‑first web safety — blocklist, SafeSearch, simple heuristics; one-click Focus Mode for homework.
   - Full description: Features, Focus Mode (Kid Homework Mode), AI captions/object detection (local-only mini model for NSFW/violence/weapons), permissions rationale, privacy statement, how to use.
   - Store copy snippets:

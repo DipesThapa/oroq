@@ -2,15 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the v2 parental controls — an always-blocked app list and a daily screen-time limit with a "time's up" lock — to the SafeBrowse Android app.
+**Goal:** Add the v2 parental controls — an always-blocked app list and a daily screen-time limit with a "time's up" lock — to the OroQ Android app.
 
 **Architecture:** A foreground service polls Android's `UsageStatsManager` once per second for the current foreground app and today's usage, runs a pure decision function, and launches a full-screen `BlockActivity` when an app is blocked or the limit is reached. No Accessibility Service; `SYSTEM_ALERT_WINDOW` is declared only for the background-activity-launch exemption needed to show the block screen.
 
 **Tech Stack:** Kotlin, Android Views, `UsageStatsManager`, foreground service, Preferences DataStore, JUnit 4.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-app-blocking-screentime-design.md`.
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-app-blocking-screentime-design.md`.
 
-**Depends on:** Plans 1-4 (the MVP) — uses `ConfigRepository`, `ui/Style.kt`, `SafeBrowseVpnService`, `MainActivity`, `SettingsActivity`.
+**Depends on:** Plans 1-4 (the MVP) — uses `ConfigRepository`, `ui/Style.kt`, `OroQVpnService`, `MainActivity`, `SettingsActivity`.
 
 ---
 
@@ -19,7 +19,7 @@
 ```
 android/app/src/main/
 ├─ AndroidManifest.xml          + permissions, service, 3 activities, <queries>
-└─ java/uk/co/cyberheroez/safebrowse/
+└─ java/uk/co/cyberheroez/oroq/
    ├─ config/ConfigRepository.kt   + v2 keys & accessors
    ├─ monitor/
    │  ├─ BlockDecision.kt          decideBlock() + effectiveExtraMinutes() (pure)
@@ -32,7 +32,7 @@ android/app/src/main/
    ├─ MainActivity.kt              start/stop the monitor with protection
    └─ ui/SettingsActivity.kt       + App blocking & Screen time rows
 
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/monitor/
+android/app/src/test/java/uk/co/cyberheroez/oroq/monitor/
 └─ BlockDecisionTest.kt
 ```
 
@@ -43,8 +43,8 @@ android/app/src/test/java/uk/co/cyberheroez/safebrowse/monitor/
 Pure, JVM-testable logic for what the monitor should do.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/monitor/BlockDecision.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/monitor/BlockDecisionTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/monitor/BlockDecision.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/monitor/BlockDecisionTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -170,7 +170,7 @@ Extends `ConfigRepository` with the blocked-app list, the daily limit, and the
 parent-granted extra time.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/config/ConfigRepository.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt`
 
 - [ ] **Step 1: Add the imports**
 
@@ -255,7 +255,7 @@ Wraps `UsageStatsManager` — the foreground app, today's usage, and whether the
 Usage Access permission is granted.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/monitor/UsageReader.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/monitor/UsageReader.kt`
 
 - [ ] **Step 1: Write `UsageReader.kt`**
 
@@ -369,7 +369,7 @@ A foreground service that polls every second and shows the block screen when
 needed.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/monitor/AppMonitorService.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/monitor/AppMonitorService.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Declare permissions and the service in the manifest**
@@ -384,7 +384,7 @@ ones (before `<application>`):
         tools:ignore="ProtectedPermissions" />
 ```
 
-Add this `<service>` inside `<application>`, after the `SafeBrowseVpnService`
+Add this `<service>` inside `<application>`, after the `OroQVpnService`
 service:
 
 ```xml
@@ -492,7 +492,7 @@ class AppMonitorService : android.app.Service() {
             NotificationChannel(CHANNEL_ID, "App & screen-time limits", NotificationManager.IMPORTANCE_LOW)
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("SafeBrowse limits are active")
+            .setContentTitle("OroQ limits are active")
             .setContentText("App blocking and screen-time limits are running")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setOngoing(true)
@@ -502,7 +502,7 @@ class AppMonitorService : android.app.Service() {
     companion object {
         private const val TAG = "AppMonitor"
         private const val NOTIFICATION_ID = 2
-        private const val CHANNEL_ID = "safebrowse_monitor"
+        private const val CHANNEL_ID = "oroq_monitor"
     }
 }
 ```
@@ -531,7 +531,7 @@ git commit -m "feat(android): app-monitor foreground service"
 The full-screen screen shown when an app is blocked or the limit is reached.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/BlockActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Declare the activity in the manifest**
@@ -586,7 +586,7 @@ class BlockActivity : AppCompatActivity() {
     private fun appBlockedView(): View = screen(this) {
         card {
             cardTitle("App blocked")
-            body("This app has been blocked by SafeBrowse.")
+            body("This app has been blocked by OroQ.")
         }
         primaryButton("Go to home screen") { goHome() }
     }
@@ -659,7 +659,7 @@ The Home screen's protection toggle should start and stop `AppMonitorService`
 alongside the VPN.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 
 - [ ] **Step 1: Add the import**
 
@@ -675,14 +675,14 @@ In `MainActivity.kt`, replace `startVpnService` and `stopVpnService` with:
 
 ```kotlin
     private fun startVpnService() {
-        startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, OroQVpnService::class.java))
         startService(Intent(this, AppMonitorService::class.java))
     }
 
     private fun stopVpnService() {
         startService(
-            Intent(this, SafeBrowseVpnService::class.java)
-                .setAction(SafeBrowseVpnService.ACTION_STOP)
+            Intent(this, OroQVpnService::class.java)
+                .setAction(OroQVpnService.ACTION_STOP)
         )
         stopService(Intent(this, AppMonitorService::class.java))
     }
@@ -711,10 +711,10 @@ git commit -m "feat(android): run the app monitor with protection"
 A parent screen that lists installed apps and saves which ones to block.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/MonitorPermissions.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/AppBlockActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/MonitorPermissions.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/AppBlockActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
 
 - [ ] **Step 1: Declare the activity and app-query visibility**
 
@@ -898,9 +898,9 @@ A parent screen showing today's usage and a control to set the daily limit, with
 the Usage Access permission prompt.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/ScreenTimeActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/ScreenTimeActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
 
 - [ ] **Step 1: Declare the activity**
 
@@ -1050,7 +1050,7 @@ Expected: `BUILD SUCCESSFUL`, `Installed on 1 device`.
 
 - [ ] **Step 3: On-device verification**
 
-Open **SafeBrowse**, complete onboarding if needed, and:
+Open **OroQ**, complete onboarding if needed, and:
 
 1. Tap **Start protection**, accept the VPN consent.
 2. Go to **Settings** (enter PIN) → **App blocking** → tick an app (e.g. Chrome) →
@@ -1072,7 +1072,7 @@ Otherwise Plan 5 is complete.
 
 ## Done — Plan 5 outcome (v2 complete)
 
-SafeBrowse now does app blocking and screen-time limits on top of web filtering:
+OroQ now does app blocking and screen-time limits on top of web filtering:
 a foreground service polls usage, blocks chosen apps, and enforces a daily limit
 with a parent-PIN time extension. With Plans 1-5 done, the app covers the full
 original vision — web filtering plus app and screen-time control.

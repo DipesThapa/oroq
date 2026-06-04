@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript Cloudflare Worker (D1 + KV); Kotlin, Android Views, WorkManager, the `family/` package, `ConfigRepository`.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`, section 6.3 (remote control).
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`, section 6.3 (remote control).
 
 **Depends on:** Plans A1, A2a, A2b, B (pairing, sync, dashboard).
 
@@ -26,7 +26,7 @@ backend/
 ├─ src/index.ts                                  + /cmd route
 └─ test/cmd.test.ts
 
-android/app/src/main/java/uk/co/cyberheroez/safebrowse/
+android/app/src/main/java/uk/co/cyberheroez/oroq/
 ├─ family/
 │  ├─ FamilyCommand.kt      command model + toJson/parseCommand
 │  ├─ AppliedCommandLog.kt  file-backed set of already-applied command ids
@@ -39,7 +39,7 @@ android/app/src/main/java/uk/co/cyberheroez/safebrowse/
 │  └─ ChildDashboardActivity.kt   + "Grant 30 min" / "Set daily limit" buttons
 └─ ui/BlockActivity.kt      time's-up screen polls for a remote grant
 
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/
+android/app/src/test/java/uk/co/cyberheroez/oroq/family/
 ├─ FamilyCommandTest.kt
 └─ AppliedCommandLogTest.kt
 ```
@@ -259,8 +259,8 @@ git commit -m "feat(backend): add remote-command queue routes"
 ## Task 2: FamilyCommand model
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt`
 
 - [ ] **Step 1: Write the failing test — `FamilyCommandTest.kt`**
 
@@ -328,7 +328,7 @@ Expected: both tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt
 git commit -m "feat(android): add FamilyCommand model"
 ```
 
@@ -337,8 +337,8 @@ git commit -m "feat(android): add FamilyCommand model"
 ## Task 3: FamilyApi command methods
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt` (add cases)
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt` (add cases)
 
 - [ ] **Step 1: Add tests to `FamilyApiTest.kt`**
 
@@ -423,7 +423,7 @@ Expected: all FamilyApi tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt
 git commit -m "feat(android): add FamilyApi command-queue methods"
 ```
 
@@ -432,9 +432,9 @@ git commit -m "feat(android): add FamilyApi command-queue methods"
 ## Task 4: Applied-command log and CommandSync
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/AppliedCommandLog.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/AppliedCommandLogTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/AppliedCommandLog.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/AppliedCommandLogTest.kt`
 
 - [ ] **Step 1: Write the failing test — `AppliedCommandLogTest.kt`**
 
@@ -594,7 +594,7 @@ suspend fun pollAndApplyCommands(context: Context): Int {
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/AppliedCommandLog.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/AppliedCommandLogTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/AppliedCommandLog.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/AppliedCommandLogTest.kt
 git commit -m "feat(android): add applied-command log and CommandSync"
 ```
 
@@ -605,8 +605,8 @@ git commit -m "feat(android): add applied-command log and CommandSync"
 The child runs `pollAndApplyCommands` on each sync cycle, and — while the "time's up" screen is showing — every 30 seconds so a remote grant clears the lock quickly.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/BlockActivity.kt`
 
 - [ ] **Step 1: Poll for commands in `FamilySyncWorker.kt`**
 
@@ -677,7 +677,7 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/BlockActivity.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt android/app/src/main/java/uk/co/cyberheroez/oroq/ui/BlockActivity.kt
 git commit -m "feat(android): child applies remote commands on sync and at the time's-up screen"
 ```
 
@@ -688,9 +688,9 @@ git commit -m "feat(android): child applies remote commands on sync and at the t
 `ParentRepository.sendCommand` encrypts a command for the child; `ChildDashboardActivity` gains "Grant 30 minutes" and "Set daily limit" actions.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyStore.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyStore.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt`
 
 - [ ] **Step 1: Add `childrenBlocking()` to `FamilyStore.kt`**
 
@@ -829,7 +829,7 @@ With a paired parent and child:
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyStore.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyStore.kt android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt
 git commit -m "feat(android): parent remote control — grant time and set daily limit"
 ```
 

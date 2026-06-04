@@ -1,6 +1,6 @@
 # Pairing Relay (Dev)
 
-`Safeguard` device pairing needs a small HTTPS relay so two different devices (different Google accounts) can exchange **encrypted** access requests and approvals.
+`OroQ` device pairing needs a small HTTPS relay so two different devices (different Google accounts) can exchange **encrypted** access requests and approvals.
 
 This folder contains a minimal development relay that stores only encrypted blobs in memory.
 

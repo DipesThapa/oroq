@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the Family Link device-role choice, parent email-OTP login, and the two-sided pairing flow to the SafeBrowse Android app, completing spec "Plan A".
+**Goal:** Add the Family Link device-role choice, parent email-OTP login, and the two-sided pairing flow to the OroQ Android app, completing spec "Plan A".
 
 **Architecture:** A `FamilyStore` (Preferences DataStore) holds the device role, the parent session token, this device's key pair and its pairing records. A role picker on first launch routes the app into Child mode (the existing app) or Parent mode (a new `ParentActivity`). Pairing reuses `FamilyApi`/`FamilyCrypto` from Plan A2a: the parent creates a pairing and shows a code; the child enters it; both confirm a 6-digit SAS before the pairing is saved.
 
 **Tech Stack:** Kotlin, Android Views, Preferences DataStore, coroutines, the `family/` package from Plan A2a, the `ui/Style.kt` design system.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`, sections 3 (architecture), 4 (pairing) and 7 (UI).
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`, sections 3 (architecture), 4 (pairing) and 7 (UI).
 
 **Depends on:** Plan A2a (`FamilyCrypto`, `FamilyApi`, `HttpUrlTransport`, models) and Plan A1 (the deployed Worker — `WORKER_BASE_URL` must point at it).
 
@@ -23,7 +23,7 @@
 ```
 android/app/src/main/
 ├─ AndroidManifest.xml                    + 4 activities
-└─ java/uk/co/cyberheroez/safebrowse/
+└─ java/uk/co/cyberheroez/oroq/
    ├─ family/
    │  ├─ FamilyConfig.kt        WORKER_BASE_URL + familyApi() factory
    │  ├─ FamilyStore.kt         DataStore: role, token, keypair, pairings
@@ -37,7 +37,7 @@ android/app/src/main/
    │  ├─ LinkParentActivity.kt  child side: enter code, SAS confirm
    │  └─ SettingsActivity.kt    + "Link a parent" row
    └─ MainActivity.kt           route by device role
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/
+android/app/src/test/java/uk/co/cyberheroez/oroq/family/
 └─ PairingSupportTest.kt
 ```
 
@@ -46,10 +46,10 @@ android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/
 ## Task 1: FamilyStore, config, and the code helper
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyConfig.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/PairingSupport.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyStore.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/PairingSupportTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/PairingSupport.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyStore.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/PairingSupportTest.kt`
 
 - [ ] **Step 1: Write the failing test — `PairingSupportTest.kt`**
 
@@ -104,7 +104,7 @@ Replace `<account>` with the real `workers.dev` subdomain once Plan A1's Worker 
 package uk.co.cyberheroez.oroq.family
 
 /** Base URL of the deployed Family Link Worker. */
-const val WORKER_BASE_URL = "https://safebrowse-family.<account>.workers.dev"
+const val WORKER_BASE_URL = "https://oroq-family.<account>.workers.dev"
 
 /** A FamilyApi bound to the production Worker over real HTTP. */
 fun familyApi(): FamilyApi = FamilyApi(WORKER_BASE_URL, HttpUrlTransport())
@@ -223,7 +223,7 @@ class FamilyStore(context: Context) {
 - [ ] **Step 7: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyConfig.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/PairingSupport.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyStore.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/PairingSupportTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/PairingSupport.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyStore.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/PairingSupportTest.kt
 git commit -m "feat(android): add FamilyStore, config and code helper"
 ```
 
@@ -234,8 +234,8 @@ git commit -m "feat(android): add FamilyStore, config and code helper"
 On first launch the user picks a role; `MainActivity` then routes by role.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/RolePickerActivity.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/RolePickerActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Create `RolePickerActivity.kt`**
@@ -277,7 +277,7 @@ class RolePickerActivity : AppCompatActivity() {
             setPadding(dp(20), dp(64), dp(20), dp(28))
         }
         column.addView(TextView(this).apply {
-            text = "Welcome to SafeBrowse"
+            text = "Welcome to OroQ"
             textSize = 27f
             setTypeface(typeface, Typeface.BOLD)
             setTextColor(Style.INK)
@@ -412,7 +412,7 @@ Expected: BUILD SUCCESSFUL. (`ParentActivity`, `ParentLoginActivity`, `AddChildA
 - [ ] **Step 5: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/RolePickerActivity.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt android/app/src/main/AndroidManifest.xml
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/ui/RolePickerActivity.kt android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt android/app/src/main/AndroidManifest.xml
 git commit -m "feat(android): add device role picker and role-based routing"
 ```
 
@@ -423,8 +423,8 @@ git commit -m "feat(android): add device role picker and role-based routing"
 `ParentActivity` is the parent home; if there is no session token it sends the user to `ParentLoginActivity` (email → OTP).
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentLoginActivity.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentLoginActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentActivity.kt`
 
 - [ ] **Step 1: Create `ParentLoginActivity.kt`**
 
@@ -652,7 +652,7 @@ class ParentActivity : AppCompatActivity() {
 - [ ] **Step 3: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentLoginActivity.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentActivity.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentLoginActivity.kt android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentActivity.kt
 git commit -m "feat(android): add parent login and parent home"
 ```
 
@@ -663,7 +663,7 @@ git commit -m "feat(android): add parent login and parent home"
 `AddChildActivity` generates the parent key pair, creates a pairing, shows the code, polls until the child joins, then shows the SAS to confirm.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/AddChildActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/AddChildActivity.kt`
 
 - [ ] **Step 1: Create `AddChildActivity.kt`**
 
@@ -748,7 +748,7 @@ class AddChildActivity : AppCompatActivity() {
         pageHeader("Pairing code")
         card {
             cardTitle("On your child's phone")
-            body("Open SafeBrowse, choose \"This is my child's phone\", then " +
+            body("Open OroQ, choose \"This is my child's phone\", then " +
                 "Settings → Link a parent, and enter this code:")
             addView(android.widget.TextView(context).apply {
                 text = code
@@ -811,7 +811,7 @@ Expected: BUILD SUCCESSFUL. (`LinkParentActivity`, referenced in the manifest fr
 - [ ] **Step 3: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/AddChildActivity.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/AddChildActivity.kt
 git commit -m "feat(android): add parent-side pairing (Add a child)"
 ```
 
@@ -822,8 +822,8 @@ git commit -m "feat(android): add parent-side pairing (Add a child)"
 `LinkParentActivity` is reached from child-mode Settings. The child enters the code, joins, and confirms the SAS.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/LinkParentActivity.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/LinkParentActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
 
 - [ ] **Step 1: Create `LinkParentActivity.kt`**
 
@@ -973,7 +973,7 @@ Install (`./gradlew :app:installDebug`) on two emulators (or an emulator + a dev
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/LinkParentActivity.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/ui/LinkParentActivity.kt android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt
 git commit -m "feat(android): add child-side pairing (Link a parent)"
 ```
 

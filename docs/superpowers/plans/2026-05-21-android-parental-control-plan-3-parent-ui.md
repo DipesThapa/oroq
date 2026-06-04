@@ -8,9 +8,9 @@
 
 **Tech Stack:** Kotlin, Android Views, Preferences DataStore, PBKDF2 (JDK `javax.crypto`), JUnit 4.
 
-**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-safebrowse-android-parental-control-design.md` (§7, §8).
+**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-oroq-android-parental-control-design.md` (§7, §8).
 
-**Depends on:** Plan 1 (filter core) and Plan 2 (`SafeBrowseVpnService`, `loadBlocklistRepository`, `DnsFilter`).
+**Depends on:** Plan 1 (filter core) and Plan 2 (`OroQVpnService`, `loadBlocklistRepository`, `DnsFilter`).
 
 **Plan series:** Plan 1 (done) → Plan 2 (done) → Plan 3 (this) → Plan 4 (blocklist updates + release prep).
 
@@ -25,7 +25,7 @@
 ```
 android/app/src/main/
 ├─ AndroidManifest.xml                   + OnboardingActivity, SettingsActivity
-└─ java/uk/co/cyberheroez/safebrowse/
+└─ java/uk/co/cyberheroez/oroq/
    ├─ MainActivity.kt                    reworked: Home/Status + onboarding routing
    ├─ config/
    │  ├─ PinHasher.kt                    salted PBKDF2 hash/verify + recovery code
@@ -35,9 +35,9 @@ android/app/src/main/
    │  ├─ PinPrompt.kt                    reusable numeric PIN dialog
    │  ├─ OnboardingActivity.kt           first-launch setup
    │  └─ SettingsActivity.kt             PIN-locked settings
-   └─ vpn/SafeBrowseVpnService.kt        reads enabled categories from config
+   └─ vpn/OroQVpnService.kt        reads enabled categories from config
 
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/config/
+android/app/src/test/java/uk/co/cyberheroez/oroq/config/
 └─ PinHasherTest.kt
 ```
 
@@ -99,8 +99,8 @@ Salted PBKDF2 hashing for the parent PIN and the recovery code. Uses
 `android.util.Base64`, which is unavailable in unit tests.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/config/PinHasher.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/config/PinHasherTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/PinHasher.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/config/PinHasherTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -229,8 +229,8 @@ The list of selectable categories, and a DataStore-backed store for the parent's
 PIN, recovery code, and category selection.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/config/Categories.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/config/ConfigRepository.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/Categories.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt`
 
 - [ ] **Step 1: Write `Categories.kt`**
 
@@ -276,7 +276,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 
-private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
+private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 
 /**
  * Persists parent configuration: the PIN and recovery code (as salted PBKDF2
@@ -366,7 +366,7 @@ git commit -m "feat(android): category list + DataStore config repository"
 A numeric PIN dialog used to gate the Settings screen.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/PinPrompt.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/PinPrompt.kt`
 
 - [ ] **Step 1: Write `PinPrompt.kt`**
 
@@ -430,7 +430,7 @@ git commit -m "feat(android): reusable PIN prompt dialog"
 First-launch setup: create a PIN, choose categories, then see the recovery code.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/OnboardingActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/OnboardingActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Declare the activity**
@@ -489,7 +489,7 @@ class OnboardingActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, pad)
         }
-        column.addView(heading("Set up SafeBrowse"))
+        column.addView(heading("Set up OroQ"))
 
         column.addView(label("Create a parent PIN (4+ digits)"))
         pinField = pinInput()
@@ -606,7 +606,7 @@ Reworks `MainActivity` into the real Home screen: it sends a first-time user to
 onboarding, shows protection status, and starts/stops the VPN.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 
 - [ ] **Step 1: Replace `MainActivity.kt` entirely**
 
@@ -629,7 +629,7 @@ import kotlinx.coroutines.launch
 import uk.co.cyberheroez.oroq.config.ConfigRepository
 import uk.co.cyberheroez.oroq.ui.OnboardingActivity
 import uk.co.cyberheroez.oroq.ui.SettingsActivity
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 
 /** Home screen: protection status, start/stop, and a link to Settings. */
 class MainActivity : AppCompatActivity() {
@@ -703,7 +703,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatus() {
-        if (SafeBrowseVpnService.isActive) {
+        if (OroQVpnService.isActive) {
             statusText.text = "● Protected"
             statusText.setTextColor(Color.parseColor("#1B7F3B"))
         } else {
@@ -727,13 +727,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startVpnService() {
-        startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, OroQVpnService::class.java))
     }
 
     private fun stopVpnService() {
         startService(
-            Intent(this, SafeBrowseVpnService::class.java)
-                .setAction(SafeBrowseVpnService.ACTION_STOP)
+            Intent(this, OroQVpnService::class.java)
+                .setAction(OroQVpnService.ACTION_STOP)
         )
     }
 }
@@ -763,7 +763,7 @@ git commit -m "feat(android): Home screen with onboarding routing"
 PIN-locked: category toggles and a change-PIN action.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/SettingsActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/SettingsActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Declare the activity**
@@ -972,11 +972,11 @@ The VpnService currently enables every category. Make it read the parent's
 selection from `ConfigRepository`, then verify the whole app on a device.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/SafeBrowseVpnService.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt`
 
 - [ ] **Step 1: Read enabled categories from config**
 
-In `SafeBrowseVpnService.kt`, add these imports alongside the existing ones:
+In `OroQVpnService.kt`, add these imports alongside the existing ones:
 
 ```kotlin
 import kotlinx.coroutines.runBlocking
@@ -1027,7 +1027,7 @@ To start from a clean state, clear the app's data first:
 adb shell pm clear uk.co.cyberheroez.oroq
 ```
 
-Open **SafeBrowse**. Expected flow:
+Open **OroQ**. Expected flow:
 1. **Onboarding** appears (first launch). Set a PIN (e.g. `1234`), confirm it,
    leave categories at their defaults, tap **Finish setup**.
 2. The **recovery code** dialog appears. Tap **I have saved it**.
@@ -1041,7 +1041,7 @@ Open **SafeBrowse**. Expected flow:
    Home; confirm the previously blocked site now loads.
 7. Re-open the app — it goes straight to **Home** (onboarding is not repeated).
 
-If any step fails, capture `adb logcat -s SafeBrowseVpn` and stop to investigate
+If any step fails, capture `adb logcat -s OroQVpn` and stop to investigate
 rather than guessing.
 
 - [ ] **Step 5: Commit**

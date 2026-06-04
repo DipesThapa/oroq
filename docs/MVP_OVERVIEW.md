@@ -1,9 +1,9 @@
-# Safeguard MVP Overview
+# OroQ MVP Overview
 
-This document explains the minimum viable product (MVP) behavior of the Safeguard (OroQ AI) browser extension.
+This document explains the minimum viable product (MVP) behavior of the OroQ (OroQ AI) browser extension.
 
 ## What it is
-Safeguard is a privacy-first safety extension that runs entirely on-device. It blocks unsafe pages, blurs risky media in aggressive mode, and provides parent/teacher controls without sending browsing data to any server.
+OroQ is a privacy-first safety extension that runs entirely on-device. It blocks unsafe pages, blurs risky media in aggressive mode, and provides parent/teacher controls without sending browsing data to any server.
 
 ## MVP goals
 - Reduce exposure to unsafe content using local heuristics and blocklists.
@@ -21,7 +21,7 @@ Safeguard is a privacy-first safety extension that runs entirely on-device. It b
 1) Parent/teacher enables protection in the popup.
 2) User visits a page:
    - If domain matches blocklist or policy rules, it is blocked at the network level.
-   - If the page appears risky via on-page heuristics, Safeguard blocks or blurs content.
+   - If the page appears risky via on-page heuristics, OroQ blocks or blurs content.
 3) If blocked, the interstitial explains why and offers a timed override (PIN required if enabled).
 4) Guardian reviews override log and exports a weekly safeguarding digest (optional).
 

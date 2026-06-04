@@ -6,7 +6,7 @@
 
 **Architecture:** Inventory rides on the existing encrypted `FamilySummary` blob (two new fields: `installedApps`, `blockedApps`). New command `SET_BLOCKED_APPS` reuses the `stringValue` slot added for `SET_CATEGORIES`. No Worker change. No service restart on apply — `AppMonitorService` re-reads `getBlockedApps()` every 1-second tick.
 
-**Tech Stack:** Android Views (Kotlin, no Compose), Preferences DataStore, WorkManager, JUnit4 + org.json for tests. Build with `./gradlew` from `/Users/apple/Desktop/Projects/safebrowse-ai/android`.
+**Tech Stack:** Android Views (Kotlin, no Compose), Preferences DataStore, WorkManager, JUnit4 + org.json for tests. Build with `./gradlew` from `/Users/apple/Desktop/Projects/oroq/android`.
 
 **Spec:** `docs/superpowers/specs/2026-05-23-remote-app-blocking-design.md`
 
@@ -15,15 +15,15 @@
 ## Task 1: Add `InstalledApp` model + `InstalledAppReader`
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledApp.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledAppReader.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledApp.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledAppReader.kt`
 
 `InstalledAppReader` depends on Android's `PackageManager` — not unit-testable without Robolectric, which this project doesn't use. We rely on compile + manual verification in Task 8.
 
 - [ ] **Step 1: Create the data class**
 
 ```kotlin
-// android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledApp.kt
+// android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledApp.kt
 package uk.co.cyberheroez.oroq.family
 
 /** A single user-installed app on the child phone, as seen by the parent. */
@@ -33,7 +33,7 @@ data class InstalledApp(val packageName: String, val label: String)
 - [ ] **Step 2: Create the reader**
 
 ```kotlin
-// android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledAppReader.kt
+// android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledAppReader.kt
 package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
@@ -47,7 +47,7 @@ import android.content.pm.ApplicationInfo
  * later received an OTA update (Android clears `FLAG_SYSTEM` on those, so
  * checking it alone would let Settings/Phone leak through).
  *
- * SafeBrowse itself is filtered out so the parent picker can't ask the child
+ * OroQ itself is filtered out so the parent picker can't ask the child
  * to block the parental-control app.
  */
 fun listUserApps(context: Context): List<InstalledApp> {
@@ -67,7 +67,7 @@ fun listUserApps(context: Context): List<InstalledApp> {
 - [ ] **Step 3: Verify it compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin
 ```
 Expected: BUILD SUCCESSFUL.
@@ -75,9 +75,9 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledApp.kt \
-          android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/InstalledAppReader.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledApp.kt \
+          android/app/src/main/java/uk/co/cyberheroez/oroq/family/InstalledAppReader.kt && \
   git commit -m "feat(family): InstalledApp model and user-app reader"
 ```
 
@@ -86,8 +86,8 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 2: Add `installedApps` + `blockedApps` fields to `FamilySummary`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt`
 
 - [ ] **Step 1: Extend the failing tests**
 
@@ -181,7 +181,7 @@ Expected: compile error — `FamilySummary` has no `installedApps`/`blockedApps`
 
 - [ ] **Step 3: Add the fields and wire-format support**
 
-Replace `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt` with:
+Replace `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt` with:
 
 ```kotlin
 package uk.co.cyberheroez.oroq.family
@@ -314,9 +314,9 @@ Expected: still fails — `buildSummary` doesn't accept `installedApps`/`blocked
 The summary model is complete; the builder gets its matching signature in Task 3. Tests will go green at the end of Task 3.
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt \
-          android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt \
+          android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt && \
   git commit -m "feat(family): installedApps and blockedApps in summary wire format"
 ```
 
@@ -325,8 +325,8 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 3: Update `buildSummary` + `FamilySyncWorker`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt`
 
 - [ ] **Step 1: Extend `buildSummary`**
 
@@ -373,12 +373,12 @@ fun buildSummary(
 
 - [ ] **Step 2: Update the caller in `FamilySyncWorker`**
 
-Edit `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt`. Find the `buildSummary(...)` call and add the two new args:
+Edit `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt`. Find the `buildSummary(...)` call and add the two new args:
 
 ```kotlin
         val summary = buildSummary(
             now = System.currentTimeMillis(),
-            protectionOn = SafeBrowseVpnService.isActive,
+            protectionOn = OroQVpnService.isActive,
             dailyLimitMinutes = config.getDailyLimitMinutes(),
             usageByApp = if (usage.hasUsageAccess()) usage.todayUsageByApp() else emptyMap(),
             recentEvents = blockLog.recent(20),
@@ -400,9 +400,9 @@ Expected: BUILD SUCCESSFUL, all `FamilySummaryTest` cases pass (now that `buildS
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt \
-          android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt \
+          android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt && \
   git commit -m "feat(family): worker uploads installedApps and blockedApps"
 ```
 
@@ -411,8 +411,8 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 4: Add `SET_BLOCKED_APPS` command
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt`
 
 - [ ] **Step 1: Add the failing test**
 
@@ -487,9 +487,9 @@ Expected: all 7 tests pass.
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyCommand.kt \
-          android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyCommandTest.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyCommand.kt \
+          android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyCommandTest.kt && \
   git commit -m "feat(family): add SET_BLOCKED_APPS command type"
 ```
 
@@ -498,7 +498,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 5: `CommandSync` applies `SET_BLOCKED_APPS`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt`
 
 `AppMonitorService` already polls `getBlockedApps()` every 1 s, so no service restart is needed here — unlike `SET_CATEGORIES` which has to bounce the VPN.
 
@@ -549,7 +549,7 @@ The final `when` should look like:
 - [ ] **Step 2: Verify it compiles**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
+cd /Users/apple/Desktop/Projects/oroq/android && \
   ./gradlew :app:compileDebugKotlin
 ```
 Expected: BUILD SUCCESSFUL.
@@ -557,8 +557,8 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/CommandSync.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/CommandSync.kt && \
   git commit -m "feat(family): apply SET_BLOCKED_APPS on child"
 ```
 
@@ -567,7 +567,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 6: `ParentRepository.sendSetBlockedApps`
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt`
 
 - [ ] **Step 1: Add the wrapper**
 
@@ -596,8 +596,8 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 3: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt && \
   git commit -m "feat(parent): sendSetBlockedApps convenience wrapper"
 ```
 
@@ -606,7 +606,7 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 ## Task 7: Parent dashboard — BLOCKED APPS section
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt`
 
 The picker mirrors the categories one — same visual treatment, same Save flow.
 
@@ -725,8 +725,8 @@ Expected: BUILD SUCCESSFUL on both, all tests pass.
 - [ ] **Step 7: Commit**
 
 ```bash
-cd /Users/apple/Desktop/Projects/safebrowse-ai && \
-  git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt && \
+cd /Users/apple/Desktop/Projects/oroq && \
+  git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt && \
   git commit -m "feat(parent): BLOCKED APPS picker on child dashboard"
 ```
 
@@ -744,7 +744,7 @@ No code changes — this is "does the round-trip work in real life".
 
 ```bash
 adb -s emulator-5554 install -r \
-  /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+  /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success`. No `uninstall` first — we want to keep the existing pairing and category settings.
 
@@ -755,13 +755,13 @@ adb devices
 V="<paste the Vivo serial — usually adb-…_adb-tls-connect._tcp>"
 if [ -z "$V" ]; then echo "VIVO SERIAL EMPTY — abort"; exit 1; fi
 adb -s "$V" install -r \
-  /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
+  /Users/apple/Desktop/Projects/oroq/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 Expected: `Success`. If Vivo offline, reconnect via wireless ADB first.
 
 - [ ] **Step 3: Trigger an immediate child sync**
 
-Open SafeBrowse on the emulator. It launches the home screen → `scheduleFamilySync` runs → an immediate one-time `FamilySyncWorker` fires. Within ~30 s the parent should see the updated summary on next pull.
+Open OroQ on the emulator. It launches the home screen → `scheduleFamilySync` runs → an immediate one-time `FamilySyncWorker` fires. Within ~30 s the parent should see the updated summary on next pull.
 
 If you'd rather not wait, force a sync from a terminal:
 
@@ -774,7 +774,7 @@ adb -s emulator-5554 shell am broadcast -a androidx.work.diagnostics.REQUEST_DIA
 
 - [ ] **Step 4: Verify the new dashboard section appears**
 
-Open SafeBrowse on the Vivo → tap the child's card. Scroll past BLOCKED CATEGORIES. Expect a new BLOCKED APPS section listing the emulator's user apps alphabetically (Chrome, Settings should be absent — they're system).
+Open OroQ on the Vivo → tap the child's card. Scroll past BLOCKED CATEGORIES. Expect a new BLOCKED APPS section listing the emulator's user apps alphabetically (Chrome, Settings should be absent — they're system).
 
 If the section shows "Waiting for the child phone to sync its app list…", the sync hasn't landed yet. Wait ~30 s and re-open the dashboard.
 
@@ -786,17 +786,17 @@ On the parent:
 3. Expect toast: "Sent — the phone updates shortly".
 
 On the emulator, within ~30 s:
-- Open that app. Expect the SafeBrowse BLOCK screen ("App blocked") to appear immediately.
+- Open that app. Expect the OroQ BLOCK screen ("App blocked") to appear immediately.
 
 Then on the parent, untick the app and save again. On the emulator, opening it now works normally.
 
 - [ ] **Step 6: Verify inventory refresh on app install**
 
-On the emulator, install any APK (e.g. `adb -s emulator-5554 install some.apk`). Wait one sync cycle (~15 min) OR reopen the SafeBrowse app to trigger immediate sync. Reopen the parent dashboard. Expect the new app to appear in the BLOCKED APPS picker.
+On the emulator, install any APK (e.g. `adb -s emulator-5554 install some.apk`). Wait one sync cycle (~15 min) OR reopen the OroQ app to trigger immediate sync. Reopen the parent dashboard. Expect the new app to appear in the BLOCKED APPS picker.
 
 - [ ] **Step 7: Update the project memory file**
 
-Append a one-line note to `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md`:
+Append a one-line note to `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/project_native_app_direction.md`:
 
 > Remote app blocking COMPLETE (2026-05-23). Child inventory (`InstalledApp` list, user apps only) syncs in `FamilySummary`. New `SET_BLOCKED_APPS` command applied without VPN restart (AppMonitorService polls every 1s). Parent dashboard BLOCKED APPS picker.
 

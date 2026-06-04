@@ -1,7 +1,7 @@
 {
   "updated": "2025-11-08T22:50:00Z",
   "sources": [
-    "Safeguard sample feed"
+    "OroQ sample feed"
   ],
   "entries": [
     { "host": "paypal-login[.]security-check.net", "brand": "PayPal", "severity": "high" },

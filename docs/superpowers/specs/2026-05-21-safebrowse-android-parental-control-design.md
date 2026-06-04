@@ -1,4 +1,4 @@
-# SafeBrowse Android Parental Control — MVP Design
+# OroQ Android Parental Control — MVP Design
 
 > **For agentic workers:** the next step after this spec is the `superpowers:writing-plans`
 > skill — turn this design into a task-by-task implementation plan. Do not start
@@ -11,7 +11,7 @@
 
 ## 1. Overview & goal
 
-Build a **native Android parental-control app** for SafeBrowse that filters harmful
+Build a **native Android parental-control app** for OroQ that filters harmful
 web content on a child's phone. The MVP is deliberately narrow: **on-device web
 content filtering only**, installed as a single app on the child's device, with
 PIN-locked parent settings.
@@ -118,7 +118,7 @@ can see protection is active, which satisfies the non-covert requirement automat
 
 ### 6.1 Data sources
 
-- **SafeBrowse curated core:** the per-category lists from the deleted
+- **OroQ curated core:** the per-category lists from the deleted
   `dns/data/sources/` (`adult`, `drugs`, `gambling`, `gaming`, `malware`, `phishing`,
   `social`, `violence`). These are recoverable from git history (the commit before
   `429a424`).
@@ -170,7 +170,7 @@ Five screens:
 4. **Settings** (PIN-locked): change categories, change PIN, view blocklist
    last-updated time, about/help.
 5. **Blocked page:** when a blocked domain is requested over HTTP, the child sees a
-   clear branded "blocked by SafeBrowse" page served from a local sinkhole. **Honest
+   clear branded "blocked by OroQ" page served from a local sinkhole. **Honest
    limitation:** for HTTPS domains (most of the web), DNS-level blocking causes the
    browser to show its own native connection-failure screen rather than a branded
    page — a fully branded HTTPS blocked page is not reliably possible with DNS-only
@@ -253,7 +253,7 @@ zero-retention — nothing leaves the device.
 ## 12. Repository & tech stack
 
 - The Android app is a **new Kotlin/Gradle project** living in a new `android/`
-  directory of the existing `safebrowse-ai` repository (consistent with how `dns/`,
+  directory of the existing `oroq` repository (consistent with how `dns/`,
   `landing/`, and `profiles/` were previously organised as sibling sub-projects).
 - **Kotlin + Jetpack Compose** for the UI.
 - **DataStore** for settings persistence.

@@ -1,6 +1,6 @@
 # Browser support
 
-Safeguard is built as a Chrome/Chromium WebExtension (Manifest V3) and ships with a Firefox build (Manifest V2) for easier local installs on macOS laptops.
+OroQ is built as a Chrome/Chromium WebExtension (Manifest V3) and ships with a Firefox build (Manifest V2) for easier local installs on macOS laptops.
 
 ## Chromium browsers (Chrome, Edge, Brave, Vivaldi, Opera)
 
@@ -35,7 +35,7 @@ Safari requires converting the extension into a Safari App Extension (Xcode proj
 
 1. Build the Chromium folder: `npm run build:chromium`
 2. Convert:
-   - `xcrun safari-web-extension-converter dist/chromium --project-location safari/SafeguardSafari --app-name Safeguard --bundle-identifier uk.co.cyberheroez.safeguard`
+   - `xcrun safari-web-extension-converter dist/chromium --project-location safari/OroQSafari --app-name OroQ --bundle-identifier uk.co.cyberheroez.safeguard`
 3. Open the generated Xcode project and run it to install the extension in Safari.
 
 ## Feature parity notes

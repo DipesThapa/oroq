@@ -8,7 +8,7 @@
 
 **Tech Stack:** Kotlin, `android.net.VpnService`, foreground service + notification, JUnit 4.
 
-**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-safebrowse-android-parental-control-design.md` (§5).
+**Reference:** Design spec — `docs/superpowers/specs/2026-05-21-oroq-android-parental-control-design.md` (§5).
 
 **Depends on:** Plan 1 — uses `normalizeDomain`, `isDomainBlocked`, `BlocklistRepository`, `DnsMessage`, and the bundled `assets/blocklists/*.txt`.
 
@@ -22,18 +22,18 @@
 android/app/src/main/
 ├─ AndroidManifest.xml                   + VPN service, permissions
 ├─ assets/blocklists/doh-endpoints.txt   known DoH hostnames (Task 6)
-└─ java/uk/co/cyberheroez/safebrowse/
+└─ java/uk/co/cyberheroez/oroq/
    ├─ filter/
    │  ├─ BlocklistAssets.kt              parseBlocklistText() + asset loader
    │  └─ DnsFilter.kt                    block/allow decision
    ├─ vpn/
    │  ├─ Ipv4Packet.kt                   IPv4 field accessors
    │  ├─ UdpPacket.kt                    parseUdp() + buildUdpPacket()
-   │  └─ SafeBrowseVpnService.kt         the VpnService + foreground notif
+   │  └─ OroQVpnService.kt         the VpnService + foreground notif
    └─ MainActivity.kt                    + start/stop trigger (Task 8)
 android/blocklist/sources/doh.json       DoH endpoint source (Task 6)
 
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/
+android/app/src/test/java/uk/co/cyberheroez/oroq/
 ├─ filter/BlocklistAssetsTest.kt
 ├─ filter/DnsFilterTest.kt
 └─ vpn/
@@ -49,8 +49,8 @@ Parses a bundled `.txt` blocklist (pure, tested) and loads all categories from
 the APK assets into a `BlocklistRepository` (Android, verified later on device).
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/filter/BlocklistAssets.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/filter/BlocklistAssetsTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/filter/BlocklistAssets.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/filter/BlocklistAssetsTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -153,8 +153,8 @@ git commit -m "feat(android): blocklist asset loader"
 Read-only accessors for the IPv4 header fields the VPN loop needs.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/Ipv4Packet.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/vpn/Ipv4PacketTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/Ipv4Packet.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/vpn/Ipv4PacketTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -261,8 +261,8 @@ git commit -m "feat(android): IPv4 packet field accessors"
 Extracts the UDP layer — ports and payload — from an IPv4 packet.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/UdpPacket.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/vpn/UdpPacketTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/UdpPacket.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/vpn/UdpPacketTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -386,8 +386,8 @@ correct IPv4 header checksum. The UDP checksum is set to 0, which IPv4 permits
 ("checksum not computed") and avoids the UDP pseudo-header calculation.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/UdpPacket.kt`
-- Modify: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/vpn/UdpPacketTest.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/UdpPacket.kt`
+- Modify: `android/app/src/test/java/uk/co/cyberheroez/oroq/vpn/UdpPacketTest.kt`
 
 - [ ] **Step 1: Add the failing tests**
 
@@ -518,8 +518,8 @@ Ties Plan 1's `DnsMessage` and `BlocklistRepository` together: given a raw DNS
 query, decide whether to block it (and produce the NXDOMAIN response) or allow it.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/filter/DnsFilter.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/filter/DnsFilterTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/filter/DnsFilter.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/filter/DnsFilterTest.kt`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -708,7 +708,7 @@ runs as a foreground service. This is Android integration code — it is verifie
 on a device in Task 8, not by unit tests.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/SafeBrowseVpnService.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Declare the service and permissions in the manifest**
@@ -727,7 +727,7 @@ before the closing `</application>` tag:
 
 ```xml
         <service
-            android:name=".vpn.SafeBrowseVpnService"
+            android:name=".vpn.OroQVpnService"
             android:exported="false"
             android:permission="android.permission.BIND_VPN_SERVICE"
             android:foregroundServiceType="specialUse">
@@ -742,7 +742,7 @@ before the closing `</application>` tag:
 
 - [ ] **Step 2: Write the VpnService**
 
-Create `SafeBrowseVpnService.kt`:
+Create `OroQVpnService.kt`:
 
 ```kotlin
 package uk.co.cyberheroez.oroq.vpn
@@ -771,7 +771,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * the system DNS server and routes only that server's address into the TUN, so
  * the worker loop sees DNS packets exclusively.
  */
-class SafeBrowseVpnService : VpnService() {
+class OroQVpnService : VpnService() {
 
     private val running = AtomicBoolean(false)
     private var tun: ParcelFileDescriptor? = null
@@ -790,7 +790,7 @@ class SafeBrowseVpnService : VpnService() {
         if (running.get()) return
         startForeground(NOTIFICATION_ID, buildNotification())
         val descriptor = Builder()
-            .setSession("SafeBrowse")
+            .setSession("OroQ")
             .addAddress(VPN_ADDRESS, 32)
             .addDnsServer(DNS_SERVER)
             .addRoute(DNS_SERVER, 32)
@@ -880,7 +880,7 @@ class SafeBrowseVpnService : VpnService() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "SafeBrowse protection",
+                "OroQ protection",
                 NotificationManager.IMPORTANCE_LOW,
             )
         )
@@ -891,7 +891,7 @@ class SafeBrowseVpnService : VpnService() {
             PendingIntent.FLAG_IMMUTABLE,
         )
         return Notification.Builder(this, CHANNEL_ID)
-            .setContentTitle("SafeBrowse is protecting this device")
+            .setContentTitle("OroQ is protecting this device")
             .setContentText("Web filtering is active")
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentIntent(openApp)
@@ -909,7 +909,7 @@ class SafeBrowseVpnService : VpnService() {
         private const val UPSTREAM_TIMEOUT_MS = 5000
         private const val MAX_PACKET = 32767
         private const val NOTIFICATION_ID = 1
-        private const val CHANNEL_ID = "safebrowse_vpn"
+        private const val CHANNEL_ID = "oroq_vpn"
     }
 }
 ```
@@ -938,7 +938,7 @@ A minimal control to start and stop the VPN, plus the manual test that proves th
 filter works. The real parent UI arrives in Plan 3.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
 
 - [ ] **Step 1: Replace MainActivity with a start/stop screen**
 
@@ -965,7 +965,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 
 class MainActivity : ComponentActivity() {
 
@@ -1000,13 +1000,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startVpnService() {
-        startService(Intent(this, SafeBrowseVpnService::class.java))
+        startService(Intent(this, OroQVpnService::class.java))
     }
 
     private fun stopVpnService() {
         startService(
-            Intent(this, SafeBrowseVpnService::class.java)
-                .setAction(SafeBrowseVpnService.ACTION_STOP)
+            Intent(this, OroQVpnService::class.java)
+                .setAction(OroQVpnService.ACTION_STOP)
         )
     }
 }
@@ -1018,7 +1018,7 @@ private fun ControlScreen(onStart: () -> Unit, onStop: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("SafeBrowse", style = MaterialTheme.typography.headlineMedium)
+        Text("OroQ", style = MaterialTheme.typography.headlineMedium)
         Button(onClick = onStart) { Text("Start protection") }
         Button(onClick = onStop) { Text("Stop protection") }
     }
@@ -1041,8 +1041,8 @@ Start an emulator (or connect a device), then:
 ./gradlew :app:installDebug
 ```
 
-Open the **SafeBrowse** app. Tap **Start protection** — Android shows a VPN
-consent dialog; accept it. A persistent "SafeBrowse is protecting this device"
+Open the **OroQ** app. Tap **Start protection** — Android shows a VPN
+consent dialog; accept it. A persistent "OroQ is protecting this device"
 notification with the VPN key icon should appear.
 
 - [ ] **Step 4: Manual filter verification**
@@ -1070,7 +1070,7 @@ git commit -m "feat(android): VPN start/stop control and on-device verification"
 
 ## Done — Plan 2 outcome
 
-A working on-device DNS filter: the `SafeBrowseVpnService` intercepts DNS,
+A working on-device DNS filter: the `OroQVpnService` intercepts DNS,
 blocks domains in the bundled categories (including `doh`), forwards the rest to
 an upstream resolver, and runs as a foreground service. Packet parsing and
 construction are fully unit-tested on the JVM. **Plan 3** adds the real parent

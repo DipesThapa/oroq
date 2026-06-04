@@ -25,7 +25,7 @@ In your repository Settings → Secrets and variables → Actions, add:
 - The workflow builds a curated `extension.zip` (icons/data/src/manifest only) and uploads + publishes it.
 
 ## 5) Listing Requirements
-- Title: Safeguard (OroQ AI)
+- Title: OroQ (OroQ AI)
 - Short description: Privacy‑first web safety. Block adult sites, enforce SafeSearch, blur risky images/videos.
 - Long description: Use README highlights (privacy‑on‑device, features, usage).
 - Category: Productivity or Family

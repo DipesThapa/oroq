@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript Cloudflare Worker (D1 + KV); Kotlin, Android Views, WorkManager, the `family/` package from Plans A2a/A2b, `ui/Style.kt`.
 
-**Reference:** Spec — `docs/superpowers/specs/2026-05-22-safebrowse-parent-remote-view-design.md`, section 6 (data sync) and section 7 (child dashboard).
+**Reference:** Spec — `docs/superpowers/specs/2026-05-22-oroq-parent-remote-view-design.md`, section 6 (data sync) and section 7 (child dashboard).
 
 **Depends on:** Plan A1 (Worker), A2a (`FamilyCrypto`, `FamilyApi`), A2b (`FamilyStore`, pairing). Out of scope: remote control (Plan C).
 
@@ -24,7 +24,7 @@ backend/
 ├─ src/index.ts                                  + /sync route
 └─ test/sync.test.ts
 
-android/app/src/main/java/uk/co/cyberheroez/safebrowse/
+android/app/src/main/java/uk/co/cyberheroez/oroq/
 ├─ family/
 │  ├─ FamilySummary.kt      FamilySummary/TopApp/BlockEvent + toJson/parseSummary
 │  ├─ BlockEventLog.kt      file-backed rolling log of blocked attempts
@@ -35,13 +35,13 @@ android/app/src/main/java/uk/co/cyberheroez/safebrowse/
 │  ├─ ParentRepository.kt   fetch + decrypt a child summary
 │  ├─ ParentActivity.kt     child card -> ChildDashboardActivity
 │  └─ ChildDashboardActivity.kt   renders the summary
-├─ vpn/SafeBrowseVpnService.kt    + record web blocks
+├─ vpn/OroQVpnService.kt    + record web blocks
 ├─ monitor/AppMonitorService.kt   + record app blocks
 ├─ MainActivity.kt                + scheduleFamilySync when paired (child)
 ├─ ui/LinkParentActivity.kt       + scheduleFamilySync after pairing
 └─ AndroidManifest.xml            + ChildDashboardActivity
 
-android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/
+android/app/src/test/java/uk/co/cyberheroez/oroq/family/
 ├─ FamilySummaryTest.kt
 └─ BlockEventLogTest.kt
 ```
@@ -252,8 +252,8 @@ git commit -m "feat(backend): add encrypted summary sync routes"
 The summary that crosses the wire. `buildSummary` (Task 4) produces a `FamilySummary`; `toJson`/`parseSummary` are its wire format.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt`
 
 - [ ] **Step 1: Write the failing test — `FamilySummaryTest.kt`**
 
@@ -389,7 +389,7 @@ Expected: both tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySummary.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySummary.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt
 git commit -m "feat(android): add FamilySummary model and JSON wire format"
 ```
 
@@ -400,8 +400,8 @@ git commit -m "feat(android): add FamilySummary model and JSON wire format"
 A small file-backed rolling log of blocked attempts, shared by the two services and read by the sync worker.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/BlockEventLog.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/BlockEventLogTest.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/BlockEventLog.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/BlockEventLogTest.kt`
 
 - [ ] **Step 1: Write the failing test — `BlockEventLogTest.kt`**
 
@@ -540,7 +540,7 @@ Expected: all 4 tests PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/BlockEventLog.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/BlockEventLogTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/BlockEventLog.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/BlockEventLogTest.kt
 git commit -m "feat(android): add BlockEventLog — rolling log of blocked attempts"
 ```
 
@@ -551,10 +551,10 @@ git commit -m "feat(android): add BlockEventLog — rolling log of blocked attem
 Hook `BlockEventLog` into the two places a block happens, de-duplicating consecutive identical blocks so a retrying child does not flood the log.
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/SafeBrowseVpnService.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/monitor/AppMonitorService.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/monitor/AppMonitorService.kt`
 
-- [ ] **Step 1: Record web blocks in `SafeBrowseVpnService.kt`**
+- [ ] **Step 1: Record web blocks in `OroQVpnService.kt`**
 
 Add the import near the other `uk.co.cyberheroez.oroq` imports:
 
@@ -562,7 +562,7 @@ Add the import near the other `uk.co.cyberheroez.oroq` imports:
 import uk.co.cyberheroez.oroq.family.BlockEventLog
 ```
 
-Add two fields inside the `class SafeBrowseVpnService` body (next to the existing fields):
+Add two fields inside the `class OroQVpnService` body (next to the existing fields):
 
 ```kotlin
     private val blockLog by lazy { BlockEventLog.forContext(this) }
@@ -623,7 +623,7 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 4: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/vpn/SafeBrowseVpnService.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/monitor/AppMonitorService.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt android/app/src/main/java/uk/co/cyberheroez/oroq/monitor/AppMonitorService.kt
 git commit -m "feat(android): record blocked domains and apps to BlockEventLog"
 ```
 
@@ -634,12 +634,12 @@ git commit -m "feat(android): record blocked domains and apps to BlockEventLog"
 A pure `buildSummary`, then a `FamilySyncWorker` that gathers inputs, encrypts and uploads.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/LinkParentActivity.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt` (add a case)
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/ui/LinkParentActivity.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt` (add a case)
 
 - [ ] **Step 1: Add a `buildSummary` test to `FamilySummaryTest.kt`**
 
@@ -743,7 +743,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import uk.co.cyberheroez.oroq.config.ConfigRepository
 import uk.co.cyberheroez.oroq.monitor.UsageReader
-import uk.co.cyberheroez.oroq.vpn.SafeBrowseVpnService
+import uk.co.cyberheroez.oroq.vpn.OroQVpnService
 import java.util.Base64
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
@@ -768,7 +768,7 @@ class FamilySyncWorker(
 
         val summary = buildSummary(
             now = System.currentTimeMillis(),
-            protectionOn = SafeBrowseVpnService.isActive,
+            protectionOn = OroQVpnService.isActive,
             dailyLimitMinutes = config.getDailyLimitMinutes(),
             usageByApp = if (usage.hasUsageAccess()) usage.todayUsageByApp() else emptyMap(),
             recentEvents = blockLog.recent(20),
@@ -847,7 +847,7 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 9: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/SummaryBuilder.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilySyncWorker.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/MainActivity.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/ui/LinkParentActivity.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilySummaryTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/SummaryBuilder.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilySyncWorker.kt android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt android/app/src/main/java/uk/co/cyberheroez/oroq/ui/LinkParentActivity.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilySummaryTest.kt
 git commit -m "feat(android): add summary builder and periodic sync worker"
 ```
 
@@ -856,9 +856,9 @@ git commit -m "feat(android): add summary builder and periodic sync worker"
 ## Task 6: Parent fetch repository
 
 **Files:**
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt`
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt`
-- Test: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt` (add a case)
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt`
+- Test: `android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt` (add a case)
 
 - [ ] **Step 1: Add a `syncFetch` test to `FamilyApiTest.kt`**
 
@@ -962,7 +962,7 @@ Expected: BUILD SUCCESSFUL.
 - [ ] **Step 8: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyApi.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/family/FamilyStore.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentRepository.kt android/app/src/test/java/uk/co/cyberheroez/safebrowse/family/FamilyApiTest.kt
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyApi.kt android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyStore.kt android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentRepository.kt android/app/src/test/java/uk/co/cyberheroez/oroq/family/FamilyApiTest.kt
 git commit -m "feat(android): add ParentRepository — fetch and decrypt child summary"
 ```
 
@@ -973,8 +973,8 @@ git commit -m "feat(android): add ParentRepository — fetch and decrypt child s
 `ChildDashboardActivity` shows one child's summary; the parent opens it from a child card.
 
 **Files:**
-- Create: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentActivity.kt`
+- Create: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentActivity.kt`
 - Modify: `android/app/src/main/AndroidManifest.xml`
 
 - [ ] **Step 1: Create `ChildDashboardActivity.kt`**
@@ -1222,7 +1222,7 @@ With the Worker deployed and `WORKER_BASE_URL` set (Plan A2b prerequisite), and 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ChildDashboardActivity.kt android/app/src/main/java/uk/co/cyberheroez/safebrowse/parent/ParentActivity.kt android/app/src/main/AndroidManifest.xml
+git add android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ChildDashboardActivity.kt android/app/src/main/java/uk/co/cyberheroez/oroq/parent/ParentActivity.kt android/app/src/main/AndroidManifest.xml
 git commit -m "feat(android): add parent child-dashboard screen"
 ```
 

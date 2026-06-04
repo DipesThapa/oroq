@@ -1,4 +1,4 @@
-# Safeguard MVP Architecture
+# OroQ MVP Architecture
 
 This document describes how the extension is wired together at runtime.
 
