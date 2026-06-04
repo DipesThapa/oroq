@@ -1,18 +1,18 @@
-# SafeBrowse → Shield Pilot Rename Implementation Plan
+# SafeBrowse → OroQ Rename Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rename the product from SafeBrowse to Shield Pilot across Android, backend, blocklists hosting, in-repo docs, repo dir, and Claude memory — preserving D1/KV data, JWT_SECRET, and git history.
+**Goal:** Rename the product from SafeBrowse to OroQ across Android, backend, blocklists hosting, in-repo docs, repo dir, and Claude memory — preserving D1/KV data, JWT_SECRET, and git history.
 
-**Architecture:** Backend gets a new Worker name (`shieldpilot-family`) that re-binds the same D1 database and KV namespace by ID — no data migration. Pages gets a new project (`shieldpilot-blocklists`). Android gets a coordinated `git mv` of the Kotlin package directories + mass sed across package strings, brand strings, applicationId, namespace, URL constants, and DataStore literal. Build + manual round-trip on real devices is the gate.
+**Architecture:** Backend gets a new Worker name (`oroq-family`) that re-binds the same D1 database and KV namespace by ID — no data migration. Pages gets a new project (`oroq-blocklists`). Android gets a coordinated `git mv` of the Kotlin package directories + mass sed across package strings, brand strings, applicationId, namespace, URL constants, and DataStore literal. Build + manual round-trip on real devices is the gate.
 
 **Tech Stack:** Cloudflare Workers (TypeScript), Cloudflare Pages, Android Gradle (Kotlin DSL), Tink, sed/grep, git.
 
-**Spec:** `docs/superpowers/specs/2026-06-04-shieldpilot-rename-design.md`
+**Spec:** `docs/superpowers/specs/2026-06-04-oroq-rename-design.md`
 
 ---
 
-## Task 1: Deploy new Worker `shieldpilot-family`
+## Task 1: Deploy new Worker `oroq-family`
 
 **Files:**
 - Modify: `backend/wrangler.toml`
@@ -27,7 +27,7 @@ name = "safebrowse-family"
 ```
 to:
 ```toml
-name = "shieldpilot-family"
+name = "oroq-family"
 ```
 And change:
 ```toml
@@ -35,18 +35,18 @@ database_name = "safebrowse-family"
 ```
 to:
 ```toml
-database_name = "shieldpilot-family"
+database_name = "oroq-family"
 ```
 Leave `database_id`, KV `id`, `compatibility_date`, and the secret bindings comment unchanged. The file's full top should now read:
 
 ```toml
-name = "shieldpilot-family"
+name = "oroq-family"
 main = "src/index.ts"
 compatibility_date = "2025-09-06"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "shieldpilot-family"
+database_name = "oroq-family"
 database_id = "6ff2b5f1-ce1c-4f70-9157-f2929f526bb0"
 migrations_dir = "migrations"
 
@@ -75,16 +75,16 @@ If it isn't recorded anywhere: this is a rotation. Acknowledge that every paired
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && npx wrangler deploy 2>&1 | tail -15
 ```
-Expected output ends with `Deployed shieldpilot-family triggers (… ms)` and prints the URL `https://shieldpilot-family.cyberheroez.workers.dev`. A new Worker is created; the old `safebrowse-family` remains alive.
+Expected output ends with `Deployed oroq-family triggers (… ms)` and prints the URL `https://oroq-family.cyberheroez.workers.dev`. A new Worker is created; the old `safebrowse-family` remains alive.
 
 - [ ] **Step 5: Set secrets on the new Worker**
 
 Paste each secret value when prompted:
 
 ```bash
-npx wrangler secret put JWT_SECRET --name shieldpilot-family
-npx wrangler secret put RESEND_API_KEY --name shieldpilot-family
-npx wrangler secret put RESEND_FROM --name shieldpilot-family
+npx wrangler secret put JWT_SECRET --name oroq-family
+npx wrangler secret put RESEND_API_KEY --name oroq-family
+npx wrangler secret put RESEND_FROM --name oroq-family
 ```
 
 Use the **same `JWT_SECRET` value** as the old Worker (Step 3). Use the same `RESEND_API_KEY` and `RESEND_FROM` (Resend domain unchanged).
@@ -94,7 +94,7 @@ Use the **same `JWT_SECRET` value** as the old Worker (Step 3). Use the same `RE
 ```bash
 curl -s -o /dev/null -w "%{http_code}\n" \
   -X POST -H 'content-type: application/json' -d '{}' \
-  https://shieldpilot-family.cyberheroez.workers.dev/auth/request
+  https://oroq-family.cyberheroez.workers.dev/auth/request
 ```
 Expected: `400` (bad request — empty email). A `0` or `5xx` indicates DNS/deploy issue.
 
@@ -103,14 +103,14 @@ Expected: `400` (bad request — empty email). A `0` or `5xx` indicates DNS/depl
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git add backend/wrangler.toml && \
-  git commit -m "rename(backend): worker safebrowse-family -> shieldpilot-family"
+  git commit -m "rename(backend): worker safebrowse-family -> oroq-family"
 ```
 
 Secrets aren't repo-tracked; nothing else to stage.
 
 ---
 
-## Task 2: Create + deploy new Pages project `shieldpilot-blocklists`
+## Task 2: Create + deploy new Pages project `oroq-blocklists`
 
 **Files:**
 - None (Cloudflare-side change).
@@ -119,25 +119,25 @@ Secrets aren't repo-tracked; nothing else to stage.
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && \
-  npx wrangler pages project create shieldpilot-blocklists --production-branch=main 2>&1 | tail -5
+  npx wrangler pages project create oroq-blocklists --production-branch=main 2>&1 | tail -5
 ```
-Expected: `✨ Successfully created the 'shieldpilot-blocklists' project.`
+Expected: `✨ Successfully created the 'oroq-blocklists' project.`
 
 - [ ] **Step 2: Deploy the existing blocklist assets**
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/android && \
   npx wrangler pages deploy app/src/main/assets/blocklists \
-    --project-name=shieldpilot-blocklists --branch=main --commit-dirty=true 2>&1 | tail -10
+    --project-name=oroq-blocklists --branch=main --commit-dirty=true 2>&1 | tail -10
 ```
-Expected: `✨ Deployment complete! Take a peek over at https://<hash>.shieldpilot-blocklists.pages.dev`.
+Expected: `✨ Deployment complete! Take a peek over at https://<hash>.oroq-blocklists.pages.dev`.
 
 - [ ] **Step 3: Verify the production URL**
 
 ```bash
 for f in manifest social gaming violence adult; do
   printf "%-12s %s\n" "$f" \
-    "$(curl -s -o /dev/null -w "%{http_code}" https://shieldpilot-blocklists.pages.dev/$f.txt)"
+    "$(curl -s -o /dev/null -w "%{http_code}" https://oroq-blocklists.pages.dev/$f.txt)"
 done
 ```
 Expected: `200` for each.
@@ -151,8 +151,8 @@ Pages is a Cloudflare-side resource; no repo state changes here. Task 4 updates 
 ## Task 3: `git mv` Kotlin package directories
 
 **Files:**
-- Rename: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/`
-- Rename: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/test/java/uk/co/cyberheroez/shieldpilot/`
+- Rename: `android/app/src/main/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/main/java/uk/co/cyberheroez/oroq/`
+- Rename: `android/app/src/test/java/uk/co/cyberheroez/safebrowse/` → `android/app/src/test/java/uk/co/cyberheroez/oroq/`
 
 After the move, the build is broken (every `package uk.co.cyberheroez.safebrowse.…` declaration disagrees with its filesystem location). Task 4 fixes that with a mass sed.
 
@@ -161,7 +161,7 @@ After the move, the build is broken (every `package uk.co.cyberheroez.safebrowse
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git mv android/app/src/main/java/uk/co/cyberheroez/safebrowse \
-         android/app/src/main/java/uk/co/cyberheroez/shieldpilot
+         android/app/src/main/java/uk/co/cyberheroez/oroq
 ```
 Expected: no output (success).
 
@@ -169,7 +169,7 @@ Expected: no output (success).
 
 ```bash
 git mv android/app/src/test/java/uk/co/cyberheroez/safebrowse \
-       android/app/src/test/java/uk/co/cyberheroez/shieldpilot
+       android/app/src/test/java/uk/co/cyberheroez/oroq
 ```
 Expected: no output.
 
@@ -178,7 +178,7 @@ Expected: no output.
 ```bash
 git status --short | head -10
 ```
-Expected: dozens of `R  …/safebrowse/<file>.kt -> …/shieldpilot/<file>.kt` lines. Git detected the rename and the diff is just the directory change.
+Expected: dozens of `R  …/safebrowse/<file>.kt -> …/oroq/<file>.kt` lines. Git detected the rename and the diff is just the directory change.
 
 - [ ] **Step 4: Do not commit yet**
 
@@ -190,14 +190,14 @@ Task 4 follows immediately with the sed that makes the tree compile. Commit at t
 
 **Files:**
 - Modify (sed): every file containing `uk.co.cyberheroez.safebrowse` (~82 files)
-- Rename: `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/vpn/SafeBrowseVpnService.kt` → `…/ShieldPilotVpnService.kt`
+- Rename: `android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt` → `…/OroQVpnService.kt`
 
 - [ ] **Step 1: Replace the dotted package string everywhere**
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   grep -rl 'uk\.co\.cyberheroez\.safebrowse' android backend docs 2>/dev/null \
-  | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.shieldpilot/g'
+  | xargs sed -i '' 's/uk\.co\.cyberheroez\.safebrowse/uk.co.cyberheroez.oroq/g'
 ```
 This replaces in `.kt`, `.kts`, `.xml`, `.toml`, `.md`, `.json` — anywhere the dotted form appears, including the historical superpowers spec/plan files (we accept the noise; those files are append-only history but the rename is global). Backend `wrangler.toml` is untouched because it doesn't contain the dotted form — only the Worker name was changed in Task 1.
 
@@ -211,8 +211,8 @@ Expected: no output. If any line prints, sed missed it (likely a different quote
 - [ ] **Step 3: Rename the VPN service file + class**
 
 ```bash
-git mv android/app/src/main/java/uk/co/cyberheroez/shieldpilot/vpn/SafeBrowseVpnService.kt \
-       android/app/src/main/java/uk/co/cyberheroez/shieldpilot/vpn/ShieldPilotVpnService.kt
+git mv android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/SafeBrowseVpnService.kt \
+       android/app/src/main/java/uk/co/cyberheroez/oroq/vpn/OroQVpnService.kt
 ```
 
 - [ ] **Step 4: Replace the class name across the codebase**
@@ -220,7 +220,7 @@ git mv android/app/src/main/java/uk/co/cyberheroez/shieldpilot/vpn/SafeBrowseVpn
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   grep -rl 'SafeBrowseVpnService' android 2>/dev/null \
-  | xargs sed -i '' 's/SafeBrowseVpnService/ShieldPilotVpnService/g'
+  | xargs sed -i '' 's/SafeBrowseVpnService/OroQVpnService/g'
 ```
 
 - [ ] **Step 5: Confirm the class is consistent**
@@ -231,7 +231,7 @@ grep -rn 'SafeBrowseVpnService' android 2>/dev/null
 Expected: no output.
 
 ```bash
-grep -rn 'ShieldPilotVpnService' android 2>/dev/null | head -3
+grep -rn 'OroQVpnService' android 2>/dev/null | head -3
 ```
 Expected: ≥3 lines (the file itself + at least 2 callers — `MainActivity`, `CommandSync`, `AppMonitorService`).
 
@@ -248,7 +248,7 @@ Expected: `BUILD SUCCESSFUL`. If errors mention unresolved `uk.co.cyberheroez.sa
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git add -A android docs backend && \
-  git commit -m "rename(android): kotlin package safebrowse -> shieldpilot, ShieldPilotVpnService"
+  git commit -m "rename(android): kotlin package safebrowse -> oroq, OroQVpnService"
 ```
 
 ---
@@ -260,10 +260,10 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
 - Modify: `android/app/src/main/res/values/strings.xml`
 - Modify: `android/app/src/main/res/values/themes.xml`, `values-night/themes.xml`, `values/colors.xml`
 - Modify: `android/app/src/main/AndroidManifest.xml`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/family/FamilyConfig.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/update/BlocklistUpdater.kt`
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/config/ConfigRepository.kt` (DataStore name)
-- Modify: `android/app/src/main/java/uk/co/cyberheroez/shieldpilot/MainActivity.kt` (the one `SAFEBROWSE` literal)
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt` (DataStore name)
+- Modify: `android/app/src/main/java/uk/co/cyberheroez/oroq/MainActivity.kt` (the one `SAFEBROWSE` literal)
 - Modify (sed): any remaining file with `SafeBrowse` brand string
 
 - [ ] **Step 1: Update `build.gradle.kts`**
@@ -283,7 +283,7 @@ android {
 ```bash
 grep -n "namespace\|applicationId" /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build.gradle.kts
 ```
-Expected: both lines now reference `uk.co.cyberheroez.shieldpilot`. If not, Task 4 missed them — replace manually.
+Expected: both lines now reference `uk.co.cyberheroez.oroq`. If not, Task 4 missed them — replace manually.
 
 - [ ] **Step 2: Update the display name in `strings.xml`**
 
@@ -294,7 +294,7 @@ Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/res/value
 ```
 to:
 ```xml
-<string name="app_name">Shield Pilot</string>
+<string name="app_name">OroQ</string>
 ```
 
 - [ ] **Step 3: Mass-replace `SafeBrowse` and `SAFEBROWSE` brand strings**
@@ -302,9 +302,9 @@ to:
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   grep -rl 'SafeBrowse' android backend 2>/dev/null \
-  | xargs sed -i '' 's/SafeBrowse/Shield Pilot/g'
+  | xargs sed -i '' 's/SafeBrowse/OroQ/g'
 grep -rl 'SAFEBROWSE' android 2>/dev/null \
-  | xargs sed -i '' 's/SAFEBROWSE/SHIELD PILOT/g'
+  | xargs sed -i '' 's/SAFEBROWSE/OROQ/g'
 ```
 
 These pick up `MainActivity` ("SAFEBROWSE" badge), `BlockActivity` ("blocked by SafeBrowse"), `AppMonitorService` ("SafeBrowse limits are active"), `RolePickerActivity` ("Welcome to SafeBrowse"), the themes, the colors comment, etc.
@@ -318,38 +318,38 @@ Expected: no output. (If the historical specs/plans under `docs/` still contain 
 
 - [ ] **Step 5: Update `FamilyConfig.WORKER_BASE_URL`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/shieldpilot/family/FamilyConfig.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/family/FamilyConfig.kt`. Find:
 
 ```kotlin
 const val WORKER_BASE_URL = "https://safebrowse-family.cyberheroez.workers.dev"
 ```
 Change to:
 ```kotlin
-const val WORKER_BASE_URL = "https://shieldpilot-family.cyberheroez.workers.dev"
+const val WORKER_BASE_URL = "https://oroq-family.cyberheroez.workers.dev"
 ```
 
 - [ ] **Step 6: Update `BlocklistUpdater.BASE_URL`**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/shieldpilot/update/BlocklistUpdater.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/update/BlocklistUpdater.kt`. Find:
 
 ```kotlin
 const val BASE_URL = "https://safebrowse-blocklists.pages.dev"
 ```
 Change to:
 ```kotlin
-const val BASE_URL = "https://shieldpilot-blocklists.pages.dev"
+const val BASE_URL = "https://oroq-blocklists.pages.dev"
 ```
 
 - [ ] **Step 7: Update the `safebrowse_config` DataStore name**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/shieldpilot/config/ConfigRepository.kt`. Find:
+Edit `/Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main/java/uk/co/cyberheroez/oroq/config/ConfigRepository.kt`. Find:
 
 ```kotlin
 private val Context.dataStore by preferencesDataStore(name = "safebrowse_config")
 ```
 Change to:
 ```kotlin
-private val Context.dataStore by preferencesDataStore(name = "shieldpilot_config")
+private val Context.dataStore by preferencesDataStore(name = "oroq_config")
 ```
 
 (The `family_config` DataStore name in `FamilyStore.kt` has no brand and stays.)
@@ -359,7 +359,7 @@ private val Context.dataStore by preferencesDataStore(name = "shieldpilot_config
 ```bash
 grep -rn 'safebrowse' /Users/apple/Desktop/Projects/safebrowse-ai/android/app/src/main 2>/dev/null
 ```
-Expected: no output (the directory path itself has been renamed; constants and DataStore are now `shieldpilot`; package strings done in Task 4).
+Expected: no output (the directory path itself has been renamed; constants and DataStore are now `oroq`; package strings done in Task 4).
 
 If a match appears under `assets/blocklists/<category>.txt` mentioning `safebrowse-` as a domain, that's fine — they're just unrelated blocked domains, not brand references.
 
@@ -398,7 +398,7 @@ Expected: `BUILD SUCCESSFUL`, every test in the suite passes.
 ```bash
 ./gradlew :app:assembleDebug 2>&1 | tail -8
 ```
-Expected: `BUILD SUCCESSFUL`. New APK at `app/build/outputs/apk/debug/app-debug.apk`. Its installed package name is now `uk.co.cyberheroez.shieldpilot`.
+Expected: `BUILD SUCCESSFUL`. New APK at `app/build/outputs/apk/debug/app-debug.apk`. Its installed package name is now `uk.co.cyberheroez.oroq`.
 
 - [ ] **Step 4: Confirm the new applicationId is baked in**
 
@@ -406,7 +406,7 @@ Expected: `BUILD SUCCESSFUL`. New APK at `app/build/outputs/apk/debug/app-debug.
 unzip -p /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk \
   AndroidManifest.xml | strings | grep -E "uk\.co\.cyberheroez" | head -3
 ```
-Expected: at least one `uk.co.cyberheroez.shieldpilot` line; **no** `uk.co.cyberheroez.safebrowse` line.
+Expected: at least one `uk.co.cyberheroez.oroq` line; **no** `uk.co.cyberheroez.safebrowse` line.
 
 - [ ] **Step 5: No commit**
 
@@ -432,23 +432,23 @@ cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   RECENT_SP="docs/superpowers/specs/2026-06-01-release-signing-aab-design.md \
              docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md" && \
   for f in $FILES $RECENT_SP; do
-    sed -i '' 's/SafeBrowse/Shield Pilot/g; s/SAFEBROWSE/SHIELD PILOT/g; s/safebrowse-family/shieldpilot-family/g; s/safebrowse-blocklists/shieldpilot-blocklists/g' "$f"
+    sed -i '' 's/SafeBrowse/OroQ/g; s/SAFEBROWSE/OROQ/g; s/safebrowse-family/oroq-family/g; s/safebrowse-blocklists/oroq-blocklists/g' "$f"
   done
 ```
 
 - [ ] **Step 2: Update the paused release-signing plan's keystore alias**
 
-Edit `/Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `safebrowse-upload` with `shieldpilot-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
+Edit `/Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md`. Replace every occurrence of `safebrowse-upload` with `oroq-upload`. The plan references the alias in Task 1 Step 2 (`keytool -alias`), Task 7's runbook, and the recovery section.
 
 ```bash
-sed -i '' 's/safebrowse-upload/shieldpilot-upload/g' \
+sed -i '' 's/safebrowse-upload/oroq-upload/g' \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/plans/2026-06-04-release-signing-aab-plan.md
 ```
 
 Also update the same alias in `docs/superpowers/specs/2026-06-01-release-signing-aab-design.md` if it appears there:
 
 ```bash
-sed -i '' 's/safebrowse-upload/shieldpilot-upload/g' \
+sed -i '' 's/safebrowse-upload/oroq-upload/g' \
   /Users/apple/Desktop/Projects/safebrowse-ai/docs/superpowers/specs/2026-06-01-release-signing-aab-design.md
 ```
 
@@ -468,7 +468,7 @@ Expected: no output.
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai && \
   git add -A docs PRIVACY.md README.md 2>/dev/null; \
-  git commit -m "rename(docs): SafeBrowse -> Shield Pilot in recent docs, leave historical record"
+  git commit -m "rename(docs): SafeBrowse -> OroQ in recent docs, leave historical record"
 ```
 
 ---
@@ -485,7 +485,7 @@ The rename-record memory file (`project_shield_pilot_rename.md`) was already cre
 Open `/Users/apple/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai/memory/project_native_app_direction.md`. After the frontmatter (the line `---` that closes the metadata block at line ~7), insert this paragraph before the first bullet:
 
 ```
-**Note (2026-06-04):** Renamed to Shield Pilot. Paragraphs below describing
+**Note (2026-06-04):** Renamed to OroQ. Paragraphs below describing
 past events keep the old name verbatim as historical record. See
 [[project-shield-pilot-rename]] for the rename details.
 ```
@@ -518,12 +518,12 @@ adb -s emulator-5554 uninstall uk.co.cyberheroez.safebrowse 2>&1
 ```
 Expected: `Success` or `Failure [DELETE_FAILED_INTERNAL_ERROR]` if absent — both fine.
 
-- [ ] **Step 3: Install the new Shield Pilot build on the emulator**
+- [ ] **Step 3: Install the new OroQ build on the emulator**
 
 ```bash
 adb -s emulator-5554 install /Users/apple/Desktop/Projects/safebrowse-ai/android/app/build/outputs/apk/debug/app-debug.apk
 ```
-Expected: `Success`. Launcher now shows "Shield Pilot".
+Expected: `Success`. Launcher now shows "OroQ".
 
 - [ ] **Step 4: Repeat for the Vivo**
 
@@ -541,18 +541,18 @@ In a separate terminal:
 
 ```bash
 cd /Users/apple/Desktop/Projects/safebrowse-ai/backend && \
-  npx wrangler tail --name shieldpilot-family
+  npx wrangler tail --name oroq-family
 ```
 Leave it streaming. Steps below should produce log lines on it.
 
 - [ ] **Step 6: Walk through child onboarding + pair**
 
 On the emulator (child):
-1. Open Shield Pilot, pick "This is my child's phone".
+1. Open OroQ, pick "This is my child's phone".
 2. Walk through the 5 permission steps (VPN, Usage Access, Overlay, Battery, Pair).
 
 On the Vivo (parent):
-3. Open Shield Pilot, pick "I'm a parent". Email-OTP login (OTP appears in the wrangler tail).
+3. Open OroQ, pick "I'm a parent". Email-OTP login (OTP appears in the wrangler tail).
 4. Add child, generate code, hand the 8-character code to the emulator.
 
 On the emulator:
@@ -586,7 +586,7 @@ Untick Chrome on the Vivo, save, wait 60 s. Chrome opens normally.
 
 - [ ] **Step 10: Round-trip flow D — state sync**
 
-Relaunch Shield Pilot on the emulator (triggers immediate sync via `scheduleFamilySync`). On the Vivo, refresh the child dashboard. Expected: categories, current daily limit, and BLOCKED APPS list reflect the last-saved values.
+Relaunch OroQ on the emulator (triggers immediate sync via `scheduleFamilySync`). On the Vivo, refresh the child dashboard. Expected: categories, current daily limit, and BLOCKED APPS list reflect the last-saved values.
 
 - [ ] **Step 11: Logcat clean-bill**
 
@@ -620,14 +620,14 @@ Expected: empty (all rename commits already landed).
 
 ```bash
 mv /Users/apple/Desktop/Projects/safebrowse-ai \
-   /Users/apple/Desktop/Projects/shieldpilot
+   /Users/apple/Desktop/Projects/oroq
 ```
 Expected: no output.
 
 - [ ] **Step 3: Verify the repo still works at the new path**
 
 ```bash
-cd /Users/apple/Desktop/Projects/shieldpilot && git log --oneline -3
+cd /Users/apple/Desktop/Projects/oroq && git log --oneline -3
 ```
 Expected: the three most recent commits print — git history intact.
 
@@ -635,14 +635,14 @@ Expected: the three most recent commits print — git history intact.
 
 ```bash
 mv ~/.claude/projects/-Users-apple-Desktop-Projects-safebrowse-ai \
-   ~/.claude/projects/-Users-apple-Desktop-Projects-shieldpilot
+   ~/.claude/projects/-Users-apple-Desktop-Projects-oroq
 ```
 Expected: no output.
 
 - [ ] **Step 5: Verify the memory directory contents survive**
 
 ```bash
-ls -la ~/.claude/projects/-Users-apple-Desktop-Projects-shieldpilot/memory/ | head
+ls -la ~/.claude/projects/-Users-apple-Desktop-Projects-oroq/memory/ | head
 ```
 Expected: `MEMORY.md`, `project_shield_pilot_rename.md`, `project_native_app_direction.md`, and the other memory files all listed.
 
@@ -650,7 +650,7 @@ Expected: `MEMORY.md`, `project_shield_pilot_rename.md`, `project_native_app_dir
 
 Both moves are filesystem changes only.
 
-> **Note for the next Claude session:** the working directory and memory path have changed. Use `/Users/apple/Desktop/Projects/shieldpilot` from this point on.
+> **Note for the next Claude session:** the working directory and memory path have changed. Use `/Users/apple/Desktop/Projects/oroq` from this point on.
 
 ---
 
@@ -660,12 +660,12 @@ Only run **at least 24 hours** after Task 9 passes — keeps the rollback path o
 
 - [ ] **Step 1: Re-verify the new build still works**
 
-Quick spot-check: open Shield Pilot on the Vivo, see the child dashboard refresh correctly with recent data. If anything is off, do not proceed.
+Quick spot-check: open OroQ on the Vivo, see the child dashboard refresh correctly with recent data. If anything is off, do not proceed.
 
 - [ ] **Step 2: Delete the old Worker**
 
 ```bash
-cd /Users/apple/Desktop/Projects/shieldpilot/backend && \
+cd /Users/apple/Desktop/Projects/oroq/backend && \
   npx wrangler delete --name safebrowse-family
 ```
 Type `yes` to confirm. Expected: `Deleted safebrowse-family.`
@@ -706,14 +706,14 @@ Cloudflare-side resource changes only.
 
 **Naming consistency** across tasks:
 
-- `uk.co.cyberheroez.shieldpilot` everywhere (Tasks 3, 4, 5, 6, 9).
-- `shieldpilot-family` for Worker (Tasks 1, 5, 7, 9, 11).
-- `shieldpilot-blocklists` for Pages (Tasks 2, 5, 7, 9, 11).
-- `ShieldPilotVpnService` class (Task 4).
-- `shieldpilot_config` DataStore name (Task 5).
-- `Shield Pilot` (with space) for human-facing display (Task 5 strings.xml, brand strings sed; Task 7 docs).
-- `SHIELD PILOT` (all caps) for in-UI badge (Task 5's `SAFEBROWSE` sed).
-- `shieldpilot-upload` keystore alias (Task 7 — fed back into the paused release-signing plan).
-- `/Users/apple/Desktop/Projects/shieldpilot` and `-Users-apple-Desktop-Projects-shieldpilot` (Task 10).
+- `uk.co.cyberheroez.oroq` everywhere (Tasks 3, 4, 5, 6, 9).
+- `oroq-family` for Worker (Tasks 1, 5, 7, 9, 11).
+- `oroq-blocklists` for Pages (Tasks 2, 5, 7, 9, 11).
+- `OroQVpnService` class (Task 4).
+- `oroq_config` DataStore name (Task 5).
+- `OroQ` (with space) for human-facing display (Task 5 strings.xml, brand strings sed; Task 7 docs).
+- `OROQ` (all caps) for in-UI badge (Task 5's `SAFEBROWSE` sed).
+- `oroq-upload` keystore alias (Task 7 — fed back into the paused release-signing plan).
+- `/Users/apple/Desktop/Projects/oroq` and `-Users-apple-Desktop-Projects-oroq` (Task 10).
 
 **Placeholders / red flags:** none. All shell commands are concrete and runnable. The `<vivo serial>` in Task 9 Step 4 is dynamically substituted via the `adb devices | awk` invocation, not a manual fill-in.

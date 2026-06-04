@@ -1,10 +1,10 @@
-name = "safebrowse-family"
+name = "oroq-family"
 main = "src/index.ts"
 compatibility_date = "2025-09-06"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "safebrowse-family"
+database_name = "oroq-family"
 database_id = "6ff2b5f1-ce1c-4f70-9157-f2929f526bb0"
 migrations_dir = "migrations"
 
