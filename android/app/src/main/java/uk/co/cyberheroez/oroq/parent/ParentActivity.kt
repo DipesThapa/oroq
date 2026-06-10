@@ -4,6 +4,12 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import uk.co.cyberheroez.oroq.ui.motion.animationsEnabled
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,8 +59,14 @@ class ParentActivity : ComponentActivity() {
                 Modifier.fillMaxSize().background(OroqColors.BgPrimary)
                     .systemBarsPadding(),
             ) {
+                val anim = animationsEnabled()
                 Box(Modifier.weight(1f)) {
-                    NavHost(nav, startDestination = "home") {
+                    NavHost(
+                        nav,
+                        startDestination = "home",
+                        enterTransition = { if (anim) fadeIn(tween(200)) else EnterTransition.None },
+                        exitTransition = { if (anim) fadeOut(tween(200)) else ExitTransition.None },
+                    ) {
                         composable("home") { HomeScreen(viewModel, nav) }
                         composable("activity") { ActivityScreen(viewModel) }
                         composable("devices") { DevicesScreen(viewModel, nav) }
