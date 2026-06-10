@@ -50,6 +50,7 @@
         <!-- exported temporarily so adb can smoke-test during the Compose
              migration; reverts to false at the Task-17 cutover. -->
         <activity android:name=".parent.ParentHomeActivity" android:exported="true" />
+        <activity android:name=".ui.child.ChildActivity" android:exported="true" />
         <activity android:name=".parent.ParentLoginActivity" android:exported="false" />
         <activity android:name=".parent.AddChildActivity" android:exported="false" />
         <activity android:name=".parent.ChildDashboardActivity" android:exported="false" />
