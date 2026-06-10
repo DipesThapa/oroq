@@ -40,8 +40,18 @@ These are the items most likely to trigger rejection for this app class — prep
 
 ## Pre-submission mechanical checklist (not data-safety, but blocks release)
 
-- [ ] Build a **release** AAB signed with a release keystore (current builds are debug-signed).
-- [ ] Add the **release keystore SHA-1** to the Android OAuth client in the `oroq` Google Cloud project (Google sign-in will fail on the release build otherwise).
+- [x] Build a **release** AAB signed with the upload keystore (`android/oroq-upload.jks`, gitignored). R8 minify + resource shrink enabled and verified on device (Tink crypto + WorkManager confirmed working). `gradlew bundleRelease`.
+- [x] Back up `android/oroq-upload.jks` + `android/keystore.properties` off-machine — they are gitignored and exist only locally. **Losing the upload key blocks app updates** (recoverable via Play App Signing reset, but back it up anyway).
+- [x] Add the **upload-key SHA-1** (`67:EF:C2:43:CB:80:B9:5B:90:CC:5B:47:1A:5C:F2:C6:76:77:02:0F`) to the Android OAuth client in the `oroq` Google Cloud project — covers sideloaded/locally-signed builds.
+- [ ] **⚠️ Play App Signing SHA-1 (do this AFTER first AAB upload).** Google re-signs the published app with its own key, so the Play-distributed app's SHA-1 differs from the upload key. **Google sign-in and FCM push will fail for Play-Store users until you register it.** Steps:
+  1. Upload the AAB once → Play Console → **Test and release → App integrity → App signing key certificate** → copy the **SHA-1**.
+  2. Add it as **another** Android OAuth client in the `oroq` GCP project (same package `uk.co.cyberheroez.oroq`, one SHA-1 per client).
+  3. (Only if you re-enable SHA on Firebase) add it to the Firebase Android app too.
+- [ ] (Local dev only) Debug-build Google sign-in needs the **debug** SHA-1 (`C1:6E:EE:5B:24:81:28:30:51:54:F2:C4:71:C3:D1:7E:E5:C8:7C:43`) on a separate Android OAuth client — or just use the email-OTP path when testing debug builds.
 - [ ] Host `PRIVACY_ANDROID.md` at a public URL; paste it into the listing and the Data Safety form.
 - [ ] Complete content rating + target audience questionnaires.
+- [ ] Restricted-permission declarations at submission: **VpnService**, **PACKAGE_USAGE_STATS** (Usage Access), **SYSTEM_ALERT_WINDOW** (overlay), and the `specialUse` foreground-service types — see §"Mandatory accompanying declarations" above.
 - [ ] (Recommended) Set the worker's `RESEND_API_KEY` / `RESEND_FROM` so email sign-in works for non-Google parents in production.
+
+### Two-projects note (Google Cloud + Firebase)
+Sign-in lives in the **`oroq`** GCP project (web + Android OAuth clients); push lives in the separate **`oroq-8a7eb`** Firebase project (FCM). This split is fine — FCM uses `google-services.json` + the service account (no OAuth SHA-1), and sign-in uses the web client ID. The "another project uses this SHA-1" warning in Firebase is cosmetic; the SHA-1 was removed from Firebase to clear it, with no effect on push.
