@@ -32,6 +32,23 @@ class FamilyApiTest {
         assertTrue(api.authRequest("parent@example.com"))
     }
 
+    @Test fun authGooglePostsTokenAndNonceAndReturnsTheSessionToken() {
+        val transport = FakeTransport(mapOf(
+            "POST $base/auth/google" to HttpResponse(200, """{"token":"session-jwt"}"""),
+        ))
+        val api = FamilyApi(base, transport)
+        assertEquals("session-jwt", api.authGoogle("google-id-token", "nonce-1"))
+        assertTrue(transport.sent.single().contains("\"idToken\":\"google-id-token\""))
+        assertTrue(transport.sent.single().contains("\"nonce\":\"nonce-1\""))
+    }
+
+    @Test fun authGoogleReturnsNullOnRejection() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "POST $base/auth/google" to HttpResponse(401, """{"error":"bad_token"}"""),
+        )))
+        assertNull(api.authGoogle("bad", "n"))
+    }
+
     @Test fun authVerifyReturnsTheToken() {
         val api = FamilyApi(base, FakeTransport(mapOf(
             "POST $base/auth/verify" to HttpResponse(200, """{"token":"jwt-123"}"""),

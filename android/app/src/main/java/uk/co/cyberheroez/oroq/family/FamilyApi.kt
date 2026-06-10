@@ -41,6 +41,14 @@ class FamilyApi(
         return JSONObject(res.body).optString("token").ifEmpty { null }
     }
 
+    /** Exchanges a Google ID token for a session token, or null if rejected. */
+    fun authGoogle(idToken: String, nonce: String): String? {
+        val body = JSONObject().put("idToken", idToken).put("nonce", nonce).toString()
+        val res = post("/auth/google", jsonHeaders, body)
+        if (res.status != 200) return null
+        return JSONObject(res.body).optString("token").ifEmpty { null }
+    }
+
     /** Creates a pairing and returns its id + short code, or null on failure. */
     fun pairCreate(token: String, parentPublicKeyB64: String, childLabel: String?): CreatePairingResult? {
         val payload = JSONObject().put("parentPublicKey", parentPublicKeyB64)
