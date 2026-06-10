@@ -1,3 +1,4 @@
+import { SELF } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { verifyGoogleIdToken } from "../src/googletoken";
 
@@ -109,5 +110,29 @@ describe("verifyGoogleIdToken", () => {
 
   it("rejects garbage", async () => {
     expect(await verifyGoogleIdToken("not.a.jwt", CLIENT_ID, "n", fakeFetchJwks)).toBeNull();
+  });
+});
+
+describe("/auth/google", () => {
+  // The route uses the real Google JWKS fetcher, which a test token can't
+  // satisfy — so the route tests cover the failure paths and shapes only;
+  // the success path is fully covered by the unit tests above.
+  it("rejects a garbage token with 401 and no detail", async () => {
+    const res = await SELF.fetch("https://example.com/auth/google", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ idToken: "junk", nonce: "n" }),
+    });
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "bad_token" });
+  });
+
+  it("rejects a missing body field with 400", async () => {
+    const res = await SELF.fetch("https://example.com/auth/google", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ idToken: "junk" }),
+    });
+    expect(res.status).toBe(400);
   });
 });

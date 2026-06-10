@@ -14,3 +14,6 @@ id = "b101d3dc0103425cb8ca29b7ed102d1a"
 
 # JWT_SECRET, RESEND_API_KEY and RESEND_FROM are set with `wrangler secret put`,
 # never committed here.
+
+[vars]
+GOOGLE_CLIENT_ID = ""

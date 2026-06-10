@@ -3,6 +3,7 @@ import { json, readJson } from "./http";
 import { randomOtp, sha256Hex, signJwt } from "./crypto";
 import { sendOtpEmail } from "./email";
 import { rateLimit } from "./ratelimit";
+import { verifyGoogleIdToken } from "./googletoken";
 
 const OTP_TTL_SEC = 600; // 10 minutes
 const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
@@ -11,6 +12,7 @@ const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
 export async function handleAuth(req: Request, env: Env, path: string): Promise<Response> {
   if (path === "/auth/request" && req.method === "POST") return authRequest(req, env);
   if (path === "/auth/verify" && req.method === "POST") return authVerify(req, env);
+  if (path === "/auth/google" && req.method === "POST") return authGoogle(req, env);
   return json({ error: "not_found" }, 404);
 }
 
@@ -46,6 +48,34 @@ async function authVerify(req: Request, env: Env): Promise<Response> {
     return json({ error: "bad_otp" }, 401);
   }
   await env.KV.delete(`otp:${email}`);
+
+  const accountId = await upsertAccount(env, email);
+  const exp = Math.floor(Date.now() / 1000) + JWT_TTL_SEC;
+  const token = await signJwt({ sub: accountId, exp }, env.JWT_SECRET);
+  return json({ token });
+}
+
+/**
+ * Sign in with Google: verifies the ID token and issues the same session
+ * token as the OTP flow — accounts link by verified e-mail. Failures return
+ * an undetailed 401 (no oracle).
+ */
+async function authGoogle(req: Request, env: Env): Promise<Response> {
+  const body = await readJson(req);
+  const idToken = typeof body.idToken === "string" ? body.idToken : "";
+  const nonce = typeof body.nonce === "string" ? body.nonce : "";
+  if (!idToken || !nonce) return json({ error: "bad_request" }, 400);
+  if (!env.GOOGLE_CLIENT_ID) return json({ error: "bad_token" }, 401); // feature not configured
+
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rateLimit(env, `auth:${ip}`, 5, OTP_TTL_SEC))) {
+    return json({ error: "rate_limited" }, 429);
+  }
+
+  const verified = await verifyGoogleIdToken(idToken, env.GOOGLE_CLIENT_ID, nonce);
+  if (!verified) return json({ error: "bad_token" }, 401);
+  const email = normalizeEmail(verified.email);
+  if (!email) return json({ error: "bad_token" }, 401);
 
   const accountId = await upsertAccount(env, email);
   const exp = Math.floor(Date.now() / 1000) + JWT_TTL_SEC;

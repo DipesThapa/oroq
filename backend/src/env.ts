@@ -4,6 +4,8 @@ export interface Env {
   JWT_SECRET: string;
   RESEND_API_KEY?: string;
   RESEND_FROM?: string;
+  /** OAuth web client id for Sign in with Google; blank disables /auth/google. */
+  GOOGLE_CLIENT_ID?: string;
 }
 
 /** Throws if a required binding or secret is missing — the Worker must not run half-configured. */
