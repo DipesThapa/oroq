@@ -1,10 +1,24 @@
-# OroQ — Privacy-first Web Safety Extension
+# OroQ — Privacy-first Family Safety
 
 [![CI](https://github.com/DipesThapa/oroq/actions/workflows/ci.yml/badge.svg)](https://github.com/DipesThapa/oroq/actions/workflows/ci.yml) [![CodeQL](https://github.com/DipesThapa/oroq/actions/workflows/codeql.yml/badge.svg)](https://github.com/DipesThapa/oroq/actions/workflows/codeql.yml) [![Release](https://github.com/DipesThapa/oroq/actions/workflows/release.yml/badge.svg)](https://github.com/DipesThapa/oroq/actions/workflows/release.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-OroQ is a lightweight, on-device browser extension that helps families, schools, and workplace teams reduce exposure to harmful content without compromising privacy. Built and maintained by CyberHeroez CIC.
+**OroQ — *See Risk. Act With Confidence.*** A privacy-first web-safety suite for families, schools, and workplaces. All filtering and decisioning happens **on-device**; activity a parent sees is **end-to-end encrypted**, so OroQ's own servers can't read it. Built and maintained by CyberHeroez CIC.
 
-## Features
+OroQ ships as two complementary products that share one backend:
+
+| Component | What it is | Path |
+|---|---|---|
+| **Browser extension** | On-device web filtering for Chromium / Firefox / Safari | repo root (`manifest.json`, `src/`) |
+| **Android app** | Parent + child family app — web/app blocking, screen-time, instant alerts | `android/` |
+| **Family backend** | Cloudflare Worker for passwordless parent accounts, device pairing, encrypted sync, FCM push | `backend/`, `relay/` |
+
+---
+
+## 1. Browser extension
+
+A lightweight, on-device extension that reduces exposure to harmful content without sending browsing data anywhere.
+
+### Features
 - **Advanced heuristics**: weighted URL/title/meta/body scoring with sensitivity control
 - **On-page protection**: optional Aggressive mode to blur/pause images/videos on-device
 - **Visual detection**: image heuristics sample pixels to escalate or block graphic imagery even without text
@@ -29,7 +43,7 @@ OroQ is a lightweight, on-device browser extension that helps families, schools,
 - **Encrypted override log**: AES-GCM at rest; stores timestamp, host, reason, and approver only (no full URLs)
 - **Interstitial**: blocked page with timed “Show anyway” override (per tab/session)
 
-## Business-ready capabilities
+### Business-ready capabilities
 - **Privacy by design**: all analysis and decisioning stays on-device; no browsing data is transmitted.
 - **Policy controls**: organisation-wide allowlists & custom blocklists with import/export workflows.
 - **Deployment friendly**: minimal permissions (`storage`, `declarativeNetRequest`) and no background polling.
@@ -40,12 +54,12 @@ Hosted resources
 - Bundled static pages (packaged inside the extension): `site/index.html`, `site/privacy.html`, `site/support.html`
 - Optional public hosting: host `site/` on cyberheroez.co.uk (or enable GitHub Pages) and point the Chrome Web Store listing + homepage to those URLs.
 
-## Browser support
+### Browser support
 - Chromium browsers (Chrome/Edge/Brave/Vivaldi/Opera): load the repo folder directly (contains `manifest.json`).
 - Firefox: build and load `dist/firefox/manifest.json` (see `docs/BROWSER_SUPPORT.md`).
 - Safari: convert via Apple’s Safari Web Extension tooling (see `docs/BROWSER_SUPPORT.md`).
 
-## Dev Setup
+### Dev setup
 1. Chrome → `chrome://extensions` → enable **Developer mode**
 2. **Load unpacked** → select this folder
 3. Open the popup → toggle **Enable protection** (badge shows **Active**)
@@ -54,19 +68,19 @@ Hosted resources
    - or edit `data/blocklist.json` and reload the extension
 6. For private windows: open extension details → enable **Allow in Incognito**
 
-## Quick setup (parents)
+### Quick setup (parents)
 1. Enable protection in the popup.
 2. Run the Family Setup Wizard → pick age profile → set PIN (for overrides) → set Focus default.
 3. Turn on Conversation starters and Weekly tips (optional).
 4. Show your child the “Report unsafe page” button; review reports in Parent mode.
 
-## Quick setup (teachers)
+### Quick setup (teachers)
 1. Enable protection; apply Classroom Mode when teaching.
 2. Add approved YouTube playlists/videos if needed; overrides stay locked.
 3. Use Focus Mode presets for study blocks; allow comms tools only if required.
 4. Review Child reports/Overrides in Parent mode (PIN-gated).
 
-## Privacy/Security at a glance
+### Privacy/Security at a glance
 - All analysis runs locally; no browsing history or page content is sent anywhere.
 - Kid reports store only timestamp + host + optional note; conversation starters store topic only.
 - Override logs are encrypted locally; webhooks require HTTPS and no LAN/localhost.
@@ -79,31 +93,71 @@ Notes:
 - DNR rules are rebuilt on install/startup and when allowlist/blocklist change.
 - Interstitial uses safe DOM APIs; “Show anyway” temporarily allows the current host for this tab/session.
 
-## Roadmap
-- On-device visual model (optional) for stronger image/video detection
-- Options page polish + export/import lists (popup import exists)
-- Scheduled safeguarding digests and trust-level preset sharing
-- Chrome Web Store listing (screenshots, description, privacy link)
-
-MIT License
-
-## Quick start
-1. Load unpacked (Developer mode)
-2. Toggle **Enable protection** in the popup (status badge turns green)
-3. Optional: toggle Aggressive mode + set sensitivity
-4. Blocklist: paste domains → Import/Replace (one per line)
-5. Visit sites to verify interstitial (strong signals) or blurring (contextual)
-
-Phase 1 additions
-- Static DNR rules for common ad domains and SafeSearch (Google/Bing)
-- Dynamic DNR rules compiled from packaged + user-imported blocklist with allowlist overrides
-- Focus Mode timer with edu allowlist + social/gaming/streaming blocks
-- Classroom Mode lockdown for teachers (overrides disabled; YouTube playlists only)
-- Conversation starters, weekly tips, healthy nudges, and kid reports (host-only, optional note)
-
-Limitations
+### Limitations
 - Chrome’s dynamic DNR rules have capacity limits (~30k). Very large custom imports are truncated.
 - Visual detection is heuristic-based; cross-origin videos may block pixel reads (skipped).
+
+---
+
+## 2. Android app (`android/`)
+
+A single APK with **two roles**, chosen on first launch:
+
+- **Child phone** — on-device DNS filtering via a local-only `VpnService` (no traffic leaves the device), app blocking and screen-time limits, Safe Search / YouTube Restricted enforcement, and a visible "protected" status. Designed slim per the UK Age Appropriate Design Code: the child is never covertly monitored.
+- **Parent phone** — a Jetpack Compose dashboard (deck design v1.0): a **Cyber Confidence** gauge, threat/activity feed, per-device protection toggles, screen-time controls, insights, and **instant push alerts** when a child is blocked from a threat.
+
+**Pairing** is end-to-end encrypted: the parent generates an 8-character code (or QR); the child joins; both confirm a matching 6-digit security number before the link is trusted (Tink HPKE over X25519). The child's activity summary is encrypted **for the parent device only** — the server stores an opaque blob it cannot read.
+
+**Sign-in:** parents use one-tap **Sign in with Google** (Android Credential Manager, no Firebase Auth SDK) or a passwordless email code as fallback.
+
+**Instant alerts:** a threat block fires an expedited, encrypted sync; the worker sends an FCM push carrying only IDs (never the domain or category) so the parent is notified within seconds. Push registers on the parent role only — the child never gets a Google push identifier.
+
+### Tech stack
+Kotlin · Jetpack Compose · Material3 · CameraX + ZXing (QR) · Tink (E2E crypto) · WorkManager (sync) · Credential Manager (Google sign-in) · Firebase Cloud Messaging (parent push only). `applicationId uk.co.cyberheroez.oroq`, minSdk 26, targetSdk 36.
+
+### Build & run
+```bash
+cd android
+./gradlew assembleDebug          # build the debug APK
+./gradlew testDebugUnitTest      # unit tests (stat derivation, crypto, DNS, API)
+./gradlew connectedDebugAndroidTest   # Compose UI tests (needs a device/emulator)
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+Design specs and implementation plans live in `docs/superpowers/`.
+
+### Activation prerequisites (owner-supplied)
+- **Google sign-in:** an OAuth web client id in `FamilyConfig.GOOGLE_WEB_CLIENT_ID` + the worker `GOOGLE_CLIENT_ID` var. Blank → the button hides itself.
+- **Push:** `android/app/google-services.json` (Firebase project), the `com.google.gms.google-services` plugin, and the worker secret `FCM_SERVICE_ACCOUNT` + `FCM_PROJECT_ID` var. Unset → push stays dormant, app runs normally.
+
+> Note: aggressive-OEM phones (Vivo, Oppo, Xiaomi) suppress background FCM unless the app is added to their auto-start / battery allowlist. Stock Android (Pixel, most others) delivers instantly.
+
+---
+
+## 3. Family backend (`backend/`, `relay/`)
+
+A dependency-light **Cloudflare Worker** (D1 + KV) providing:
+- Passwordless parent auth (email OTP via Resend) and **Sign in with Google** (WebCrypto ID-token verification — no SDK).
+- Device pairing (single-use codes, ≤10-min TTL) and unpair.
+- Encrypted summary sync (opaque blobs, 7-day TTL) and encrypted parent→child commands (24-h TTL).
+- **FCM push** (HTTP v1, service-account token minted with WebCrypto) — IDs-only payloads.
+
+```bash
+cd backend
+npm test            # vitest (49 tests: auth, pairing, sync, push, crypto)
+npm run typecheck
+npx wrangler dev     # local
+npx wrangler deploy  # production (operator)
+```
+Migrations live in `backend/migrations/` and are **human-applied to production** D1. The optional pairing relay (WebRTC-style signalling) is in `relay/cloudflare/`.
+
+---
+
+## Roadmap
+- **Extension:** on-device visual model for stronger image/video detection; options-page polish; Chrome Web Store listing.
+- **App:** per-category alert preferences and quiet hours; richer insights once server-side history lands; parent web portal (deck panel 14).
+- **Backend:** server-side Cyber Confidence scoring; threat-event history beyond the rolling on-device window.
+
+---
 
 ## Community
 - Code of Conduct: see `CODE_OF_CONDUCT.md`
@@ -113,8 +167,14 @@ Limitations
 - Publisher: CyberHeroez CIC — https://cyberheroez.co.uk/
 - Maintainer: dipesthapa (dipesh@cyberheroez.co.uk)
 
-## Chrome Web Store
-- Publishing workflow: see `.github/workflows/publish-webstore.yml`
-- Setup + credentials + manual upload steps: `docs/WEBSTORE.md`
+## Store / distribution
+**Extension (Chrome Web Store):**
+- Publishing workflow: `.github/workflows/publish-webstore.yml`
+- Setup + credentials + manual upload: `docs/WEBSTORE.md`
 - Listing content template: `docs/STORE_LISTING.md`
-- Build zip for upload: `npm run zip:webstore` (outputs `dist/extension.zip`; ensures only required files are packaged)
+- Build zip for upload: `npm run zip:webstore` (outputs `dist/extension.zip`)
+
+**Android app (Google Play):**
+- Privacy policy: `docs/PRIVACY_ANDROID.md` · Data Safety mapping: `docs/PLAY_DATA_SAFETY.md`
+- UK compliance packs: `docs/KCSIE_COMPLIANCE_MATRIX.md`, `docs/PREVENT_DUTY_BRIEFING.md`, `docs/DPIA_TEMPLATE_UK.md`
+- Before release: a release-signed AAB, the release keystore SHA-1 added to the Google OAuth + Firebase Android app, and the worker's Resend secrets for email-OTP delivery.
