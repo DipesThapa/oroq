@@ -36,6 +36,16 @@ class ParentActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Login gate (behaviour from the old ParentActivity): no session
+        // token means the parent must sign in first.
+        val hasToken = kotlinx.coroutines.runBlocking {
+            uk.co.cyberheroez.oroq.family.FamilyStore(this@ParentActivity).getParentToken() != null
+        }
+        if (!hasToken) {
+            startActivity(android.content.Intent(this, ParentLoginActivity::class.java))
+            finish()
+            return
+        }
         setContent {
             val nav = rememberNavController()
             var tab by remember { mutableStateOf(ParentTab.HOME) }
