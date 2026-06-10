@@ -43,17 +43,14 @@ describe("buildServiceAccountJwt", () => {
 });
 
 describe("buildFcmMessage", () => {
-  it("carries only token, generic body, and IDs — never threat content", () => {
+  it("is data-only with IDs + childLabel — never threat content or body text", () => {
     const msg = buildFcmMessage("device-token-1", "pair-123", "Aarav");
     expect(msg.message.token).toBe("device-token-1");
     expect(msg.message.data).toEqual({ pairingId: "pair-123", childLabel: "Aarav" });
-    expect(msg.message.notification.body).toContain("Aarav");
+    expect(msg.message.android.priority).toBe("high");
+    // No notification block (data-only) and no threat content anywhere.
+    expect((msg.message as Record<string, unknown>).notification).toBeUndefined();
     expect(JSON.stringify(msg)).not.toMatch(/phishing|malware|\.com|\.example/);
-  });
-
-  it("falls back to a generic name when the label is blank", () => {
-    const msg = buildFcmMessage("t", "p", "  ");
-    expect(msg.message.notification.body).toContain("your child");
   });
 });
 

@@ -52,6 +52,15 @@ class ParentActivity : ComponentActivity() {
             finish()
             return
         }
+        // The parent receives push alerts, so it must hold POST_NOTIFICATIONS
+        // (Android 13+). The child requests this in MainActivity; the parent
+        // needs its own prompt or alerts are silently dropped.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 0)
+        }
         // Register this parent device for instant push alerts (no-op until
         // Firebase is configured).
         uk.co.cyberheroez.oroq.push.PushRegistration.register(this)

@@ -40,17 +40,19 @@ export async function buildServiceAccountJwt(sa: ServiceAccount, nowSec: number)
   return `${header}.${claims}.${b64url(sig)}`;
 }
 
-/** The FCM v1 message — generic body, IDs + childLabel only, never threat content. */
+/**
+ * The FCM v1 message — **data-only**, IDs + childLabel only, never threat
+ * content. Data-only routes through the app's onMessageReceived in every app
+ * state (not the system tray), so the device builds and posts the alert. This
+ * is both more private (no body text in the payload) and far more reliable on
+ * OEMs like Vivo that suppress background notification-messages.
+ */
 export function buildFcmMessage(token: string, pairingId: string, childLabel: string) {
-  const name = childLabel.trim() || "your child";
   return {
     message: {
       token,
-      notification: {
-        title: "OroQ",
-        body: `OroQ blocked something on ${name}'s phone — tap to view.`,
-      },
       data: { pairingId, childLabel },
+      android: { priority: "high" },
     },
   };
 }

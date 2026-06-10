@@ -20,8 +20,10 @@ class OroqMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: "OroQ"
-        val body = message.notification?.body ?: "New alert — tap to view."
+        // Data-only message: build the alert text on-device from the IDs.
+        val childLabel = message.data["childLabel"]?.takeIf { it.isNotBlank() } ?: "your child"
+        val title = "OroQ"
+        val body = "OroQ blocked something on $childLabel's phone — tap to view."
         val manager = ContextCompat.getSystemService(this, NotificationManager::class.java) ?: return
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, "Alerts", NotificationManager.IMPORTANCE_HIGH),
