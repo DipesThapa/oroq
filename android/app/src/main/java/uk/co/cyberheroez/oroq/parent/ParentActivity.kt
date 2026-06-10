@@ -52,6 +52,9 @@ class ParentActivity : ComponentActivity() {
             finish()
             return
         }
+        // Register this parent device for instant push alerts (no-op until
+        // Firebase is configured).
+        uk.co.cyberheroez.oroq.push.PushRegistration.register(this)
         setContent {
             val nav = rememberNavController()
             var tab by remember { mutableStateOf(ParentTab.HOME) }
