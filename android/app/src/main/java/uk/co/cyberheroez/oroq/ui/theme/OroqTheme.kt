@@ -45,6 +45,7 @@ object OroqType {
     val Display = TextStyle(fontFamily = Inter, fontSize = 56.sp, fontWeight = FontWeight.Bold, letterSpacing = (-1.1).sp, lineHeight = 62.sp, color = OroqColors.TextPrimary)
     val H1 = TextStyle(fontFamily = Inter, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = OroqColors.TextPrimary)
     val H2 = TextStyle(fontFamily = Inter, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, color = OroqColors.TextPrimary)
+    val H3 = TextStyle(fontFamily = Inter, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, color = OroqColors.TextPrimary)
     val Body = TextStyle(fontFamily = Inter, fontSize = 15.sp, fontWeight = FontWeight.Normal, color = OroqColors.TextSecondary)
     val BodyOnDark = Body.copy(color = OroqColors.TextPrimary)
     val Caption = TextStyle(fontFamily = Inter, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.9.sp, color = OroqColors.TextSecondary)
@@ -60,4 +61,6 @@ object OroqDimens {
     val PadCard = 16.dp
     val PadScreen = 20.dp
     val GapGrid = 12.dp
+    val SectionGap = 12.dp
+    val ScreenTop = 16.dp
 }
