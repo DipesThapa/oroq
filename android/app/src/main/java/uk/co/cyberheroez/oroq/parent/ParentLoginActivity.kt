@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -74,6 +75,33 @@ private fun LoginFlow(onSignedIn: () -> Unit) {
         OroqWordmark()
         Spacer(Modifier.height(24.dp))
         Text("Parent sign-in", style = OroqType.H2)
+
+        if (GoogleSignIn.isConfigured && stage == "email") {
+            Spacer(Modifier.height(16.dp))
+            PrimaryButton(if (busy) "Signing in…" else "Continue with Google", enabled = !busy) {
+                busy = true
+                scope.launch {
+                    when (val result = GoogleSignIn.signIn(context)) {
+                        is GoogleSignInResult.Success -> {
+                            store.setParentToken(result.sessionToken)
+                            onSignedIn()
+                        }
+                        GoogleSignInResult.Cancelled -> { /* silent — email form is right there */ }
+                        GoogleSignInResult.Unavailable ->
+                            error = "Google sign-in isn't available on this device"
+                        GoogleSignInResult.Rejected ->
+                            error = "Google sign-in failed — try the email code instead"
+                    }
+                    busy = false
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                "or",
+                style = OroqType.Caption,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
+            )
+        }
         Spacer(Modifier.height(16.dp))
 
         if (stage == "email") {
