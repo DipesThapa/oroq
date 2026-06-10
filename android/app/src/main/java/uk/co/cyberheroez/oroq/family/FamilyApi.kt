@@ -76,6 +76,12 @@ class FamilyApi(
         )
     }
 
+    /** Parent: unpair — deletes the pairing and its server traces. True on success. */
+    fun pairDelete(token: String, pairingId: String): Boolean {
+        val headers = mapOf("authorization" to "Bearer $token")
+        return transport.request("DELETE", "$baseUrl/pair/$pairingId", headers, null).status == 200
+    }
+
     /** Fetches a pairing record, or null if it does not exist or the request fails. */
     fun pairGet(pairingId: String): PairingRecord? {
         val res = transport.request("GET", "$baseUrl/pair/$pairingId", emptyMap(), null)

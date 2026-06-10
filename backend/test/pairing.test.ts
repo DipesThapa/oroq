@@ -55,6 +55,55 @@ describe("/pair", () => {
     });
   });
 
+  it("unpairs: deletes the pairing for the owning account and 404s afterwards", async () => {
+    const token = await accountToken();
+    const create = await fetchJson("/pair/create", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ parentPublicKey: PARENT_KEY }),
+    });
+    const { pairingId } = (await create.json()) as { pairingId: string };
+
+    const del = await fetchJson(`/pair/${pairingId}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${token}` },
+    });
+    expect(del.status).toBe(200);
+
+    const get = await fetchJson(`/pair/${pairingId}`, { method: "GET" });
+    expect(get.status).toBe(404);
+  });
+
+  it("rejects unpair without a token", async () => {
+    const token = await accountToken();
+    const create = await fetchJson("/pair/create", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ parentPublicKey: PARENT_KEY }),
+    });
+    const { pairingId } = (await create.json()) as { pairingId: string };
+    const del = await fetchJson(`/pair/${pairingId}`, { method: "DELETE" });
+    expect(del.status).toBe(401);
+  });
+
+  it("forbids unpairing another account's pairing", async () => {
+    const ownerToken = await accountToken();
+    const create = await fetchJson("/pair/create", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ parentPublicKey: PARENT_KEY }),
+    });
+    const { pairingId } = (await create.json()) as { pairingId: string };
+
+    const otherExp = Math.floor(Date.now() / 1000) + 600;
+    const otherToken = await signJwt({ sub: "acc-other", exp: otherExp }, env.JWT_SECRET);
+    const del = await fetchJson(`/pair/${pairingId}`, {
+      method: "DELETE",
+      headers: { authorization: `Bearer ${otherToken}` },
+    });
+    expect(del.status).toBe(403);
+  });
+
   it("rejects an unknown code", async () => {
     const res = await fetchJson("/pair/join", {
       method: "POST",

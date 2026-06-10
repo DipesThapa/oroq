@@ -48,6 +48,15 @@ class ParentViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Unpairs [pairingId] (server + local), refreshes, then invokes [onDone] on the main thread. */
+    fun unpair(pairingId: String, onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.unpairChild(pairingId)
+            refresh()
+            withContext(Dispatchers.Main) { onDone() }
+        }
+    }
+
     /** Sends [command] to one child (or every child when [pairingId] is null), then refreshes. */
     fun send(pairingId: String?, command: FamilyCommand) {
         viewModelScope.launch(Dispatchers.IO) {

@@ -44,6 +44,18 @@ class ParentRepository(context: Context) {
         return api.cmdSend(token, pairingId, Base64.getEncoder().encodeToString(ciphertext))
     }
 
+    /**
+     * Unpairs a child: deletes the pairing on the server, then removes it from
+     * this device. Local removal happens even if the server call fails, so a
+     * dead pairing can always be cleared from the parent's view.
+     */
+    fun unpairChild(pairingId: String): Boolean {
+        val token = store.tokenBlocking()
+        val serverOk = token != null && api.pairDelete(token, pairingId)
+        kotlinx.coroutines.runBlocking { store.removeChild(pairingId) }
+        return serverOk
+    }
+
     /** Convenience wrapper: tells the child to block exactly [categories]. */
     fun sendSetCategories(pairingId: String, categories: Set<String>): Boolean =
         sendCommand(

@@ -85,6 +85,14 @@ class FamilyStore(context: Context) {
         }
     }
 
+    /** Removes a paired child by pairing id (unpair). */
+    suspend fun removeChild(pairingId: String) {
+        store.edit { prefs ->
+            val current = prefs[Keys.CHILDREN] ?: emptySet()
+            prefs[Keys.CHILDREN] = current.filterNot { decodeChild(it)?.pairingId == pairingId }.toSet()
+        }
+    }
+
     suspend fun getParentLink(): ParentLink? =
         store.data.first()[Keys.PARENT_LINK]?.let { decodeLink(it) }
 

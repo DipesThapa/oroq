@@ -11,6 +11,7 @@ export async function handlePairing(req: Request, env: Env, path: string): Promi
   if (path === "/pair/join" && req.method === "POST") return pairJoin(req, env);
   const match = path.match(/^\/pair\/([0-9a-f-]{36})$/);
   if (match && req.method === "GET") return pairGet(env, match[1]);
+  if (match && req.method === "DELETE") return pairDelete(req, env, match[1]);
   return json({ error: "not_found" }, 404);
 }
 
@@ -102,4 +103,24 @@ async function pairGet(env: Env, id: string): Promise<Response> {
     paired: row.child_public_key !== null,
     pairedAt: row.paired_at,
   });
+}
+
+/**
+ * Unpair: the owning parent deletes the pairing record and its server-side
+ * traces (latest encrypted summary + pending commands). Idempotent.
+ */
+async function pairDelete(req: Request, env: Env, id: string): Promise<Response> {
+  const accountId = await authAccount(req, env);
+  if (!accountId) return json({ error: "unauthorized" }, 401);
+
+  const row = await env.DB.prepare("SELECT account_id FROM pairings WHERE id = ?")
+    .bind(id)
+    .first<{ account_id: string }>();
+  if (!row) return json({ error: "not_found" }, 404);
+  if (row.account_id !== accountId) return json({ error: "forbidden" }, 403);
+
+  await env.DB.prepare("DELETE FROM pairings WHERE id = ?").bind(id).run();
+  await env.KV.delete(`summary:${id}`);
+  await env.KV.delete(`cmds:${id}`);
+  return json({ ok: true });
 }
