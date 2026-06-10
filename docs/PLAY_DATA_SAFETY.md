@@ -43,10 +43,7 @@ These are the items most likely to trigger rejection for this app class — prep
 - [x] Build a **release** AAB signed with the upload keystore (`android/oroq-upload.jks`, gitignored). R8 minify + resource shrink enabled and verified on device (Tink crypto + WorkManager confirmed working). `gradlew bundleRelease`.
 - [x] Back up `android/oroq-upload.jks` + `android/keystore.properties` off-machine — they are gitignored and exist only locally. **Losing the upload key blocks app updates** (recoverable via Play App Signing reset, but back it up anyway).
 - [x] Add the **upload-key SHA-1** (`67:EF:C2:43:CB:80:B9:5B:90:CC:5B:47:1A:5C:F2:C6:76:77:02:0F`) to the Android OAuth client in the `oroq` Google Cloud project — covers sideloaded/locally-signed builds.
-- [ ] **⚠️ Play App Signing SHA-1 (do this AFTER first AAB upload).** Google re-signs the published app with its own key, so the Play-distributed app's SHA-1 differs from the upload key. **Google sign-in and FCM push will fail for Play-Store users until you register it.** Steps:
-  1. Upload the AAB once → Play Console → **Test and release → App integrity → App signing key certificate** → copy the **SHA-1**.
-  2. Add it as **another** Android OAuth client in the `oroq` GCP project (same package `uk.co.cyberheroez.oroq`, one SHA-1 per client).
-  3. (Only if you re-enable SHA on Firebase) add it to the Firebase Android app too.
+- [x] **Play App Signing SHA-1 registered.** AAB uploaded to internal testing; Play app-signing SHA-1 `B3:1D:45:5D:31:CF:4D:5F:3D:AB:A7:56:0D:E2:BF:21:EF:A8:79:A3` added as the "Android oroq" OAuth client in the `oroq` GCP project. "oroq local" client carries the upload/debug key for sideloaded builds. Web client "OroQ" (`…k2nh…`) is the app's `GOOGLE_WEB_CLIENT_ID`. Sign-in works for both Play and local builds.
 - [ ] (Local dev only) Debug-build Google sign-in needs the **debug** SHA-1 (`C1:6E:EE:5B:24:81:28:30:51:54:F2:C4:71:C3:D1:7E:E5:C8:7C:43`) on a separate Android OAuth client — or just use the email-OTP path when testing debug builds.
 - [ ] Host `PRIVACY_ANDROID.md` at a public URL; paste it into the listing and the Data Safety form.
 - [ ] Complete content rating + target audience questionnaires.
