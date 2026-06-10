@@ -53,6 +53,19 @@ describe("/sync", () => {
     expect(await get.json()).toMatchObject({ ciphertext: "BLOB-2" });
   });
 
+  it("accepts a notify flag and still stores the blob (best-effort push)", async () => {
+    const res = await SELF.fetch(`https://x/sync/${pairedId}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ciphertext: "BLOB-NOTIFY", notify: true }),
+    });
+    expect(res.status).toBe(200);
+    const get = await SELF.fetch(`https://x/sync/${pairedId}`, {
+      headers: { authorization: `Bearer ${await token(ACCOUNT)}` },
+    });
+    expect(await get.json()).toMatchObject({ ciphertext: "BLOB-NOTIFY" });
+  });
+
   it("rejects an upload to an unpaired pairing", async () => {
     const res = await SELF.fetch(`https://x/sync/${unpairedId}`, {
       method: "POST",

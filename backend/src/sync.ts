@@ -2,6 +2,7 @@ import { Env } from "./env";
 import { json, readJson } from "./http";
 import { verifyJwt } from "./crypto";
 import { rateLimit } from "./ratelimit";
+import { notifyAccount } from "./push";
 
 const SUMMARY_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
@@ -21,17 +22,24 @@ async function syncUpload(req: Request, env: Env, pairingId: string): Promise<Re
   if (!(await rateLimit(env, `sync:${ip}`, 30, 600))) {
     return json({ error: "rate_limited" }, 429);
   }
-  const ciphertext = (await readJson(req)).ciphertext;
+  const body = await readJson(req);
+  const ciphertext = body.ciphertext;
+  const notify = body.notify === true;
   if (typeof ciphertext !== "string" || ciphertext.length === 0 || ciphertext.length > 100_000) {
     return json({ error: "bad_request" }, 400);
   }
-  const row = await env.DB.prepare("SELECT child_public_key FROM pairings WHERE id = ?")
+  const row = await env.DB.prepare(
+    "SELECT account_id, child_label, child_public_key FROM pairings WHERE id = ?",
+  )
     .bind(pairingId)
-    .first<{ child_public_key: string | null }>();
+    .first<{ account_id: string; child_label: string | null; child_public_key: string | null }>();
   if (!row) return json({ error: "not_found" }, 404);
   if (!row.child_public_key) return json({ error: "not_paired" }, 409);
 
   await env.KV.put(`summary:${pairingId}`, ciphertext, { expirationTtl: SUMMARY_TTL_SEC });
+  if (notify) {
+    await notifyAccount(env, row.account_id, pairingId, row.child_label ?? "your child");
+  }
   return json({ ok: true });
 }
 
