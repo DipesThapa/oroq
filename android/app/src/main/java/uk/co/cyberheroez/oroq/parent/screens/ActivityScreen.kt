@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
 import uk.co.cyberheroez.oroq.ui.components.ActivityRow
+import uk.co.cyberheroez.oroq.ui.components.EmptyState
 import uk.co.cyberheroez.oroq.ui.components.FilterChips
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
@@ -49,8 +50,7 @@ fun ActivityScreen(vm: ParentViewModel) {
         // windows would lie. Becomes a real dropdown with backend history.
         Text("Last 7 days", style = OroqType.Caption)
         if (events.isEmpty()) {
-            Spacer(Modifier.height(24.dp))
-            Text("Nothing in this window.", style = OroqType.Body)
+            EmptyState("Nothing blocked yet", "When OroQ blocks something, it shows up here.")
         } else {
             LazyColumn { items(events) { e -> ActivityRow(e.cat, e.type, e.label, e.ts) } }
         }

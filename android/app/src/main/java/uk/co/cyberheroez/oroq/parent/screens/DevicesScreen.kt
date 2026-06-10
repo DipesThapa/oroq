@@ -20,7 +20,9 @@ import androidx.navigation.NavController
 import uk.co.cyberheroez.oroq.parent.ConfidenceScore
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
 import uk.co.cyberheroez.oroq.ui.components.DeviceRow
+import uk.co.cyberheroez.oroq.ui.components.EmptyState
 import uk.co.cyberheroez.oroq.ui.components.FilterChips
+import uk.co.cyberheroez.oroq.ui.components.OnboardingCard
 import uk.co.cyberheroez.oroq.ui.components.PrimaryButton
 import uk.co.cyberheroez.oroq.ui.components.relativeTime
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
@@ -48,9 +50,11 @@ fun DevicesScreen(vm: ParentViewModel, nav: NavController) {
         ) { filterPrefix = it.substringBefore(" (") }
         Spacer(Modifier.height(8.dp))
         Column(Modifier.weight(1f)) {
-            if (shown.isEmpty()) {
-                Spacer(Modifier.height(24.dp))
-                Text("No devices here yet.", style = OroqType.Body)
+            if (snaps.isEmpty()) {
+                Spacer(Modifier.height(OroqDimens.ScreenTop))
+                OnboardingCard(onAddChild = { nav.navigate("addchild") })
+            } else if (shown.isEmpty()) {
+                EmptyState("No devices in this filter", "Switch the filter above to see your other devices.")
             } else {
                 LazyColumn {
                     items(shown) { snap ->
@@ -64,7 +68,9 @@ fun DevicesScreen(vm: ParentViewModel, nav: NavController) {
                 }
             }
         }
-        PrimaryButton("Add a child device") { nav.navigate("addchild") }
+        if (snaps.isNotEmpty()) {
+            PrimaryButton("Add a child device") { nav.navigate("addchild") }
+        }
         Spacer(Modifier.height(12.dp))
     }
 }

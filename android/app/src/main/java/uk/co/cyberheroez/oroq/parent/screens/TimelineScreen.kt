@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
+import uk.co.cyberheroez.oroq.ui.components.EmptyState
 import uk.co.cyberheroez.oroq.ui.components.TimelineGroup
 import uk.co.cyberheroez.oroq.ui.components.categoryColor
 import uk.co.cyberheroez.oroq.ui.components.categoryTitle
@@ -40,7 +41,9 @@ fun TimelineScreen(vm: ParentViewModel) {
         }
     Column(Modifier.fillMaxSize().padding(horizontal = OroqDimens.PadScreen)) {
         Text("Timeline", style = OroqType.H2, modifier = Modifier.padding(vertical = 16.dp))
-        if (groups.isEmpty()) Text("No events yet.", style = OroqType.Body)
+        if (groups.isEmpty()) {
+            EmptyState("No events yet", "Pairing, blocks and protection changes will appear over time.")
+        }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(groups.entries.toList()) { (day, entries) ->
                 TimelineGroup(

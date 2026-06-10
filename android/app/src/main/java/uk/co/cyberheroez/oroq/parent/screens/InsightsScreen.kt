@@ -24,6 +24,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
+import uk.co.cyberheroez.oroq.ui.components.EmptyState
 import uk.co.cyberheroez.oroq.ui.components.OroqCard
 import uk.co.cyberheroez.oroq.ui.components.SecondaryLink
 import uk.co.cyberheroez.oroq.ui.components.categoryColor
@@ -42,6 +43,10 @@ fun InsightsScreen(vm: ParentViewModel, nav: NavController) {
             .padding(horizontal = OroqDimens.PadScreen),
     ) {
         Text("Insights", style = OroqType.H2, modifier = Modifier.padding(vertical = 16.dp))
+        if (events.isEmpty()) {
+            EmptyState("Insights are coming", "Once there's a week of activity, you'll see trends here.")
+            return@Column
+        }
         Text("This week", style = OroqType.Caption)
         Spacer(Modifier.height(8.dp))
         OroqCard {

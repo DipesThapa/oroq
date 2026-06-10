@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
 import uk.co.cyberheroez.oroq.ui.components.ActivityRow
+import uk.co.cyberheroez.oroq.ui.components.EmptyState
 import uk.co.cyberheroez.oroq.ui.components.FilterChips
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
@@ -41,7 +42,10 @@ fun NotificationsScreen(vm: ParentViewModel) {
         Text("Notifications", style = OroqType.H2, modifier = Modifier.padding(vertical = 16.dp))
         FilterChips(listOf("All", "Unread", "Important"), filter) { filter = it }
         Spacer(Modifier.height(8.dp))
-        if (events.isEmpty()) Text("Nothing here yet.", style = OroqType.Body)
-        LazyColumn { items(events) { e -> ActivityRow(e.cat, e.type, e.label, e.ts) } }
+        if (events.isEmpty()) {
+            EmptyState("Nothing blocked yet", "When OroQ blocks something, it shows up here.")
+        } else {
+            LazyColumn { items(events) { e -> ActivityRow(e.cat, e.type, e.label, e.ts) } }
+        }
     }
 }
