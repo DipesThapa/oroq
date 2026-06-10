@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -39,20 +41,23 @@ import uk.co.cyberheroez.oroq.ui.components.Skeleton
 import uk.co.cyberheroez.oroq.ui.components.StatTile
 import uk.co.cyberheroez.oroq.ui.components.WhatYouWillSeeCard
 import uk.co.cyberheroez.oroq.ui.components.relativeTime
+import uk.co.cyberheroez.oroq.ui.motion.staggeredEntrance
 import uk.co.cyberheroez.oroq.ui.theme.OroqColors
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(vm: ParentViewModel, nav: NavController) {
     val state by vm.state.collectAsState()
-    HomeContent(
-        state = state,
-        onAddChild = { nav.navigate("addchild") },
-        onViewAll = { nav.navigate("activity") },
-        onRefresh = { vm.refresh() },
-        onBell = { nav.navigate("notifications") },
-    )
+    PullToRefreshBox(isRefreshing = state.refreshing, onRefresh = { vm.refresh() }) {
+        HomeContent(
+            state = state,
+            onAddChild = { nav.navigate("addchild") },
+            onViewAll = { nav.navigate("activity") },
+            onBell = { nav.navigate("notifications") },
+        )
+    }
 }
 
 @Composable
@@ -60,7 +65,6 @@ fun HomeContent(
     state: ParentUiState,
     onAddChild: () -> Unit,
     onViewAll: () -> Unit,
-    onRefresh: () -> Unit,
     onBell: () -> Unit,
 ) {
     Column(
@@ -105,7 +109,7 @@ fun HomeContent(
 
             else -> {
                 val stats = state.stats
-                GlowBox {
+                GlowBox(Modifier.staggeredEntrance(0)) {
                     OroqCard {
                         Text("CYBER CONFIDENCE", style = OroqType.Caption)
                         Spacer(Modifier.height(10.dp))
@@ -131,17 +135,16 @@ fun HomeContent(
                             }
                         }
                         Spacer(Modifier.height(8.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Updated ${relativeTime(state.lastRefresh)}", style = OroqType.Caption)
-                            Spacer(Modifier.weight(1f))
-                            SecondaryLink(if (state.refreshing) "Refreshing…" else "Refresh", onClick = onRefresh)
-                        }
+                        Text(
+                            if (state.refreshing) "Refreshing…" else "Updated ${relativeTime(state.lastRefresh)}",
+                            style = OroqType.Caption,
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(12.dp))
 
-                OroqCard {
+                OroqCard(Modifier.staggeredEntrance(1)) {
                     Row {
                         Text("Recent Activity", style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.SemiBold))
                         Spacer(Modifier.weight(1f))

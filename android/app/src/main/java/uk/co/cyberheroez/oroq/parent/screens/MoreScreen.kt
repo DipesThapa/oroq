@@ -31,6 +31,7 @@ fun MoreScreen(vm: ParentViewModel, nav: NavController) {
     Column(Modifier.fillMaxSize().padding(horizontal = OroqDimens.PadScreen)) {
         Text("More", style = OroqType.H2, modifier = Modifier.padding(vertical = 16.dp))
         OroqCard {
+            SecondaryLink("Refresh now") { vm.refresh() }
             SecondaryLink("Timeline") { nav.navigate("timeline") }
             SecondaryLink("Notifications") { nav.navigate("notifications") }
             SecondaryLink("Add a child device") { nav.navigate("addchild") }

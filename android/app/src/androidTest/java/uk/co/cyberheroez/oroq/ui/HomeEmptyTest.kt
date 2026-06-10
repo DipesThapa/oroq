@@ -16,7 +16,7 @@ class HomeEmptyTest {
 
     @Test
     fun empty_shows_onboarding_not_gauge() {
-        rule.setContent { HomeContent(ParentUiState(), {}, {}, {}, {}) }
+        rule.setContent { HomeContent(ParentUiState(), {}, {}, {}) }
         rule.onNodeWithText("Add your first device").assertIsDisplayed()
     }
 
@@ -29,7 +29,7 @@ class HomeEmptyTest {
             now,
         )
         val state = ParentUiState(listOf(snap), Insights.derive(listOf(snap), now), false, now)
-        rule.setContent { HomeContent(state, {}, {}, {}, {}) }
+        rule.setContent { HomeContent(state, {}, {}, {}) }
         rule.onNodeWithText("CYBER CONFIDENCE").assertIsDisplayed()
     }
 }
