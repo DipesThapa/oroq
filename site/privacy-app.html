@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OroQ Android App Privacy Policy</title>
+  <link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <span class="pill">Privacy-first</span>
+      <h1>OroQ Android App Privacy Policy</h1>
+      <p>The OroQ Android app (parent &amp; child) filters on-device and end-to-end encrypts the activity a parent sees, so OroQ's servers can't read it. This policy is separate from the browser-extension policy.</p>
+      <nav>
+        <a href="index.html">Overview</a>
+        <a href="privacy.html">Extension Privacy</a>
+        <a href="privacy-app.html">App Privacy</a>
+        <a href="support.html">Support</a>
+        <a href="https://github.com/DipesThapa/oroq" target="_blank" rel="noopener">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <p><strong>Controller:</strong> CyberHeroez CIC, United Kingdom — <a href="mailto:dipesh@cyberheroez.co.uk">dipesh@cyberheroez.co.uk</a></p>
+      <p>This policy covers the <strong>OroQ Android app</strong> (<code>uk.co.cyberheroez.oroq</code>), a parental-control and web-filtering app with a parent role and a child role. OroQ is transparent and on-device first: the child phone is never monitored covertly, filtering runs locally, and the activity a parent sees is end-to-end encrypted.</p>
+
+      <h2>Who the app is for</h2>
+      <ul>
+        <li><strong>Parent device:</strong> an adult sets up filtering, screen-time limits and app blocking, and views a child's activity summary.</li>
+        <li><strong>Child device:</strong> runs on-device filtering and reports a summary to the linked parent. OroQ is always visibly installed and shows its protection status; it does not hide itself.</li>
+      </ul>
+
+      <h2>What the app processes, and where it goes</h2>
+      <h3>On the child device (processed locally)</h3>
+      <ul>
+        <li><strong>Web requests (DNS):</strong> evaluated on-device by a local-only VPN to block harmful domains and apply Safe Search / YouTube Restricted Mode. Traffic is never routed to OroQ or any third party. Full URLs and page content are never read or stored — only the <strong>domain</strong> of a blocked request is recorded.</li>
+        <li><strong>Foreground app + screen time:</strong> read via Android Usage Access to enforce app blocks and screen-time limits.</li>
+        <li><strong>Installed-apps list:</strong> read so the parent can choose which apps to block.</li>
+        <li><strong>Recent block events:</strong> a rolling local log of up to 50 entries (domain or app name, category, timestamp).</li>
+      </ul>
+      <h3>Sent to the linked parent (end-to-end encrypted)</h3>
+      <p>On a periodic sync the child uploads an activity summary encrypted <strong>for the parent device only</strong> (Tink hybrid encryption, HPKE over X25519): protection on/off, today's screen-time total and limit, top apps by time, blocked-today counts, recent block events, enabled block categories, the installed-apps list, blocked-app selection, and Safe Search / YouTube Restricted state. <strong>OroQ's server stores only the encrypted blob and cannot decrypt it.</strong> It auto-expires after 7 days; remote commands from the parent (also encrypted) expire after 24 hours.</p>
+      <h3>Account data (parent only)</h3>
+      <ul>
+        <li><strong>Email address</strong> — used to sign in and identify the parent account.</li>
+        <li><strong>Google sign-in (optional):</strong> Google returns a verified email used as above. OroQ receives no other Google profile data and stores no Google tokens. A one-time email code remains available as an alternative.</li>
+        <li><strong>Device pairing keys:</strong> public encryption keys for paired devices. Private keys never leave the device that generated them.</li>
+      </ul>
+      <h3>Not collected</h3>
+      <p>No browsing history or full URLs. No message, photo, video, or microphone content. No contacts. No location. No advertising identifiers. No third-party analytics or ad SDKs. No hardware identifiers — device identity is a random app-generated UUID.</p>
+
+      <h2>Legal basis (UK GDPR)</h2>
+      <ul>
+        <li><strong>Performance of the service</strong> the parent requests (filtering, screen-time, the activity summary).</li>
+        <li><strong>Legitimate interests / safeguarding</strong> for organisational (school) deployments, supported by a DPIA and KCSIE compliance materials.</li>
+        <li>Child-facing screens collect no data beyond what the linked parent's settings require, in line with the UK Age Appropriate Design Code.</li>
+      </ul>
+
+      <h2>Retention</h2>
+      <ul>
+        <li>Encrypted activity summary (server): 7 days, then auto-deleted.</li>
+        <li>Pending remote command (server): 24 hours.</li>
+        <li>Sign-in email code, hashed (server): 10 minutes.</li>
+        <li>Parent session token (device): 30 days.</li>
+        <li>Parent account email (server): until account deletion is requested.</li>
+        <li>Local block-event log (child device): rolling, last 50 events only.</li>
+        <li>On-device settings, PIN hash, keys: until the app is uninstalled.</li>
+      </ul>
+
+      <h2>Sharing</h2>
+      <p>OroQ does not sell data and shares it with no advertisers or data brokers. Processors used to run the service: <strong>Cloudflare</strong> (hosting and the pairing relay) and, for sign-in only, <strong>Resend</strong> (sends the one-time email code) and <strong>Google</strong> (verifies Sign in with Google and delivers push notifications). Each receives only the minimum needed. The activity summary is encrypted such that no processor — including Cloudflare — can read it; push notifications carry only IDs, never threat content.</p>
+
+      <h2>Your rights and controls</h2>
+      <ul>
+        <li><strong>Access / deletion:</strong> email <a href="mailto:dipesh@cyberheroez.co.uk">dipesh@cyberheroez.co.uk</a> to access or delete your account and data. Uninstalling the child app stops all collection and deletes local data; the encrypted summary expires from the server within 7 days regardless.</li>
+        <li><strong>Withdraw:</strong> a parent can disable any protection or unpair a device at any time. Children can see protection status on the device at all times.</li>
+        <li><strong>Security disclosures:</strong> see <a href="https://github.com/DipesThapa/oroq/blob/main/SECURITY.md" target="_blank" rel="noopener">SECURITY.md</a>.</li>
+      </ul>
+
+      <h2>Children's data</h2>
+      <p>OroQ is a tool operated by a parent or a school for a child's safety. It is not directed at children as consumers and shows no ads. Child-side data is minimised to what the supervising adult's settings produce, is encrypted in transit and at rest on the server, and is never used for profiling or advertising.</p>
+
+      <h2>Changes</h2>
+      <p>Material changes will update the date below and, where required, be surfaced in-app.</p>
+    </section>
+
+    <p class="footer">Last updated: June 2026 · Product of CyberHeroez CIC.</p>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div>© <span id="year"></span> CyberHeroez CIC. All rights reserved.</div>
+      <div>
+        <a href="index.html">Overview</a> ·
+        <a href="privacy.html">Extension Privacy</a> ·
+        <a href="support.html">Support</a> ·
+        <a href="https://cyberheroez.co.uk/" target="_blank" rel="noopener noreferrer">CyberHeroez CIC</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/site.js"></script>
+</body>
+</html>
