@@ -11,11 +11,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Create zip
         run: |
-          ZIP="safeguard-${GITHUB_REF_NAME}.zip"
+          ZIP="oroq-${GITHUB_REF_NAME}.zip"
           echo "ZIP_FILE=$ZIP" >> $GITHUB_ENV
           zip -r "$ZIP" . -x ".git/*" ".github/*" "node_modules/*" "*.zip"
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: Safeguard ${{ github.ref_name }}
+          name: OroQ ${{ github.ref_name }}
           files: ${{ env.ZIP_FILE }}

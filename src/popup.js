@@ -2951,7 +2951,7 @@ if (allowExport){
       setAllowMessage('Allowlist is empty.', 'muted');
       return;
     }
-    downloadJson(`safeguard-allowlist-${new Date().toISOString().slice(0,10)}.json`, {
+    downloadJson(`oroq-allowlist-${new Date().toISOString().slice(0,10)}.json`, {
       exportedAt: new Date().toISOString(),
       type: 'allowlist',
       domains: currentAllowlist
@@ -2966,7 +2966,7 @@ if (exportBlocklist){
       setBlockMessage('Blocklist is empty.', 'muted');
       return;
     }
-    downloadJson(`safeguard-blocklist-${new Date().toISOString().slice(0,10)}.json`, {
+    downloadJson(`oroq-blocklist-${new Date().toISOString().slice(0,10)}.json`, {
       exportedAt: new Date().toISOString(),
       type: 'blocklist',
       domains: currentBlocklist
@@ -3698,7 +3698,7 @@ if (overrideExportBtn){
       return;
     }
     if (!(await ensureLogPin('download the override log'))) return;
-    downloadJson(`safeguard-overrides-${new Date().toISOString().slice(0,10)}.json`, {
+    downloadJson(`oroq-overrides-${new Date().toISOString().slice(0,10)}.json`, {
       exportedAt: new Date().toISOString(),
       count: log.length,
       entries: log
@@ -4167,7 +4167,7 @@ if (digestDownloadBtn){
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `safeguard-digest-${new Date().toISOString().slice(0,10)}.csv`;
+      a.download = `oroq-digest-${new Date().toISOString().slice(0,10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

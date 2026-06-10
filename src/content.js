@@ -1402,7 +1402,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   function rotateList(list, seed, take){
     if (!Array.isArray(list) || !list.length) return [];
     const length = Math.min(take || 3, list.length);
-    const source = String(seed || 'safeguard');
+    const source = String(seed || 'oroq');
     let hash = 0;
     for (let i = 0; i < source.length; i += 1){
       hash = (hash + source.charCodeAt(i)) % 100000;

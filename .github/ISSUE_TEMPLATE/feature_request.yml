@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea to improve Safeguard
+description: Suggest an idea to improve OroQ
 labels: [enhancement]
 body:
   - type: textarea

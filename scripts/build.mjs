@@ -107,9 +107,9 @@ async function main() {
     // eslint-disable-next-line no-console
     console.log('  xcrun safari-web-extension-converter dist/safari \\');
     // eslint-disable-next-line no-console
-    console.log('    --app-name "SafeBrowse" \\');
+    console.log('    --app-name "OroQ" \\');
     // eslint-disable-next-line no-console
-    console.log('    --bundle-identifier co.cyberheroez.safeguard \\');
+    console.log('    --bundle-identifier uk.co.cyberheroez.oroq \\');
     // eslint-disable-next-line no-console
     console.log('    --swift --macos-only');
     // eslint-disable-next-line no-console

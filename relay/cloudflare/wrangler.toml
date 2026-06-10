@@ -1,4 +1,4 @@
-name = "safeguard-pairing-relay"
+name = "oroq-pairing-relay"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 

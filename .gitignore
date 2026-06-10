@@ -3,3 +3,5 @@ node_modules
 dist
 docs/idea-to-store-flow.md
 .env
+.wrangler
+.superpowers

@@ -6,7 +6,7 @@
   "homepage_url": "https://cyberheroez.co.uk/",
   "browser_specific_settings": {
     "gecko": {
-      "id": "safeguard@cyberheroez.co.uk",
+      "id": "oroq@cyberheroez.co.uk",
       "strict_min_version": "109.0"
     }
   },
