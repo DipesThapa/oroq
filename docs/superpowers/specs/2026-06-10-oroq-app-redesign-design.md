@@ -23,6 +23,8 @@ Out of scope here: panel 14 (portal), panel 15 (ecosystem marketing), any Supaba
 | Dashboard data | **Derived client-side on the parent app** from already-synced child summaries. No new endpoints. Score formula lives in one Kotlin object (`ConfidenceScore`) so it can move server-side in sub-project 3. |
 | QR scanning | **ZXing core (Apache-2.0) + CameraX**, our own scan UI matching deck 5.3. Camera permission requested only when the user taps "Scan QR instead". |
 | UI framework | **Jetpack Compose rewrite** (owner's choice over evolving `Style.kt`). Old view-based screens and `Style.kt` are deleted at the end; no parallel maintenance. |
+| Device Details toggles | **Full fidelity** (owner's choice, 2026-06-10). The deck's four toggles get real child-side enforcement: new command types `SET_PROTECTION`, `SET_SAFE_SEARCH`, `SET_YT_RESTRICTED` plus the existing category mechanism. Safe Search / YouTube Restricted are DNS rewrites in `DnsFilter` (`forcesafesearch.google.com` / `restrictmoderate.youtube.com`). The child reports toggle states back in `FamilySummary` (new optional fields) so the parent UI shows truth. |
+| Threat categories | `BlockEvent` gains an optional `cat` field (wire-compatible; absent = legacy). The DNS filter records which blocklist category matched so the Activity screen's PHISHING/SCAM/ADULT pills are real. |
 | Theme | Dark is the only mobile theme. The deck's light surfaces exist only in deck-slide backgrounds and the (out-of-scope) portal. |
 
 Deck defects fixed as the deck spec instructs: "Allo to Home" → `Go to Home`; 5-tab bar everywhere (deck panel 08 shows 4); wordmark **OROQ**, prose **OroQ**; panels renumbered 10 Insights / 11 Recommendations / 12 Timeline / 13 Notifications.
@@ -89,7 +91,7 @@ Illustrations (family, shield-check, green check): simple flat vector drawables 
 - **Home (06):** top bar wordmark + bell (unread dot → Notifications). `CYBER CONFIDENCE` gauge card with `Updated Xm ago` from last sync. Stat grid 2×2: Threats Blocked / Unsafe Domains / Devices Protected / Uptime, real derived values with `This week` meta. Recent Activity card (3 latest events) + `View all` → Activity tab.
 - **Activity (07):** chips All/Threats/Warnings/Info, `Last 7 days ▾` dropdown, full event list with uppercase category pills.
 - **Devices (08):** chips `All (n)`/`Active (n)`/`Inactive (n)`, `DeviceRow` list. Status line "Active • Last seen Xm ago" from sync recency (active = synced within 24 h).
-- **Device Details (09):** title + status, `Protection` toggle section (AI Protection, Web Filtering, Safe Search, YouTube Restricted) mapped onto existing `FamilyCommand`s; below it the existing Blocked Categories and Blocked Apps editors restyled — current functionality is kept, not dropped, even though the deck omits it.
+- **Device Details (09):** title + status, `Protection` toggle section with the deck's four toggles, each backed by a real command — AI Protection → `SET_PROTECTION` (child starts/stops filtering services), Web Filtering → `SET_CATEGORIES` non-empty/empty gate, Safe Search → `SET_SAFE_SEARCH` (DNS rewrite), YouTube Restricted → `SET_YT_RESTRICTED` (DNS rewrite). Toggle states render from the child's reported `FamilySummary` fields, optimistically updated on tap. Below: the existing Blocked Categories and Blocked Apps editors restyled — current functionality is kept, not dropped, even though the deck omits it.
 - **Insights (10):** `This week ▾`, big stat `OroQ blocked N potential threats`, 3 mini-stats (threats / warnings / devices flagged — deck-illegible row, this is our explicit assumption), Top categories horizontal bars, `View all recommendations` link.
 - **Recommendations (11):** cards Enable Safe Search / Block Adult Content / Enable YouTube Restricted Mode, each `Enable` issuing the matching command to all (or a chosen) child device; enabled state reflected.
 - **Timeline (12):** grouped Today/Yesterday/date, colored dots, block + lifecycle events (protection enabled, device added, weekly summary).
@@ -98,7 +100,7 @@ Illustrations (family, shield-check, green check): simple flat vector drawables 
 
 ## Data derivation — `parent/Insights.kt` (pure Kotlin, unit-tested)
 
-Inputs: the decrypted `FamilySummary` blobs the parent already fetches per paired child (block events with category/domain/timestamp, protection states, last-sync times).
+Inputs: the decrypted `FamilySummary` blobs the parent already fetches per paired child (block events with type/label/timestamp — and, after the `cat` field lands, threat category — plus protection states and last-sync times). Events without a `cat` render as the generic blocked style, never as a fabricated category.
 
 - **Threats Blocked (week):** count of block events in last 7 days, categories phishing/malware/scam.
 - **Unsafe Domains (week):** distinct blocked domains, last 7 days.
