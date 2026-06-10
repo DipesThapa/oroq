@@ -1,24 +1,37 @@
 package uk.co.cyberheroez.oroq.ui
 
 import android.content.Intent
-import android.content.res.ColorStateList
-import android.graphics.Typeface
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.family.pollAndApplyCommands
-import uk.co.cyberheroez.oroq.ui.Style.dp
+import uk.co.cyberheroez.oroq.ui.components.PrimaryButton
+import uk.co.cyberheroez.oroq.ui.components.QSymbol
+import uk.co.cyberheroez.oroq.ui.theme.OroqColors
+import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
+import uk.co.cyberheroez.oroq.ui.theme.OroqType
 
 /**
  * Full-screen screen shown when an app is blocked or screen time is up.
@@ -27,16 +40,19 @@ import uk.co.cyberheroez.oroq.ui.Style.dp
  * On the time's-up variant, the activity polls the parent every 30 s for a
  * grant-extra-time command and dismisses itself the moment one is applied.
  */
-class BlockActivity : AppCompatActivity() {
-
-    private val match = ViewGroup.LayoutParams.MATCH_PARENT
-    private val wrap = ViewGroup.LayoutParams.WRAP_CONTENT
+class BlockActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        supportActionBar?.hide()
         val reason = intent.getStringExtra(EXTRA_REASON) ?: REASON_APP
-        setContentView(if (reason == REASON_TIME) timeUpView() else appBlockedView())
+        // Back returns to the launcher, never to the blocked app.
+        onBackPressedDispatcher.addCallback(
+            this,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() = goHome()
+            },
+        )
+        setContent { BlockScreen(reason = reason, onGoHome = ::goHome) }
         if (reason == REASON_TIME) pollForRemoteGrant()
     }
 
@@ -59,92 +75,11 @@ class BlockActivity : AppCompatActivity() {
         }
     }
 
-    /** Back returns to the launcher, never to the blocked app. */
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() = goHome()
-
-    private fun appBlockedView(): View = blockScreen(
-        bgColor = Style.CORAL,
-        iconRes = R.drawable.ic_block,
-        heading = "App blocked",
-        message = "This app has been blocked by OroQ.",
-    ) {
-        whiteButton("Go to home screen", Style.CORAL) { goHome() }
-    }
-
-    private fun timeUpView(): View = blockScreen(
-        bgColor = Style.BLUE,
-        iconRes = R.drawable.ic_clock,
-        heading = "Screen time's up",
-        message = "Today's screen-time limit has been reached. " +
-            "A parent can grant more time remotely.",
-    ) {
-        whiteButton("Go to home screen", Style.BLUE) { goHome() }
-    }
-
-    private fun blockScreen(
-        bgColor: Int,
-        iconRes: Int,
-        heading: String,
-        message: String,
-        actions: LinearLayout.() -> Unit,
-    ): View {
-        window.statusBarColor = bgColor
-        val column = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setBackgroundColor(bgColor)
-            setPadding(dp(32), dp(32), dp(32), dp(40))
-        }
-        column.addView(ImageView(this).apply {
-            setImageResource(iconRes)
-            imageTintList = ColorStateList.valueOf(Style.ON_DARK)
-            background = Style.roundRect(Style.WHITE_CHIP, dp(28).toFloat())
-            val p = dp(22)
-            setPadding(p, p, p, p)
-        }, LinearLayout.LayoutParams(dp(100), dp(100)))
-        column.addView(TextView(this).apply {
-            text = heading
-            textSize = 27f
-            setTypeface(typeface, Typeface.BOLD)
-            setTextColor(Style.ON_DARK)
-            gravity = Gravity.CENTER
-        }, mw(26))
-        column.addView(TextView(this).apply {
-            text = message
-            textSize = 15f
-            setTextColor(Style.ON_DARK_SOFT)
-            gravity = Gravity.CENTER
-            setLineSpacing(0f, 1.3f)
-        }, mw(10))
-        column.actions()
-        return column
-    }
-
-    private fun mw(topDp: Int) = LinearLayout.LayoutParams(match, wrap)
-        .apply { topMargin = dp(topDp) }
-
-    /** A white pill button with [textColor] text, for use on a coloured screen. */
-    private fun LinearLayout.whiteButton(text: String, textColor: Int, onClick: () -> Unit) {
-        addView(MaterialButton(this@BlockActivity).apply {
-            this.text = text
-            isAllCaps = false
-            textSize = 16f
-            setTypeface(typeface, Typeface.BOLD)
-            cornerRadius = dp(28)
-            insetTop = 0
-            insetBottom = 0
-            backgroundTintList = ColorStateList.valueOf(Style.ON_DARK)
-            setTextColor(textColor)
-            setOnClickListener { onClick() }
-        }, LinearLayout.LayoutParams(match, dp(56)).apply { topMargin = dp(30) })
-    }
-
     private fun goHome() {
         startActivity(
             Intent(Intent.ACTION_MAIN)
                 .addCategory(Intent.CATEGORY_HOME)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         finish()
     }
@@ -153,5 +88,41 @@ class BlockActivity : AppCompatActivity() {
         const val EXTRA_REASON = "reason"
         const val REASON_APP = "APP"
         const val REASON_TIME = "TIME"
+    }
+}
+
+@Composable
+private fun BlockScreen(reason: String, onGoHome: () -> Unit) {
+    val isTime = reason == BlockActivity.REASON_TIME
+    val accent = if (isTime) OroqColors.BluePrimary else OroqColors.Danger
+    Column(
+        Modifier.fillMaxSize().background(OroqColors.BgPrimary).systemBarsPadding()
+            .padding(horizontal = OroqDimens.PadScreen),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.weight(1f))
+        Box(
+            Modifier.size(110.dp).clip(CircleShape).background(OroqColors.pill(accent)),
+            contentAlignment = Alignment.Center,
+        ) { QSymbol(64.dp, ring = accent) }
+        Spacer(Modifier.height(26.dp))
+        Text(
+            if (isTime) "Screen time's up" else "App blocked",
+            style = OroqType.H1,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            if (isTime) {
+                "Today's screen-time limit has been reached. A parent can grant more time remotely."
+            } else {
+                "This app has been blocked by OroQ."
+            },
+            style = OroqType.Body,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.weight(1f))
+        PrimaryButton("Go to home screen", onClick = onGoHome)
+        Spacer(Modifier.height(40.dp))
     }
 }
