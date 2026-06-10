@@ -10,6 +10,8 @@
 
     <!-- OroQ brand palette — calm teal -->
     <color name="sb_bg">#FFF7F4EF</color>
+    <!-- Deck §0.1 BgPrimary — launch-window background so there's no light flash. -->
+    <color name="oroq_bg_dark">#FF010715</color>
     <color name="sb_primary">#FF1FB07A</color>
     <color name="sb_primary_dark">#FF18935F</color>
     <color name="sb_on_primary">#FFFFFFFF</color>
