@@ -2,9 +2,11 @@ package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -51,8 +53,9 @@ class FamilySyncWorker(
         val ciphertext = FamilyCrypto.encryptFor(
             link.parentPublicKeyB64, summary.toJson().toByteArray(),
         )
+        val notify = inputData.getBoolean("notify", false)
         val uploaded = familyApi().syncUpload(
-            link.pairingId, Base64.getEncoder().encodeToString(ciphertext),
+            link.pairingId, Base64.getEncoder().encodeToString(ciphertext), notify,
         )
         runCatching { pollAndApplyCommands(applicationContext) }
         return if (uploaded) Result.success() else Result.retry()
@@ -82,5 +85,21 @@ fun scheduleFamilySync(context: Context) {
         "family-sync-now",
         ExistingWorkPolicy.REPLACE,
         OneTimeWorkRequestBuilder<FamilySyncWorker>().build(),
+    )
+}
+
+/**
+ * Fires an immediate, expedited upload with the notify flag set — used when the
+ * child blocks a threat so the parent is pushed within seconds. Degrades to a
+ * normal one-time job if expedited quota is exhausted.
+ */
+fun scheduleNotifySync(context: Context) {
+    WorkManager.getInstance(context).enqueueUniqueWork(
+        "family-sync-notify",
+        ExistingWorkPolicy.REPLACE,
+        OneTimeWorkRequestBuilder<FamilySyncWorker>()
+            .setInputData(Data.Builder().putBoolean("notify", true).build())
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build(),
     )
 }

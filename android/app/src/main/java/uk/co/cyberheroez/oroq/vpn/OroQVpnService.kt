@@ -38,6 +38,9 @@ class OroQVpnService : VpnService() {
     private val blockLog by lazy { BlockEventLog.forContext(this) }
     private var lastBlockedDomain: String? = null
 
+    /** Categories worth an instant parent push (deck: threats only). */
+    private val threatCategories = setOf("phishing", "malware", "scam", "adult")
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
             stopVpn()
@@ -105,6 +108,9 @@ class OroQVpnService : VpnService() {
                             if (d != lastBlockedDomain) {
                                 lastBlockedDomain = d
                                 blockLog.record("web", d, decision.category)
+                                if (decision.category in threatCategories) {
+                                    uk.co.cyberheroez.oroq.family.scheduleNotifySync(applicationContext)
+                                }
                             }
                         }
                         decision.response
