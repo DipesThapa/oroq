@@ -32,6 +32,24 @@ class FamilyApiTest {
         assertTrue(api.authRequest("parent@example.com"))
     }
 
+    @Test fun pushRegisterPostsTokenWithAuth() {
+        val transport = FakeTransport(mapOf(
+            "POST $base/push/register" to HttpResponse(200, """{"ok":true}"""),
+        ))
+        val api = FamilyApi(base, transport)
+        assertTrue(api.pushRegister("session-jwt", "fcm-token-1"))
+        assertTrue(transport.sent.single().contains("\"token\":\"fcm-token-1\""))
+    }
+
+    @Test fun syncUploadSendsNotifyFlagWhenSet() {
+        val transport = FakeTransport(mapOf(
+            "POST $base/sync/pair-1" to HttpResponse(200, """{"ok":true}"""),
+        ))
+        val api = FamilyApi(base, transport)
+        assertTrue(api.syncUpload("pair-1", "QUJD", notify = true))
+        assertTrue(transport.sent.single().contains("\"notify\":true"))
+    }
+
     @Test fun authGooglePostsTokenAndNonceAndReturnsTheSessionToken() {
         val transport = FakeTransport(mapOf(
             "POST $base/auth/google" to HttpResponse(200, """{"token":"session-jwt"}"""),

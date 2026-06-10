@@ -96,10 +96,17 @@ class FamilyApi(
         )
     }
 
-    /** Uploads an encrypted summary blob for a pairing. Returns true on success. */
-    fun syncUpload(pairingId: String, ciphertextB64: String): Boolean {
-        val body = JSONObject().put("ciphertext", ciphertextB64).toString()
+    /** Uploads an encrypted summary blob; [notify] asks the server to push the parent. */
+    fun syncUpload(pairingId: String, ciphertextB64: String, notify: Boolean = false): Boolean {
+        val body = JSONObject().put("ciphertext", ciphertextB64).put("notify", notify).toString()
         return post("/sync/$pairingId", jsonHeaders, body).status == 200
+    }
+
+    /** Registers this parent device's FCM token. Returns true on success. */
+    fun pushRegister(token: String, fcmToken: String): Boolean {
+        val headers = jsonHeaders + ("authorization" to "Bearer $token")
+        val body = JSONObject().put("token", fcmToken).toString()
+        return post("/push/register", headers, body).status == 200
     }
 
     /** Fetches the latest encrypted summary blob for a pairing, or null if none. */
