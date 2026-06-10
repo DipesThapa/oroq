@@ -125,7 +125,7 @@ Inputs: the decrypted `FamilySummary` blobs the parent already fetches per paire
 
 ## Risks
 
-- **R1 — Compose on AGP 9.1.1 built-in Kotlin:** verify compose compiler plugin wiring as implementation step 1; fallback is pinning the explicit Kotlin Android plugin.
+- **R1 — Compose on AGP 9.1.1 built-in Kotlin:** RESOLVED 2026-06-10 — Compose compiler plugin `org.jetbrains.kotlin.plugin.compose` 2.2.20 works with AGP 9.1.1's built-in Kotlin; Compose BOM 2025.05.00.
 - **R2 — Brand SVGs missing from repo:** owner to supply `oroq_logo.svg` + Q icon, else re-draw.
 - **R3 — Full rewrite regression surface:** mitigated by migrating per-screen behind the same entry points, keeping non-UI layers untouched, and the manual smoke pass on both devices.
 
