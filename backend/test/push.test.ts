@@ -1,5 +1,11 @@
+import { SELF, env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
 import { buildServiceAccountJwt, buildFcmMessage } from "../src/push";
+import { signJwt } from "../src/crypto";
+
+async function accountToken(sub = "acc-push"): Promise<string> {
+  return signJwt({ sub, exp: Math.floor(Date.now() / 1000) + 600 }, env.JWT_SECRET);
+}
 
 // A locally generated RSA key stands in for the service account's private key.
 let pemPkcs8: string;
@@ -48,5 +54,50 @@ describe("buildFcmMessage", () => {
   it("falls back to a generic name when the label is blank", () => {
     const msg = buildFcmMessage("t", "p", "  ");
     expect(msg.message.notification.body).toContain("your child");
+  });
+});
+
+describe("/push/register", () => {
+  it("stores a token for the authed account", async () => {
+    const token = await accountToken();
+    const res = await SELF.fetch("https://example.com/push/register", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ token: "fcm-token-abc" }),
+    });
+    expect(res.status).toBe(200);
+    const row = await env.DB.prepare("SELECT account_id FROM push_tokens WHERE token = ?")
+      .bind("fcm-token-abc").first<{ account_id: string }>();
+    expect(row?.account_id).toBe("acc-push");
+  });
+
+  it("rejects without a token (401)", async () => {
+    const res = await SELF.fetch("https://example.com/push/register", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token: "x" }),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects a missing body field (400)", async () => {
+    const token = await accountToken();
+    const res = await SELF.fetch("https://example.com/push/register", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({}),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("upsert is idempotent on (account, token)", async () => {
+    const token = await accountToken("acc-dup");
+    const body = JSON.stringify({ token: "fcm-dup" });
+    const headers = { "content-type": "application/json", authorization: `Bearer ${token}` };
+    await SELF.fetch("https://example.com/push/register", { method: "POST", headers, body });
+    await SELF.fetch("https://example.com/push/register", { method: "POST", headers, body });
+    const rows = await env.DB.prepare("SELECT COUNT(*) AS n FROM push_tokens WHERE token = ?")
+      .bind("fcm-dup").first<{ n: number }>();
+    expect(rows?.n).toBe(1);
   });
 });

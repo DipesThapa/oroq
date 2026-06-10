@@ -6,6 +6,10 @@ export interface Env {
   RESEND_FROM?: string;
   /** OAuth web client id for Sign in with Google; blank disables /auth/google. */
   GOOGLE_CLIENT_ID?: string;
+  /** Service-account JSON for FCM push (secret); unset disables push send. */
+  FCM_SERVICE_ACCOUNT?: string;
+  /** Firebase project id for the FCM v1 endpoint (var); unset disables push send. */
+  FCM_PROJECT_ID?: string;
 }
 
 /** Throws if a required binding or secret is missing — the Worker must not run half-configured. */

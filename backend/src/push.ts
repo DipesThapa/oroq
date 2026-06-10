@@ -54,3 +54,90 @@ export function buildFcmMessage(token: string, pairingId: string, childLabel: st
     },
   };
 }
+
+let cachedToken: { value: string; expSec: number } | null = null;
+
+/** Returns a cached/fresh FCM access token, or null if not configured. */
+export async function getAccessToken(
+  env: Env,
+  nowSec: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
+  if (!env.FCM_SERVICE_ACCOUNT) return null;
+  if (cachedToken && cachedToken.expSec - 60 > nowSec) return cachedToken.value;
+  const sa = JSON.parse(env.FCM_SERVICE_ACCOUNT) as ServiceAccount;
+  const assertion = await buildServiceAccountJwt(sa, nowSec);
+  const res = await fetchImpl(sa.token_uri, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${assertion}`,
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { access_token: string; expires_in: number };
+  cachedToken = { value: data.access_token, expSec: nowSec + data.expires_in };
+  return data.access_token;
+}
+
+/** Sends one FCM push. Prunes the token on UNREGISTERED. Best-effort: never throws. */
+export async function sendFcm(
+  env: Env,
+  fcmToken: string,
+  pairingId: string,
+  childLabel: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<void> {
+  try {
+    if (!env.FCM_PROJECT_ID) return;
+    const access = await getAccessToken(env, Math.floor(Date.now() / 1000), fetchImpl);
+    if (!access) return;
+    const res = await fetchImpl(
+      `https://fcm.googleapis.com/v1/projects/${env.FCM_PROJECT_ID}/messages:send`,
+      {
+        method: "POST",
+        headers: { authorization: `Bearer ${access}`, "content-type": "application/json" },
+        body: JSON.stringify(buildFcmMessage(fcmToken, pairingId, childLabel)),
+      },
+    );
+    if (res.status === 404) {
+      await env.DB.prepare("DELETE FROM push_tokens WHERE token = ?").bind(fcmToken).run();
+    }
+  } catch {
+    // best-effort; a missed push must never affect the caller
+  }
+}
+
+/** Sends to every device registered for [accountId]. */
+export async function notifyAccount(
+  env: Env,
+  accountId: string,
+  pairingId: string,
+  childLabel: string,
+): Promise<void> {
+  const rows = await env.DB.prepare("SELECT token FROM push_tokens WHERE account_id = ?")
+    .bind(accountId)
+    .all<{ token: string }>();
+  for (const r of rows.results ?? []) await sendFcm(env, r.token, pairingId, childLabel);
+}
+
+/** Routes the /push/* paths. */
+export async function handlePush(req: Request, env: Env, path: string): Promise<Response> {
+  if (path === "/push/register" && req.method === "POST") return pushRegister(req, env);
+  return json({ error: "not_found" }, 404);
+}
+
+async function pushRegister(req: Request, env: Env): Promise<Response> {
+  const auth = req.headers.get("authorization") ?? "";
+  if (!auth.startsWith("Bearer ")) return json({ error: "unauthorized" }, 401);
+  const payload = await verifyJwt(auth.slice("Bearer ".length), env.JWT_SECRET);
+  const accountId = payload && typeof payload.sub === "string" ? payload.sub : null;
+  if (!accountId) return json({ error: "unauthorized" }, 401);
+  const body = await readJson(req);
+  const token = typeof body.token === "string" ? body.token : "";
+  if (!token) return json({ error: "bad_request" }, 400);
+  await env.DB.prepare(
+    "INSERT OR REPLACE INTO push_tokens (account_id, token, created_at) VALUES (?, ?, ?)",
+  )
+    .bind(accountId, token, Date.now())
+    .run();
+  return json({ ok: true });
+}
