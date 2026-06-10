@@ -1,12 +1,14 @@
 package uk.co.cyberheroez.oroq.parent
 
 import android.app.Application
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.oroq.family.FamilyCommand
 import uk.co.cyberheroez.oroq.family.FamilyStore
 
@@ -51,7 +53,15 @@ class ParentViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val targets = if (pairingId != null) listOf(pairingId)
             else _state.value.snapshots.map { it.pairingId }
-            for (id in targets) repo.sendCommand(id, command)
+            val allOk = targets.isNotEmpty() && targets.all { repo.sendCommand(it, command) }
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    getApplication(),
+                    if (allOk) "Sent — the phone updates shortly"
+                    else "Couldn't send — check your connection",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
             refresh()
         }
     }
