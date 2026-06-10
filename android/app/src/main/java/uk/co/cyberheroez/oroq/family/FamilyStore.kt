@@ -56,6 +56,11 @@ class FamilyStore(context: Context) {
         store.edit { it[Keys.PARENT_TOKEN] = token }
     }
 
+    /** Sign-out: drops the parent session token (children stay paired). */
+    suspend fun clearParentToken() {
+        store.edit { it.remove(Keys.PARENT_TOKEN) }
+    }
+
     /** Returns this device's key pair, generating and storing one on first use. */
     suspend fun getOrCreateKeyPair(): FamilyKeyPair {
         val prefs = store.data.first()
