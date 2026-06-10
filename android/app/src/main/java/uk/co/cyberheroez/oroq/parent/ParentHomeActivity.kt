@@ -8,6 +8,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,7 +39,10 @@ class ParentHomeActivity : ComponentActivity() {
         setContent {
             val nav = rememberNavController()
             var tab by remember { mutableStateOf(ParentTab.HOME) }
-            Column(Modifier.fillMaxSize().background(OroqColors.BgPrimary)) {
+            Column(
+                Modifier.fillMaxSize().background(OroqColors.BgPrimary)
+                    .systemBarsPadding(),
+            ) {
                 Box(Modifier.weight(1f)) {
                     NavHost(nav, startDestination = "home") {
                         composable("home") { HomeScreen(viewModel, nav) }
