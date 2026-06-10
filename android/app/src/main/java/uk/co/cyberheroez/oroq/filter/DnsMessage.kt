@@ -45,4 +45,39 @@ object DnsMessage {
         out[10] = 0; out[11] = 0               // ARCOUNT
         return out
     }
+
+    /** True when the query's first question is an A (IPv4) question. */
+    fun isAQuery(bytes: ByteArray): Boolean {
+        var i = HEADER_LEN
+        while (i < bytes.size && bytes[i].toInt() != 0) i += (bytes[i].toInt() and 0xFF) + 1
+        if (i + 2 >= bytes.size) return false
+        return bytes[i + 1].toInt() == 0 && bytes[i + 2].toInt() == 1
+    }
+
+    /** Builds a response answering the query's question with a single A record. */
+    fun buildARecordResponse(query: ByteArray, ipv4: ByteArray, ttlSeconds: Int = 300): ByteArray {
+        require(ipv4.size == 4) { "A record needs a 4-byte IPv4 address" }
+        // End of question section: header + QNAME + QTYPE(2) + QCLASS(2).
+        var i = HEADER_LEN
+        while (i < query.size && query[i].toInt() != 0) i += (query[i].toInt() and 0xFF) + 1
+        val questionEnd = i + 5
+        require(questionEnd <= query.size) { "query truncated before question end" }
+        val out = java.io.ByteArrayOutputStream()
+        out.write(query, 0, 2)                       // ID echoed
+        out.write(0x80 or (query[2].toInt() and 0x01)) // QR=1, keep RD
+        out.write(0x80)                              // RA=1, RCODE=0
+        out.write(0); out.write(1)                   // QDCOUNT 1
+        out.write(0); out.write(1)                   // ANCOUNT 1
+        out.write(0); out.write(0)                   // NSCOUNT 0
+        out.write(0); out.write(0)                   // ARCOUNT 0
+        out.write(query, HEADER_LEN, questionEnd - HEADER_LEN) // question echoed
+        out.write(0xC0); out.write(0x0C)             // NAME: pointer to offset 12
+        out.write(0); out.write(1)                   // TYPE A
+        out.write(0); out.write(1)                   // CLASS IN
+        out.write(ttlSeconds ushr 24); out.write(ttlSeconds ushr 16)
+        out.write(ttlSeconds ushr 8); out.write(ttlSeconds)
+        out.write(0); out.write(4)                   // RDLENGTH 4
+        out.write(ipv4, 0, 4)                        // RDATA
+        return out.toByteArray()
+    }
 }

@@ -34,6 +34,9 @@ data class FamilyCommand(
         const val SET_DAILY_LIMIT = "set_daily_limit"
         const val SET_CATEGORIES = "set_categories"
         const val SET_BLOCKED_APPS = "set_blocked_apps"
+        const val SET_PROTECTION = "set_protection"
+        const val SET_SAFE_SEARCH = "set_safe_search"
+        const val SET_YT_RESTRICTED = "set_yt_restricted"
     }
 }
 

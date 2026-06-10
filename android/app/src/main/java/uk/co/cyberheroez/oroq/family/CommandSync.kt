@@ -55,6 +55,27 @@ suspend fun pollAndApplyCommands(context: Context): Int {
                     .toSet()
                 config.setBlockedApps(pkgs)
             }
+            FamilyCommand.SET_PROTECTION -> {
+                if (command.intValue == 1) {
+                    // Can only start if VPN consent already exists; otherwise the
+                    // next summary's protectionOn=false tells the parent.
+                    if (android.net.VpnService.prepare(context) == null) {
+                        context.startService(Intent(context, OroQVpnService::class.java))
+                    }
+                } else {
+                    context.startService(
+                        Intent(context, OroQVpnService::class.java).setAction(OroQVpnService.ACTION_STOP),
+                    )
+                }
+            }
+            FamilyCommand.SET_SAFE_SEARCH -> {
+                config.setSafeSearchOn(command.intValue == 1)
+                restartVpnIfActive(context)
+            }
+            FamilyCommand.SET_YT_RESTRICTED -> {
+                config.setYtRestrictedOn(command.intValue == 1)
+                restartVpnIfActive(context)
+            }
         }
         applied.markApplied(id)
         appliedCount++

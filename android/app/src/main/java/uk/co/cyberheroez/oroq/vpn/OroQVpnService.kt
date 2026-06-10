@@ -70,11 +70,12 @@ class OroQVpnService : VpnService() {
     private fun runLoop(descriptor: ParcelFileDescriptor) {
         try {
             val repository = loadBlocklistRepository(this@OroQVpnService)
-            val enabled = runBlocking {
-                ConfigRepository(applicationContext).getEnabledCategories()
-            } + Categories.ALWAYS_ON
-            Log.i(TAG, "blocklist loaded; enabled categories=$enabled")
-            val filter = DnsFilter(repository) { enabled }
+            val config = ConfigRepository(applicationContext)
+            val enabled = runBlocking { config.getEnabledCategories() } + Categories.ALWAYS_ON
+            val safeSearch = runBlocking { config.isSafeSearchOn() }
+            val ytRestricted = runBlocking { config.isYtRestrictedOn() }
+            Log.i(TAG, "blocklist loaded; enabled categories=$enabled safeSearch=$safeSearch ytRestricted=$ytRestricted")
+            val filter = DnsFilter(repository, { enabled }, { safeSearch }, { ytRestricted })
             val input = FileInputStream(descriptor.fileDescriptor)
             val output = FileOutputStream(descriptor.fileDescriptor)
             val buffer = ByteArray(MAX_PACKET)
@@ -106,6 +107,10 @@ class OroQVpnService : VpnService() {
                                 blockLog.record("web", d, decision.category)
                             }
                         }
+                        decision.response
+                    }
+                    is DnsFilter.Decision.Rewrite -> {
+                        Log.d(TAG, "REWRITE $domain")
                         decision.response
                     }
                     DnsFilter.Decision.Allow -> {

@@ -15,6 +15,8 @@ fun buildSummary(
     categories: Set<String>,
     installedApps: List<InstalledApp>,
     blockedApps: Set<String>,
+    safeSearchOn: Boolean = false,
+    ytRestrictedOn: Boolean = false,
 ): FamilySummary {
     val topApps = usageByApp.entries
         .sortedByDescending { it.value }
@@ -32,5 +34,7 @@ fun buildSummary(
         categories = categories,
         installedApps = installedApps,
         blockedApps = blockedApps,
+        safeSearchOn = safeSearchOn,
+        ytRestrictedOn = ytRestrictedOn,
     )
 }

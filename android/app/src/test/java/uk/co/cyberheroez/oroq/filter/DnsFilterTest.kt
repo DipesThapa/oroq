@@ -25,24 +25,24 @@ class DnsFilterTest {
     private val repo = BlocklistRepository(mapOf("adult" to setOf("pornhub.com")))
 
     @Test fun blocksADomainInAnEnabledCategory() {
-        val filter = DnsFilter(repo) { setOf("adult") }
+        val filter = DnsFilter(repo, enabledCategories = { setOf("adult") })
         val decision = filter.decide(query("pornhub.com"))
         assertTrue(decision is DnsFilter.Decision.Block)
     }
 
     @Test fun blockResponseIsAnNxdomainAnswer() {
-        val filter = DnsFilter(repo) { setOf("adult") }
+        val filter = DnsFilter(repo, enabledCategories = { setOf("adult") })
         val decision = filter.decide(query("pornhub.com")) as DnsFilter.Decision.Block
         assertEquals(0x03, decision.response[3].toInt() and 0x0F) // RCODE = NXDOMAIN
     }
 
     @Test fun allowsADomainNotInAnyEnabledCategory() {
-        val filter = DnsFilter(repo) { setOf("adult") }
+        val filter = DnsFilter(repo, enabledCategories = { setOf("adult") })
         assertEquals(DnsFilter.Decision.Allow, filter.decide(query("wikipedia.org")))
     }
 
     @Test fun allowsAnUnparseableQuery() {
-        val filter = DnsFilter(repo) { setOf("adult") }
+        val filter = DnsFilter(repo, enabledCategories = { setOf("adult") })
         assertEquals(DnsFilter.Decision.Allow, filter.decide(byteArrayOf(1, 2, 3)))
     }
 }

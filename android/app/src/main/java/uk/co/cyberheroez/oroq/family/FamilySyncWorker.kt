@@ -44,6 +44,8 @@ class FamilySyncWorker(
             categories = config.getEnabledCategories(),
             installedApps = listUserApps(applicationContext),
             blockedApps = config.getBlockedApps(),
+            safeSearchOn = config.isSafeSearchOn(),
+            ytRestrictedOn = config.isYtRestrictedOn(),
         )
 
         val ciphertext = FamilyCrypto.encryptFor(

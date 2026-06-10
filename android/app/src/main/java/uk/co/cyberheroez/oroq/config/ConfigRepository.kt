@@ -33,6 +33,20 @@ class ConfigRepository(context: Context) {
         val DAILY_LIMIT = intPreferencesKey("daily_limit_minutes")
         val EXTRA_MINUTES = intPreferencesKey("extra_minutes")
         val EXTRA_DATE = stringPreferencesKey("extra_date")
+        val SAFE_SEARCH = booleanPreferencesKey("safe_search_on")
+        val YT_RESTRICTED = booleanPreferencesKey("yt_restricted_on")
+    }
+
+    suspend fun isSafeSearchOn(): Boolean = store.data.first()[Keys.SAFE_SEARCH] ?: false
+
+    suspend fun setSafeSearchOn(on: Boolean) {
+        store.edit { it[Keys.SAFE_SEARCH] = on }
+    }
+
+    suspend fun isYtRestrictedOn(): Boolean = store.data.first()[Keys.YT_RESTRICTED] ?: false
+
+    suspend fun setYtRestrictedOn(on: Boolean) {
+        store.edit { it[Keys.YT_RESTRICTED] = on }
     }
 
     suspend fun isOnboardingComplete(): Boolean =

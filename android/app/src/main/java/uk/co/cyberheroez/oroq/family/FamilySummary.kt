@@ -27,6 +27,10 @@ data class FamilySummary(
     val installedApps: List<InstalledApp> = emptyList(),
     /** Package names the child currently blocks. Mirror of [installedApps] selection. */
     val blockedApps: Set<String> = emptySet(),
+    /** Whether DNS-level Safe Search enforcement is on (parent toggle). */
+    val safeSearchOn: Boolean = false,
+    /** Whether DNS-level YouTube Restricted Mode is on (parent toggle). */
+    val ytRestrictedOn: Boolean = false,
 )
 
 /** Serialises the summary to its compact JSON wire form. */
@@ -61,6 +65,8 @@ fun FamilySummary.toJson(): String {
         .put("categories", cats)
         .put("installedApps", installed)
         .put("blockedApps", blocked)
+        .put("safeSearchOn", safeSearchOn)
+        .put("ytRestrictedOn", ytRestrictedOn)
         .toString()
 }
 
@@ -118,5 +124,7 @@ fun parseSummary(text: String): FamilySummary {
         categories = cats,
         installedApps = installed,
         blockedApps = blocked,
+        safeSearchOn = json.optBoolean("safeSearchOn", false),
+        ytRestrictedOn = json.optBoolean("ytRestrictedOn", false),
     )
 }
