@@ -88,14 +88,9 @@ fun DeviceRow(name: String, statusLine: String, isProtected: Boolean, onClick: (
             Text(name, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.Medium))
             Text(statusLine, style = OroqType.Caption)
         }
-        val pillColor = if (isProtected) OroqColors.Success else OroqColors.Danger
-        Text(
-            if (isProtected) "Protected" else "Unprotected",
-            style = OroqType.Caption.copy(color = pillColor, fontWeight = FontWeight.SemiBold),
-            modifier = Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(OroqColors.pill(pillColor))
-                .padding(horizontal = 10.dp, vertical = 5.dp),
+        StatusPill(
+            label = if (isProtected) "Protected" else "Unprotected",
+            color = if (isProtected) OroqColors.Success else OroqColors.Danger,
         )
     }
 }
