@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "755250043576",
+    "project_id": "oroq-8a7eb",
+    "storage_bucket": "oroq-8a7eb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:755250043576:android:21e3f9273a86d8d347324d",
+        "android_client_info": {
+          "package_name": "uk.co.cyberheroez.oroq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOZed6spqyj-3PQ92NcVrpRBBPX4fcldU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

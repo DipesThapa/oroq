@@ -55,4 +55,5 @@ kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "ko
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlinComposePlugin" }
+google-services = { id = "com.google.gms.google-services", version = "4.4.2" }
 
