@@ -5,3 +5,9 @@ docs/idea-to-store-flow.md
 .env
 .wrangler
 .superpowers
+
+# Android release signing — never commit
+android/oroq-upload.jks
+android/keystore.properties
+*.jks
+keystore.properties
