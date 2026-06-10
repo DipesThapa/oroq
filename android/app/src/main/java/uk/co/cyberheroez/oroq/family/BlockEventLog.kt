@@ -16,10 +16,10 @@ class BlockEventLog(
     private val lock = Any()
 
     /** Appends an event (oldest events drop once [maxEvents] is exceeded). */
-    fun record(type: String, label: String, at: Long = System.currentTimeMillis()) {
+    fun record(type: String, label: String, cat: String? = null, at: Long = System.currentTimeMillis()) {
         synchronized(lock) {
             val events = readUnlocked().toMutableList()
-            events.add(BlockEvent(at, type, label))
+            events.add(BlockEvent(at, type, label, cat))
             while (events.size > maxEvents) events.removeAt(0)
             writeUnlocked(events)
         }
@@ -41,7 +41,10 @@ class BlockEventLog(
             val array = JSONArray(file.readText())
             (0 until array.length()).map { i ->
                 val o = array.getJSONObject(i)
-                BlockEvent(o.getLong("ts"), o.getString("type"), o.getString("label"))
+                BlockEvent(
+                    o.getLong("ts"), o.getString("type"), o.getString("label"),
+                    o.optString("cat").ifEmpty { null },
+                )
             }
         }.getOrDefault(emptyList())
     }
@@ -49,7 +52,9 @@ class BlockEventLog(
     private fun writeUnlocked(events: List<BlockEvent>) {
         val array = JSONArray()
         for (e in events) {
-            array.put(JSONObject().put("ts", e.ts).put("type", e.type).put("label", e.label))
+            val o = JSONObject().put("ts", e.ts).put("type", e.type).put("label", e.label)
+            if (e.cat != null) o.put("cat", e.cat)
+            array.put(o)
         }
         file.parentFile?.mkdirs()
         file.writeText(array.toString())

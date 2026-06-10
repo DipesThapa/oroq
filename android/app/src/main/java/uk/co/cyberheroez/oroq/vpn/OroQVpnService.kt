@@ -103,7 +103,7 @@ class OroQVpnService : VpnService() {
                         domain?.let { d ->
                             if (d != lastBlockedDomain) {
                                 lastBlockedDomain = d
-                                blockLog.record("web", d)
+                                blockLog.record("web", d, decision.category)
                             }
                         }
                         decision.response

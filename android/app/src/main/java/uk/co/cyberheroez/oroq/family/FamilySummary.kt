@@ -6,8 +6,10 @@ import org.json.JSONObject
 /** One app's foreground time today. */
 data class TopApp(val label: String, val minutes: Int)
 
-/** A single blocked attempt — [type] is "web" or "app", [label] a domain or app name. */
-data class BlockEvent(val ts: Long, val type: String, val label: String)
+/** A single blocked attempt — [type] is "web" or "app", [label] a domain or app
+ *  name, [cat] the blocklist category that matched ("phishing", "malware",
+ *  "adult", …) or null for app blocks and events from older children. */
+data class BlockEvent(val ts: Long, val type: String, val label: String, val cat: String? = null)
 
 /** The activity snapshot a child device sends to its parent. */
 data class FamilySummary(
@@ -35,9 +37,9 @@ fun FamilySummary.toJson(): String {
     }
     val events = JSONArray()
     for (event in recentEvents) {
-        events.put(
-            JSONObject().put("ts", event.ts).put("type", event.type).put("label", event.label),
-        )
+        val o = JSONObject().put("ts", event.ts).put("type", event.type).put("label", event.label)
+        if (event.cat != null) o.put("cat", event.cat)
+        events.put(o)
     }
     val cats = JSONArray()
     for (id in categories) cats.put(id)
@@ -78,7 +80,12 @@ fun parseSummary(text: String): FamilySummary {
     if (eventsArray != null) {
         for (i in 0 until eventsArray.length()) {
             val o = eventsArray.getJSONObject(i)
-            events.add(BlockEvent(o.getLong("ts"), o.getString("type"), o.getString("label")))
+            events.add(
+                BlockEvent(
+                    o.getLong("ts"), o.getString("type"), o.getString("label"),
+                    o.optString("cat").ifEmpty { null },
+                ),
+            )
         }
     }
     val cats = HashSet<String>()

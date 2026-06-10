@@ -10,8 +10,9 @@ class DnsFilter(
     private val enabledCategories: () -> Set<String>,
 ) {
     sealed interface Decision {
-        /** Block the query; [response] is the NXDOMAIN answer to return. */
-        class Block(val response: ByteArray) : Decision
+        /** Block the query; [response] is the NXDOMAIN answer to return and
+         *  [category] which blocklist matched. */
+        class Block(val response: ByteArray, val category: String?) : Decision
         /** Allow the query; the caller should forward it upstream. */
         data object Allow : Decision
     }
@@ -19,8 +20,9 @@ class DnsFilter(
     /** Returns [Decision.Allow] for any query that cannot be parsed. */
     fun decide(dnsQuery: ByteArray): Decision {
         val domain = DnsMessage.parseQuestionDomain(dnsQuery) ?: return Decision.Allow
-        return if (repository.isBlocked(domain, enabledCategories())) {
-            Decision.Block(DnsMessage.buildNxdomainResponse(dnsQuery))
+        val category = repository.blockedCategory(domain, enabledCategories())
+        return if (category != null) {
+            Decision.Block(DnsMessage.buildNxdomainResponse(dnsQuery), category)
         } else {
             Decision.Allow
         }

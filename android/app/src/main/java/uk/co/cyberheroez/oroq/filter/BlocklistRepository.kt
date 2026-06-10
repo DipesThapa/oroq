@@ -15,13 +15,17 @@ class BlocklistRepository(
      * Returns true if [rawDomain] is blocked by any of [enabledCategories].
      * The domain is normalised first; unknown category names are ignored.
      */
-    fun isBlocked(rawDomain: String, enabledCategories: Set<String>): Boolean {
+    fun isBlocked(rawDomain: String, enabledCategories: Set<String>): Boolean =
+        blockedCategory(rawDomain, enabledCategories) != null
+
+    /** The first enabled category whose list matches [rawDomain], or null. */
+    fun blockedCategory(rawDomain: String, enabledCategories: Set<String>): String? {
         val domain = normalizeDomain(rawDomain)
-        if (domain.isEmpty()) return false
+        if (domain.isEmpty()) return null
         for (category in enabledCategories) {
             val set = categories[category] ?: continue
-            if (isDomainBlocked(domain, set)) return true
+            if (isDomainBlocked(domain, set)) return category
         }
-        return false
+        return null
     }
 }
