@@ -81,15 +81,20 @@ internal fun ChildScaffold(content: @Composable ColumnScope.() -> Unit) {
 
 @Composable
 fun SetupScreen(nav: NavController) = ChildScaffold {
-    QSymbol(48.dp)
-    Spacer(Modifier.height(16.dp))
-    Text("Set up OroQ", style = OroqType.H1)
-    Spacer(Modifier.height(32.dp))
-    StepRow(1, "Pair with parent", "Securely connect this device to your parent's account.")
-    Spacer(Modifier.height(22.dp))
-    StepRow(2, "Allow protection", "Enable AI protection and content filtering.")
-    Spacer(Modifier.height(22.dp))
-    StepRow(3, "All set", "You're ready. We'll keep you safe online.", done = true)
+    Spacer(Modifier.height(8.dp))
+    QSymbol(64.dp)
+    Spacer(Modifier.height(28.dp))
+    Column(Modifier.fillMaxWidth()) {
+        Text("Set up OroQ", style = OroqType.H1)
+        Spacer(Modifier.height(28.dp))
+        SetupStepper(
+            listOf(
+                SetupStep(1, "Pair with parent", "Securely connect this device to your parent's account."),
+                SetupStep(2, "Allow protection", "Enable AI protection and content filtering."),
+                SetupStep(3, "All set", "You're ready. We'll keep you safe online.", done = true),
+            ),
+        )
+    }
     Spacer(Modifier.weight(1f))
     PrimaryButton("Let's go") { nav.navigate("pair") }
     Spacer(Modifier.height(24.dp))

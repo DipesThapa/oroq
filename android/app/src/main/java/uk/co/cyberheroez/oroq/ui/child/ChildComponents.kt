@@ -5,9 +5,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,14 +54,13 @@ private fun StepBadge(number: Int, done: Boolean) {
         Modifier
             .size(28.dp)
             .clip(CircleShape)
-            .then(
-                if (done) Modifier.background(OroqColors.Success)
-                else Modifier.border(1.5.dp, Color.White.copy(alpha = 0.30f), CircleShape),
-            ),
+            .border(1.5.dp, Color.White.copy(alpha = 0.30f), CircleShape),
         contentAlignment = Alignment.Center,
     ) {
         if (done) {
-            Canvas(Modifier.size(13.dp)) { drawCheck(Color.White, widthFactor = 0.18f) }
+            // Same outlined badge as the numbered steps, with a tick in place of
+            // the number (deck §05: the final step is a check, not a filled pill).
+            Canvas(Modifier.size(13.dp)) { drawCheck(OroqColors.TextSecondary, widthFactor = 0.18f) }
         } else {
             Text(
                 "$number",
@@ -68,15 +70,46 @@ private fun StepBadge(number: Int, done: Boolean) {
     }
 }
 
-/** One row of the "Set up OroQ" checklist: badge + title + supporting line. */
+/** One entry in the "Set up OroQ" checklist. */
+data class SetupStep(val number: Int, val title: String, val body: String, val done: Boolean = false)
+
+/**
+ * Vertical stepper for "Set up OroQ": numbered/done badges joined by a thin
+ * connector line, each with a title + supporting copy (deck §05 layout).
+ */
 @Composable
-fun StepRow(number: Int, title: String, body: String, done: Boolean = false) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        StepBadge(number, done)
-        Spacer(Modifier.width(14.dp))
-        Column {
-            Text(title, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.SemiBold))
-            Text(body, style = OroqType.Caption)
+fun SetupStepper(steps: List<SetupStep>) {
+    Column(Modifier.fillMaxWidth()) {
+        steps.forEachIndexed { i, step ->
+            val last = i == steps.lastIndex
+            // IntrinsicSize.Min binds the row height to the copy block, so the
+            // badge column's fillMaxHeight + weighted connector spans exactly the
+            // gap to the next badge instead of stretching to the screen bottom.
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+                // Badge column: the connector fills whatever height the copy needs,
+                // so the line always meets the next badge regardless of text length.
+                Column(
+                    Modifier.width(28.dp).fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    StepBadge(step.number, step.done)
+                    if (!last) {
+                        Box(
+                            Modifier
+                                .padding(vertical = 4.dp)
+                                .width(2.dp)
+                                .weight(1f)
+                                .background(Color.White.copy(alpha = 0.14f)),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.padding(bottom = if (last) 0.dp else 22.dp)) {
+                    Text(step.title, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.SemiBold))
+                    Spacer(Modifier.height(3.dp))
+                    Text(step.body, style = OroqType.Caption)
+                }
+            }
         }
     }
 }
