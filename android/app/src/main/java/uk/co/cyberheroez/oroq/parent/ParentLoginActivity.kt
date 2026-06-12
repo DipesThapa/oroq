@@ -107,7 +107,7 @@ private fun LoginFlow(onSignedIn: () -> Unit, onClose: () -> Unit) {
         }
 
         Spacer(Modifier.height(28.dp))
-        Text("Parent sign-in", style = OroqType.H1)
+        Text("Sign in or create your account", style = OroqType.H1)
         Spacer(Modifier.height(8.dp))
         Text(
             if (stage == "email") {
