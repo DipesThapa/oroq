@@ -104,7 +104,7 @@ private fun BlockScreen(reason: String, onGoHome: () -> Unit) {
         Box(
             Modifier.size(110.dp).clip(CircleShape).background(OroqColors.pill(accent)),
             contentAlignment = Alignment.Center,
-        ) { QSymbol(64.dp, ring = accent) }
+        ) { QSymbol(64.dp) }
         Spacer(Modifier.height(26.dp))
         Text(
             if (isTime) "Screen time's up" else "App blocked",
