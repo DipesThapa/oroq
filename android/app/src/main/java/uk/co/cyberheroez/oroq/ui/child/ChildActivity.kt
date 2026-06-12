@@ -21,7 +21,8 @@ class ChildActivity : ComponentActivity() {
             Box(
                 Modifier.fillMaxSize().background(OroqColors.BgPrimary).systemBarsPadding(),
             ) {
-                NavHost(nav, startDestination = "setup") {
+                NavHost(nav, startDestination = "logo") {
+                    composable("logo") { ChildLogoScreen(nav) }
                     composable("setup") { SetupScreen(nav) }
                     composable("pair") { PairScreen(nav) }
                     composable("scan") { ScanScreen(nav) }

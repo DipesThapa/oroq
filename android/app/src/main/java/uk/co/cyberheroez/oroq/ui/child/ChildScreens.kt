@@ -26,6 +26,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.oroq.R
@@ -76,6 +78,23 @@ internal fun ChildScaffold(content: @Composable ColumnScope.() -> Unit) {
     ) {
         Spacer(Modifier.height(48.dp))
         content()
+    }
+}
+
+/**
+ * Brand moment shown the instant the child flow starts (right after the user
+ * taps "This is my child's phone"): just the bare Q on the dark background,
+ * then it hands off to [SetupScreen]. Deliberately not the OS launcher splash
+ * — that one carries the navy tile; this is the plain mark.
+ */
+@Composable
+fun ChildLogoScreen(nav: NavController) {
+    LaunchedEffect(Unit) {
+        delay(1100)
+        nav.navigate("setup") { popUpTo("logo") { inclusive = true } }
+    }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        QSymbol(104.dp)
     }
 }
 
