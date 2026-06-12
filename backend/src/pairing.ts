@@ -27,37 +27,47 @@ function isPublicKey(value: unknown): value is string {
   return typeof value === "string" && value.length >= 16 && value.length <= 256;
 }
 
+/**
+ * Child side: creates a pairing storing the child's own public key and mints a
+ * short code for the parent to scan/enter. No auth — the child holds no account
+ * (zero-retention). Rate-limited by IP so a device can't spam codes.
+ */
 async function pairCreate(req: Request, env: Env): Promise<Response> {
-  const accountId = await authAccount(req, env);
-  if (!accountId) return json({ error: "unauthorized" }, 401);
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rateLimit(env, `create:${ip}`, 10, CODE_TTL_SEC))) {
+    return json({ error: "rate_limited" }, 429);
+  }
 
   const body = await readJson(req);
-  if (!isPublicKey(body.parentPublicKey)) return json({ error: "bad_request" }, 400);
-  const childLabel =
-    typeof body.childLabel === "string" ? body.childLabel.slice(0, 40) : null;
+  if (!isPublicKey(body.childPublicKey)) return json({ error: "bad_request" }, 400);
 
   const id = crypto.randomUUID();
   const code = randomCode(8);
   await env.DB.prepare(
-    `INSERT INTO pairings (id, account_id, child_label, parent_public_key, created_at)
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO pairings (id, child_public_key, created_at)
+     VALUES (?, ?, ?)`,
   )
-    .bind(id, accountId, childLabel, body.parentPublicKey, Date.now())
+    .bind(id, body.childPublicKey, Date.now())
     .run();
   await env.KV.put(`code:${code}`, id, { expirationTtl: CODE_TTL_SEC });
 
   return json({ pairingId: id, code, expiresInSec: CODE_TTL_SEC });
 }
 
+/**
+ * Parent side: joins the child's pairing by code. Authenticated — this is where
+ * the link is bound to the parent's account. Stores the parent's public key and
+ * the label, and returns the child's public key for the SAS check.
+ */
 async function pairJoin(req: Request, env: Env): Promise<Response> {
-  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
-  if (!(await rateLimit(env, `join:${ip}`, 10, CODE_TTL_SEC))) {
-    return json({ error: "rate_limited" }, 429);
-  }
+  const accountId = await authAccount(req, env);
+  if (!accountId) return json({ error: "unauthorized" }, 401);
 
   const body = await readJson(req);
   const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
-  if (!code || !isPublicKey(body.childPublicKey)) return json({ error: "bad_request" }, 400);
+  if (!code || !isPublicKey(body.parentPublicKey)) return json({ error: "bad_request" }, 400);
+  const childLabel =
+    typeof body.childLabel === "string" ? body.childLabel.slice(0, 40) : null;
 
   const pairingId = await env.KV.get(`code:${code}`);
   if (!pairingId) return json({ error: "bad_code" }, 404);
@@ -66,18 +76,20 @@ async function pairJoin(req: Request, env: Env): Promise<Response> {
     "SELECT parent_public_key, child_public_key FROM pairings WHERE id = ?",
   )
     .bind(pairingId)
-    .first<{ parent_public_key: string; child_public_key: string | null }>();
+    .first<{ parent_public_key: string | null; child_public_key: string | null }>();
   if (!row) return json({ error: "bad_code" }, 404);
-  if (row.child_public_key) return json({ error: "already_paired" }, 409);
+  if (row.parent_public_key) return json({ error: "already_paired" }, 409);
 
   await env.DB.prepare(
-    "UPDATE pairings SET child_public_key = ?, paired_at = ? WHERE id = ?",
+    `UPDATE pairings
+     SET account_id = ?, parent_public_key = ?, child_label = ?, paired_at = ?
+     WHERE id = ?`,
   )
-    .bind(body.childPublicKey, Date.now(), pairingId)
+    .bind(accountId, body.parentPublicKey, childLabel, Date.now(), pairingId)
     .run();
   await env.KV.delete(`code:${code}`);
 
-  return json({ pairingId, parentPublicKey: row.parent_public_key });
+  return json({ pairingId, childPublicKey: row.child_public_key });
 }
 
 async function pairGet(env: Env, id: string): Promise<Response> {
@@ -89,7 +101,7 @@ async function pairGet(env: Env, id: string): Promise<Response> {
     .first<{
       id: string;
       child_label: string | null;
-      parent_public_key: string;
+      parent_public_key: string | null;
       child_public_key: string | null;
       paired_at: number | null;
     }>();
@@ -100,7 +112,8 @@ async function pairGet(env: Env, id: string): Promise<Response> {
     childLabel: row.child_label,
     parentPublicKey: row.parent_public_key,
     childPublicKey: row.child_public_key,
-    paired: row.child_public_key !== null,
+    // The link is complete once the parent has joined (set their key).
+    paired: row.parent_public_key !== null,
     pairedAt: row.paired_at,
   });
 }

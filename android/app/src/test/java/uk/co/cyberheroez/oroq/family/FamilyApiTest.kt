@@ -16,7 +16,7 @@ private class FakeTransport(
         headers: Map<String, String>,
         body: String?,
     ): HttpResponse {
-        sent += "$method $url ${body ?: ""}"
+        sent += "$method $url ${headers["authorization"] ?: "noauth"} ${body ?: ""}"
         return responses["$method $url"] ?: HttpResponse(404, "")
     }
 }
@@ -87,19 +87,20 @@ class FamilyApiTest {
                 200, """{"pairingId":"pid-1","code":"ABCD2345","expiresInSec":600}""",
             ),
         )))
-        val result = api.pairCreate("jwt-123", "PARENTKEY", "Tablet")
+        val result = api.pairCreate("CHILDKEY")
         assertEquals("pid-1", result?.pairingId)
         assertEquals("ABCD2345", result?.code)
     }
 
-    @Test fun pairJoinParsesTheParentKey() {
+    @Test fun pairJoinParsesTheChildKey() {
         val api = FamilyApi(base, FakeTransport(mapOf(
             "POST $base/pair/join" to HttpResponse(
-                200, """{"pairingId":"pid-1","parentPublicKey":"PARENTKEY"}""",
+                200, """{"pairingId":"pid-1","childPublicKey":"CHILDKEY"}""",
             ),
         )))
-        val result = api.pairJoin("ABCD2345", "CHILDKEY")
-        assertEquals("PARENTKEY", result?.parentPublicKeyB64)
+        val result = api.pairJoin("jwt-123", "ABCD2345", "PARENTKEY", "Tablet")
+        assertEquals("pid-1", result?.pairingId)
+        assertEquals("CHILDKEY", result?.childPublicKeyB64)
     }
 
     @Test fun pairGetParsesTheRecord() {
@@ -122,14 +123,30 @@ class FamilyApiTest {
         assertNull(api.pairGet("missing"))
     }
 
-    @Test fun pairCreateSendsTheBearerToken() {
+    @Test fun pairCreateSendsTheChildKeyWithoutAuth() {
         val transport = FakeTransport(mapOf(
             "POST $base/pair/create" to HttpResponse(
                 200, """{"pairingId":"p","code":"ABCD2345","expiresInSec":600}""",
             ),
         ))
-        FamilyApi(base, transport).pairCreate("jwt-xyz", "PK", null)
-        assertTrue(transport.sent.any { it.contains("/pair/create") })
+        FamilyApi(base, transport).pairCreate("CHILDKEY")
+        val sent = transport.sent.single()
+        assertTrue(sent.contains("\"childPublicKey\":\"CHILDKEY\""))
+        // The child holds no account, so create must not carry an auth header.
+        assertTrue(sent.contains("noauth"))
+    }
+
+    @Test fun pairJoinSendsTheBearerTokenAndParentKey() {
+        val transport = FakeTransport(mapOf(
+            "POST $base/pair/join" to HttpResponse(
+                200, """{"pairingId":"p","childPublicKey":"CK"}""",
+            ),
+        ))
+        FamilyApi(base, transport).pairJoin("jwt-xyz", "ABCD2345", "PARENTKEY", "Aarav")
+        val sent = transport.sent.single()
+        assertTrue(sent.contains("Bearer jwt-xyz"))
+        assertTrue(sent.contains("\"parentPublicKey\":\"PARENTKEY\""))
+        assertTrue(sent.contains("\"childLabel\":\"Aarav\""))
     }
 
     @Test fun syncFetchReturnsTheCiphertext() {

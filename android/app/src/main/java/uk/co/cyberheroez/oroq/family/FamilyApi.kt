@@ -49,12 +49,13 @@ class FamilyApi(
         return JSONObject(res.body).optString("token").ifEmpty { null }
     }
 
-    /** Creates a pairing and returns its id + short code, or null on failure. */
-    fun pairCreate(token: String, parentPublicKeyB64: String, childLabel: String?): CreatePairingResult? {
-        val payload = JSONObject().put("parentPublicKey", parentPublicKeyB64)
-        if (childLabel != null) payload.put("childLabel", childLabel)
-        val headers = jsonHeaders + ("authorization" to "Bearer $token")
-        val res = post("/pair/create", headers, payload.toString())
+    /**
+     * Child side: creates a pairing storing the child's own public key and
+     * returns its id + short code (no auth — the child holds no account).
+     */
+    fun pairCreate(childPublicKeyB64: String): CreatePairingResult? {
+        val body = JSONObject().put("childPublicKey", childPublicKeyB64).toString()
+        val res = post("/pair/create", jsonHeaders, body)
         if (res.status != 200) return null
         val json = JSONObject(res.body)
         return CreatePairingResult(
@@ -64,15 +65,20 @@ class FamilyApi(
         )
     }
 
-    /** Joins a pairing with a code; returns the parent public key, or null on failure. */
-    fun pairJoin(code: String, childPublicKeyB64: String): JoinPairingResult? {
-        val body = JSONObject().put("code", code).put("childPublicKey", childPublicKeyB64).toString()
-        val res = post("/pair/join", jsonHeaders, body)
+    /**
+     * Parent side: joins the child's pairing by code (authenticated, binds the
+     * link to the parent's account). Returns the child's public key, or null.
+     */
+    fun pairJoin(token: String, code: String, parentPublicKeyB64: String, childLabel: String?): JoinPairingResult? {
+        val payload = JSONObject().put("code", code).put("parentPublicKey", parentPublicKeyB64)
+        if (childLabel != null) payload.put("childLabel", childLabel)
+        val headers = jsonHeaders + ("authorization" to "Bearer $token")
+        val res = post("/pair/join", headers, payload.toString())
         if (res.status != 200) return null
         val json = JSONObject(res.body)
         return JoinPairingResult(
             pairingId = json.getString("pairingId"),
-            parentPublicKeyB64 = json.getString("parentPublicKey"),
+            childPublicKeyB64 = json.getString("childPublicKey"),
         )
     }
 
@@ -90,7 +96,7 @@ class FamilyApi(
         return PairingRecord(
             pairingId = json.getString("pairingId"),
             childLabel = json.optString("childLabel").ifEmpty { null },
-            parentPublicKeyB64 = json.getString("parentPublicKey"),
+            parentPublicKeyB64 = json.optString("parentPublicKey").ifEmpty { null },
             childPublicKeyB64 = json.optString("childPublicKey").ifEmpty { null },
             paired = json.optBoolean("paired", false),
         )

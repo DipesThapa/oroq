@@ -8,9 +8,8 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -20,9 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -35,12 +32,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -57,7 +56,6 @@ import uk.co.cyberheroez.oroq.family.FamilyCrypto
 import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.family.ParentLink
 import uk.co.cyberheroez.oroq.family.familyApi
-import uk.co.cyberheroez.oroq.family.normalizeCode
 import uk.co.cyberheroez.oroq.family.scheduleFamilySync
 import uk.co.cyberheroez.oroq.monitor.AppMonitorService
 import uk.co.cyberheroez.oroq.monitor.UsageReader
@@ -66,6 +64,7 @@ import uk.co.cyberheroez.oroq.ui.components.OroqWordmark
 import uk.co.cyberheroez.oroq.ui.components.PrimaryButton
 import uk.co.cyberheroez.oroq.ui.components.QSymbol
 import uk.co.cyberheroez.oroq.ui.components.SecondaryLink
+import uk.co.cyberheroez.oroq.ui.components.qrBitmap
 import uk.co.cyberheroez.oroq.ui.theme.OroqColors
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
@@ -116,20 +115,36 @@ fun SetupScreen(nav: NavController) = ChildScaffold {
         )
     }
     Spacer(Modifier.weight(1f))
-    PrimaryButton("Let's go") { nav.navigate("pair") }
+    PrimaryButton("Let's go") { nav.navigate("showcode") }
     Spacer(Modifier.height(24.dp))
 }
 
-/** Child-side join: returns the SAS to confirm, or null if the code failed. */
-suspend fun joinPairing(context: Context, code: String): PendingLink? {
+/** Child-side create: mints the pairing + code to display, or null on failure. */
+data class ShowPairing(val pairingId: String, val code: String, val childPublicKeyB64: String)
+
+suspend fun createPairing(context: Context): ShowPairing? {
     val store = FamilyStore(context)
     val keys = store.getOrCreateKeyPair()
-    val result = familyApi().pairJoin(code, keys.publicKeysetB64) ?: return null
-    return PendingLink(
-        pairingId = result.pairingId,
-        parentPublicKeyB64 = result.parentPublicKeyB64,
-        sas = FamilyCrypto.sas(result.parentPublicKeyB64, keys.publicKeysetB64),
-    )
+    val result = familyApi().pairCreate(keys.publicKeysetB64) ?: return null
+    return ShowPairing(result.pairingId, result.code, keys.publicKeysetB64)
+}
+
+/** Polls until the parent joins; returns the pending link (with SAS), or null on timeout. */
+suspend fun awaitParentJoin(show: ShowPairing): PendingLink? {
+    repeat(80) {
+        delay(3_000)
+        val record = familyApi().pairGet(show.pairingId)
+        val parentKey = record?.parentPublicKeyB64
+        if (record?.paired == true && parentKey != null) {
+            return PendingLink(
+                pairingId = show.pairingId,
+                parentPublicKeyB64 = parentKey,
+                // SAS arg order (parent, child) must match the parent side.
+                sas = FamilyCrypto.sas(parentKey, show.childPublicKeyB64),
+            )
+        }
+    }
+    return null
 }
 
 /** A joined-but-unconfirmed pairing: persisted only after the SAS matches. */
@@ -141,26 +156,47 @@ suspend fun confirmPairing(context: Context, pending: PendingLink) {
     scheduleFamilySync(context)
 }
 
+/**
+ * Child-led pairing: this device mints a code and shows it as a QR + text for
+ * the parent to scan/enter — the child scans nothing. It then waits for the
+ * parent to join, and both confirm the SAS digits match before the link sticks.
+ */
 @Composable
-fun PairScreen(nav: NavController) = ChildScaffold {
+fun ShowCodeScreen(nav: NavController) = ChildScaffold {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var code by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-    var busy by remember { mutableStateOf(false) }
+    var show by remember { mutableStateOf<ShowPairing?>(null) }
     var pending by remember { mutableStateOf<PendingLink?>(null) }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val created = withContext(Dispatchers.IO) { createPairing(context) }
+        if (created == null) {
+            error = "Couldn't start pairing — check your connection."
+            return@LaunchedEffect
+        }
+        show = created
+        val link = withContext(Dispatchers.IO) { awaitParentJoin(created) }
+        if (link != null) pending = link
+        else if (error == null) error = "Pairing timed out — go back and try again."
+    }
 
     val p = pending
     if (p != null) {
-        // SAS confirmation — security step the deck omits; both phones must match.
-        Text("Confirm it's safe", style = OroqType.H2)
-        Text("This should match the 6 digits on your parent's phone.", style = OroqType.Body)
-        Spacer(Modifier.height(16.dp))
-        OroqCard {
-            Text(
-                p.sas,
-                style = OroqType.Metric.copy(fontSize = 36.sp, letterSpacing = 8.sp, color = OroqColors.BluePrimary),
-            )
+        // SAS confirmation — both phones must show the same 6 digits.
+        Column(Modifier.fillMaxWidth()) {
+            Text("Confirm it's safe", style = OroqType.H1)
+            Spacer(Modifier.height(8.dp))
+            Text("This should match the 6 digits on your parent's phone.", style = OroqType.Body)
+        }
+        Spacer(Modifier.height(24.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            OroqCard {
+                Text(
+                    p.sas,
+                    style = OroqType.Metric.copy(fontSize = 36.sp, letterSpacing = 8.sp, color = OroqColors.BluePrimary),
+                )
+            }
         }
         Spacer(Modifier.weight(1f))
         PrimaryButton("They match — continue") {
@@ -169,62 +205,83 @@ fun PairScreen(nav: NavController) = ChildScaffold {
                 nav.navigate("allow")
             }
         }
-        SecondaryLink("They don't match") { pending = null; code = "" }
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            SecondaryLink("They don't match") { nav.popBackStack() }
+        }
         Spacer(Modifier.height(24.dp))
         return@ChildScaffold
     }
 
-    // Deck layout: title + copy + field + centred "Scan QR instead" + Continue,
-    // all top-aligned (the button follows the link, it isn't pinned to the foot).
     Column(Modifier.fillMaxWidth()) {
         Text("Pair with parent", style = OroqType.H1)
         Spacer(Modifier.height(8.dp))
-        // Deck shows a 6-character code; OroQ uses 8 (owner decision), so the
-        // copy keeps the real length and only adopts the deck's "or portal".
         Text(
-            "Ask your parent to generate an 8-character code on their OroQ app or portal.",
+            "Ask your parent to scan this with their OroQ app — or enter the code.",
             style = OroqType.Body,
-        )
-        Spacer(Modifier.height(20.dp))
-        OutlinedTextField(
-            value = code, onValueChange = { code = it; error = null },
-            placeholder = { Text("Pair code", style = OroqType.Body) },
-            singleLine = true,
-            trailingIcon = {
-                Box(
-                    Modifier.clickable { nav.navigate("scan") }.padding(12.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Canvas(Modifier.size(22.dp)) { drawQrGlyph(OroqColors.BlueLight) }
-                }
-            },
-            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = OroqColors.BluePrimary,
-                unfocusedBorderColor = OroqColors.Border,
-                focusedTextColor = OroqColors.TextPrimary,
-                unfocusedTextColor = OroqColors.TextPrimary,
-            ),
             modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
         )
-        if (error != null) {
-            Spacer(Modifier.height(6.dp))
-            Text(error!!, style = OroqType.Caption.copy(color = OroqColors.Danger))
-        }
-        Spacer(Modifier.height(10.dp))
+    }
+    Spacer(Modifier.height(24.dp))
+
+    val s = show
+    if (s != null) {
         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            SecondaryLink("Scan QR instead") { nav.navigate("scan") }
-        }
-        Spacer(Modifier.height(16.dp))
-        PrimaryButton(if (busy) "Pairing…" else "Continue", enabled = !busy && code.isNotBlank()) {
-            busy = true
-            scope.launch {
-                val result = withContext(Dispatchers.IO) { joinPairing(context, normalizeCode(code)) }
-                busy = false
-                if (result != null) pending = result
-                else error = "That code didn't work — check it and try again."
+            Column(
+                Modifier.clip(RoundedCornerShape(OroqDimens.RadiusCard)).background(Color.White).padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Image(
+                    bitmap = remember(s.code) { qrBitmap(s.code) }.asImageBitmap(),
+                    contentDescription = "Pairing QR code",
+                    modifier = Modifier.size(220.dp),
+                )
             }
         }
+        Spacer(Modifier.height(20.dp))
+        Text(
+            "Or enter this code",
+            style = OroqType.Caption,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(8.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Box(
+                Modifier.clip(RoundedCornerShape(OroqDimens.RadiusTile)).background(OroqColors.BgSurface)
+                    .padding(horizontal = 28.dp, vertical = 12.dp),
+            ) {
+                Text(s.code, style = OroqType.Metric.copy(fontSize = 28.sp, letterSpacing = 6.sp))
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            "Waiting for your parent…",
+            style = OroqType.Caption.copy(color = OroqColors.BlueLight),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+    } else if (error == null) {
+        Text(
+            "Starting…",
+            style = OroqType.Caption,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+    }
+
+    if (error != null) {
+        Spacer(Modifier.height(12.dp))
+        Text(
+            error!!,
+            style = OroqType.Caption.copy(color = OroqColors.Danger),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
+    }
+    Spacer(Modifier.weight(1f))
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        SecondaryLink("Cancel") { nav.popBackStack() }
     }
     Spacer(Modifier.height(24.dp))
 }

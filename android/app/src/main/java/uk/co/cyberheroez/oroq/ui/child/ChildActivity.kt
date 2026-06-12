@@ -24,8 +24,7 @@ class ChildActivity : ComponentActivity() {
                 NavHost(nav, startDestination = "logo") {
                     composable("logo") { ChildLogoScreen(nav) }
                     composable("setup") { SetupScreen(nav) }
-                    composable("pair") { PairScreen(nav) }
-                    composable("scan") { ScanScreen(nav) }
+                    composable("showcode") { ShowCodeScreen(nav) }
                     composable("allow") { AllowProtectionScreen(nav) }
                     composable("allset") { AllSetScreen(nav) }
                     composable("childhome") { ChildHomeScreen() }

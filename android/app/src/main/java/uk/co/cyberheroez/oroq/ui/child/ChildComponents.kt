@@ -20,9 +20,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -171,19 +168,4 @@ fun CheckRow(text: String) {
         Spacer(Modifier.width(12.dp))
         Text(text, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.Medium))
     }
-}
-
-/** Minimal QR glyph for the pair-code field's "scan" affordance. */
-fun DrawScope.drawQrGlyph(color: Color) {
-    val w = size.width
-    val u = w / 5f
-    drawRoundRect(
-        color,
-        cornerRadius = CornerRadius(w * 0.12f),
-        style = Stroke(w * 0.08f),
-    )
-    val sq = Size(u * 1.25f, u * 1.25f)
-    drawRect(color, topLeft = Offset(u * 0.85f, u * 0.85f), size = sq)
-    drawRect(color, topLeft = Offset(w - u * 2.1f, u * 0.85f), size = sq)
-    drawRect(color, topLeft = Offset(u * 0.85f, w - u * 2.1f), size = sq)
 }

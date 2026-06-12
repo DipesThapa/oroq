@@ -9,9 +9,9 @@ It stores only ciphertext and minimal metadata (see the design spec,
 - `GET  /health`                       — liveness probe
 - `POST /auth/request {email}`         — email a 6-digit OTP
 - `POST /auth/verify  {email, otp}`    — returns `{ token }` (30-day JWT)
-- `POST /pair/create  {parentPublicKey, childLabel?}` — auth'd; returns `{ pairingId, code }`
-- `POST /pair/join    {code, childPublicKey}`         — returns `{ pairingId, parentPublicKey }`
-- `GET  /pair/:id`                     — pairing record
+- `POST /pair/create  {childPublicKey}`               — child (no auth); returns `{ pairingId, code }`
+- `POST /pair/join    {code, parentPublicKey, childLabel?}` — parent (auth'd); returns `{ pairingId, childPublicKey }`
+- `GET  /pair/:id`                     — pairing record (`paired` true once the parent joins)
 
 ## Local development
 
