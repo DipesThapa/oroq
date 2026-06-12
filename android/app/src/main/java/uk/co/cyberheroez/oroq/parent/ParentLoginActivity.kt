@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -54,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.family.DeviceRole
 import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.family.familyApi
@@ -262,7 +265,11 @@ private fun GoogleButton(enabled: Boolean, onClick: () -> Unit) {
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Canvas(Modifier.size(20.dp)) { drawGoogleG() }
+        Image(
+            painter = painterResource(R.drawable.ic_google_g),
+            contentDescription = null,
+            modifier = Modifier.size(20.dp),
+        )
         Spacer(Modifier.width(12.dp))
         Text(
             "Continue with Google",
@@ -345,20 +352,4 @@ private fun DrawScope.drawLock(color: Color) {
         lineTo(w * 0.67f, h * 0.46f)
     }
     drawPath(shackle, color, style = Stroke(s, cap = StrokeCap.Round))
-}
-
-/** Approximation of the Google "G": four colour arcs plus the inward blue bar. */
-private fun DrawScope.drawGoogleG() {
-    val d = size.minDimension
-    val stroke = d * 0.2f
-    val inset = stroke / 2f
-    val arcSize = Size(d - stroke, d - stroke)
-    val tl = Offset(inset, inset)
-    val st = Stroke(stroke)
-    drawArc(Color(0xFFEA4335), 180f, 90f, false, topLeft = tl, size = arcSize, style = st) // red, top-left
-    drawArc(Color(0xFF4285F4), 270f, 90f, false, topLeft = tl, size = arcSize, style = st) // blue, top-right
-    drawArc(Color(0xFF34A853), 28f, 62f, false, topLeft = tl, size = arcSize, style = st) // green, bottom-right
-    drawArc(Color(0xFFFBBC05), 90f, 90f, false, topLeft = tl, size = arcSize, style = st) // yellow, bottom-left
-    // Blue bar from the centre to the right opening.
-    drawRect(Color(0xFF4285F4), topLeft = Offset(d * 0.5f, d * 0.5f - stroke * 0.5f), size = Size(d * 0.42f, stroke))
 }
