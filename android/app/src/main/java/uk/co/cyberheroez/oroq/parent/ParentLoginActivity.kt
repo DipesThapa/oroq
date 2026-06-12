@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.cyberheroez.oroq.family.DeviceRole
 import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.family.familyApi
 import uk.co.cyberheroez.oroq.ui.components.OroqCard
@@ -84,6 +85,7 @@ private fun LoginFlow(onSignedIn: () -> Unit) {
                     when (val result = GoogleSignIn.signIn(context)) {
                         is GoogleSignInResult.Success -> {
                             store.setParentToken(result.sessionToken)
+                            store.setRole(DeviceRole.PARENT)
                             onSignedIn()
                         }
                         GoogleSignInResult.Cancelled -> { /* silent — email form is right there */ }
@@ -149,6 +151,7 @@ private fun LoginFlow(onSignedIn: () -> Unit) {
                         error = "Wrong or expired code"
                     } else {
                         store.setParentToken(token)
+                        store.setRole(DeviceRole.PARENT)
                         onSignedIn()
                     }
                 }

@@ -56,6 +56,7 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
 
+        <activity android:name=".ui.WelcomeActivity" android:exported="false" />
         <activity android:name=".ui.RolePickerActivity" android:exported="false" />
         <activity android:name=".parent.ParentActivity" android:exported="false" />
         <activity android:name=".ui.child.ChildActivity" android:exported="false" />

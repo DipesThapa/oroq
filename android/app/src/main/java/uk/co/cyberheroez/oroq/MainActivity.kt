@@ -39,7 +39,7 @@ import uk.co.cyberheroez.oroq.family.scheduleFamilySync
 import uk.co.cyberheroez.oroq.monitor.AppMonitorService
 import uk.co.cyberheroez.oroq.monitor.UsageReader
 import uk.co.cyberheroez.oroq.parent.ParentActivity
-import uk.co.cyberheroez.oroq.ui.RolePickerActivity
+import uk.co.cyberheroez.oroq.ui.WelcomeActivity
 import uk.co.cyberheroez.oroq.ui.child.ChildActivity
 import uk.co.cyberheroez.oroq.ui.components.OroqWordmark
 import uk.co.cyberheroez.oroq.ui.theme.OroqColors
@@ -68,7 +68,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             when (familyStore.getRole()) {
                 null -> {
-                    startActivity(Intent(this@MainActivity, RolePickerActivity::class.java))
+                    startActivity(Intent(this@MainActivity, WelcomeActivity::class.java))
                     finish()
                 }
                 DeviceRole.PARENT -> {
