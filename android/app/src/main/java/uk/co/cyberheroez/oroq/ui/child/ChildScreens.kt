@@ -8,6 +8,10 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -29,8 +34,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -42,6 +49,7 @@ import androidx.navigation.NavController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.family.FamilyCrypto
 import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.family.ParentLink
@@ -72,42 +80,16 @@ internal fun ChildScaffold(content: @Composable ColumnScope.() -> Unit) {
 }
 
 @Composable
-fun WelcomeScreen(nav: NavController) = ChildScaffold {
-    OroqWordmark()
-    Spacer(Modifier.height(24.dp))
-    Text("Welcome to OroQ", style = OroqType.H2)
-    Text("Your digital safety companion.", style = OroqType.Body)
-    Spacer(Modifier.height(24.dp))
-    OroqCard {
-        for (feature in listOf(
-            "AI-powered threat protection",
-            "Real-time activity monitoring",
-            "Privacy-first by design",
-        )) {
-            Text("•  $feature", style = OroqType.BodyOnDark, modifier = Modifier.padding(vertical = 6.dp))
-        }
-    }
-    Spacer(Modifier.weight(1f))
-    PrimaryButton("Get started") { nav.navigate("setup") }
-    Spacer(Modifier.height(24.dp))
-}
-
-@Composable
 fun SetupScreen(nav: NavController) = ChildScaffold {
     QSymbol(48.dp)
     Spacer(Modifier.height(16.dp))
-    Text("Set up OroQ", style = OroqType.H2)
-    Spacer(Modifier.height(24.dp))
-    OroqCard {
-        Text("1. Pair with parent", style = OroqType.BodyOnDark)
-        Text("Securely connect this device to your parent's account.", style = OroqType.Caption)
-        Spacer(Modifier.height(10.dp))
-        Text("2. Allow protection", style = OroqType.BodyOnDark)
-        Text("Enable AI protection and content filtering.", style = OroqType.Caption)
-        Spacer(Modifier.height(10.dp))
-        Text("✓ All set", style = OroqType.BodyOnDark.copy(color = OroqColors.Success))
-        Text("You're ready. We'll keep you safe online.", style = OroqType.Caption)
-    }
+    Text("Set up OroQ", style = OroqType.H1)
+    Spacer(Modifier.height(32.dp))
+    StepRow(1, "Pair with parent", "Securely connect this device to your parent's account.")
+    Spacer(Modifier.height(22.dp))
+    StepRow(2, "Allow protection", "Enable AI protection and content filtering.")
+    Spacer(Modifier.height(22.dp))
+    StepRow(3, "All set", "You're ready. We'll keep you safe online.", done = true)
     Spacer(Modifier.weight(1f))
     PrimaryButton("Let's go") { nav.navigate("pair") }
     Spacer(Modifier.height(24.dp))
@@ -174,6 +156,16 @@ fun PairScreen(nav: NavController) = ChildScaffold {
     OutlinedTextField(
         value = code, onValueChange = { code = it; error = null },
         placeholder = { Text("Pair code", style = OroqType.Body) },
+        trailingIcon = {
+            Box(
+                Modifier
+                    .clickable { nav.navigate("scan") }
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Canvas(Modifier.size(22.dp)) { drawQrGlyph(OroqColors.BlueLight) }
+            }
+        },
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = OroqColors.BluePrimary,
@@ -244,22 +236,19 @@ fun AllowProtectionScreen(nav: NavController) = ChildScaffold {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    QSymbol(48.dp, ring = OroqColors.BluePrimary)
-    Spacer(Modifier.height(16.dp))
-    Text("Allow protection", style = OroqType.H2)
+    ShieldGraphic(96.dp)
+    Spacer(Modifier.height(20.dp))
+    Text("Allow protection", style = OroqType.H1)
+    Spacer(Modifier.height(8.dp))
     Text(
         "OroQ will now protect this device from harmful content and online threats.",
         style = OroqType.Body,
     )
-    Spacer(Modifier.height(16.dp))
-    OroqCard {
-        for (item in listOf("Block harmful content", "AI Scam protection", "Real-time monitoring")) {
-            Text(
-                "✓  $item",
-                style = OroqType.BodyOnDark.copy(color = OroqColors.Success),
-                modifier = Modifier.padding(vertical = 4.dp),
-            )
-        }
+    Spacer(Modifier.height(20.dp))
+    Column(Modifier.fillMaxWidth()) {
+        CheckRow("Block harmful content")
+        CheckRow("AI Scam protection")
+        CheckRow("Real-time monitoring")
     }
     if (gate != Gate.DONE) {
         Spacer(Modifier.height(12.dp))
@@ -285,16 +274,24 @@ fun AllowProtectionScreen(nav: NavController) = ChildScaffold {
 @Composable
 fun AllSetScreen(nav: NavController) = ChildScaffold {
     val context = LocalContext.current
-    Spacer(Modifier.height(24.dp))
-    Text("✓", style = OroqType.Metric.copy(color = OroqColors.Success))
-    Text("All set!", style = OroqType.H2)
+    Spacer(Modifier.height(8.dp))
+    SuccessCheck(96.dp)
+    Spacer(Modifier.height(20.dp))
+    Text("All set!", style = OroqType.H1)
+    Spacer(Modifier.height(8.dp))
     Text("You're protected. You can now browse with confidence.", style = OroqType.Body)
-    Spacer(Modifier.weight(1f))
+    Spacer(Modifier.height(8.dp))
+    Image(
+        painter = painterResource(R.drawable.welcome_hero),
+        contentDescription = null,
+        contentScale = ContentScale.Fit,
+        modifier = Modifier.fillMaxWidth().weight(1f).padding(vertical = 8.dp),
+    )
     // Deck typo "Allo to Home" fixed per the deck spec's own instruction.
     PrimaryButton("Go to Home") {
         context.startService(Intent(context, OroQVpnService::class.java))
         context.startService(Intent(context, AppMonitorService::class.java))
-        nav.navigate("childhome") { popUpTo("welcome") { inclusive = true } }
+        nav.navigate("childhome") { popUpTo("setup") { inclusive = true } }
     }
     Spacer(Modifier.height(24.dp))
 }
