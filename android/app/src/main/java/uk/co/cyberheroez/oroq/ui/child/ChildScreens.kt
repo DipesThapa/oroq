@@ -41,6 +41,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -173,44 +174,56 @@ fun PairScreen(nav: NavController) = ChildScaffold {
         return@ChildScaffold
     }
 
-    Text("Pair with parent", style = OroqType.H2)
-    // Deck copy adapted: 8-character code (owner decision), not 6.
-    Text("Ask your parent to generate an 8-character code on their OroQ app.", style = OroqType.Body)
-    Spacer(Modifier.height(16.dp))
-    OutlinedTextField(
-        value = code, onValueChange = { code = it; error = null },
-        placeholder = { Text("Pair code", style = OroqType.Body) },
-        trailingIcon = {
-            Box(
-                Modifier
-                    .clickable { nav.navigate("scan") }
-                    .padding(12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(Modifier.size(22.dp)) { drawQrGlyph(OroqColors.BlueLight) }
+    // Deck layout: title + copy + field + centred "Scan QR instead" + Continue,
+    // all top-aligned (the button follows the link, it isn't pinned to the foot).
+    Column(Modifier.fillMaxWidth()) {
+        Text("Pair with parent", style = OroqType.H1)
+        Spacer(Modifier.height(8.dp))
+        // Deck shows a 6-character code; OroQ uses 8 (owner decision), so the
+        // copy keeps the real length and only adopts the deck's "or portal".
+        Text(
+            "Ask your parent to generate an 8-character code on their OroQ app or portal.",
+            style = OroqType.Body,
+        )
+        Spacer(Modifier.height(20.dp))
+        OutlinedTextField(
+            value = code, onValueChange = { code = it; error = null },
+            placeholder = { Text("Pair code", style = OroqType.Body) },
+            singleLine = true,
+            trailingIcon = {
+                Box(
+                    Modifier.clickable { nav.navigate("scan") }.padding(12.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(Modifier.size(22.dp)) { drawQrGlyph(OroqColors.BlueLight) }
+                }
+            },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = OroqColors.BluePrimary,
+                unfocusedBorderColor = OroqColors.Border,
+                focusedTextColor = OroqColors.TextPrimary,
+                unfocusedTextColor = OroqColors.TextPrimary,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (error != null) {
+            Spacer(Modifier.height(6.dp))
+            Text(error!!, style = OroqType.Caption.copy(color = OroqColors.Danger))
+        }
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            SecondaryLink("Scan QR instead") { nav.navigate("scan") }
+        }
+        Spacer(Modifier.height(16.dp))
+        PrimaryButton(if (busy) "Pairing…" else "Continue", enabled = !busy && code.isNotBlank()) {
+            busy = true
+            scope.launch {
+                val result = withContext(Dispatchers.IO) { joinPairing(context, normalizeCode(code)) }
+                busy = false
+                if (result != null) pending = result
+                else error = "That code didn't work — check it and try again."
             }
-        },
-        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = OroqColors.BluePrimary,
-            unfocusedBorderColor = OroqColors.Border,
-            focusedTextColor = OroqColors.TextPrimary,
-            unfocusedTextColor = OroqColors.TextPrimary,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
-    if (error != null) {
-        Text(error!!, style = OroqType.Caption.copy(color = OroqColors.Danger))
-    }
-    SecondaryLink("Scan QR instead") { nav.navigate("scan") }
-    Spacer(Modifier.weight(1f))
-    PrimaryButton(if (busy) "Pairing…" else "Continue", enabled = !busy && code.isNotBlank()) {
-        busy = true
-        scope.launch {
-            val result = withContext(Dispatchers.IO) { joinPairing(context, normalizeCode(code)) }
-            busy = false
-            if (result != null) pending = result
-            else error = "That code didn't work — check it and try again."
         }
     }
     Spacer(Modifier.height(24.dp))
@@ -260,23 +273,33 @@ fun AllowProtectionScreen(nav: NavController) = ChildScaffold {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
+    // Deck order: title (top-left) → shield → centred copy → check list → button.
+    Column(Modifier.fillMaxWidth()) {
+        Text("Allow protection", style = OroqType.H1)
+    }
+    Spacer(Modifier.height(16.dp))
     ShieldGraphic(96.dp)
-    Spacer(Modifier.height(20.dp))
-    Text("Allow protection", style = OroqType.H1)
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(16.dp))
     Text(
         "OroQ will now protect this device from harmful content and online threats.",
         style = OroqType.Body,
+        modifier = Modifier.fillMaxWidth(),
+        textAlign = TextAlign.Center,
     )
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(24.dp))
     Column(Modifier.fillMaxWidth()) {
         CheckRow("Block harmful content")
         CheckRow("AI Scam protection")
         CheckRow("Real-time monitoring")
     }
     if (gate != Gate.DONE) {
-        Spacer(Modifier.height(12.dp))
-        Text("Next: ${gate.label}", style = OroqType.Caption)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Next: ${gate.label}",
+            style = OroqType.Caption,
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center,
+        )
     }
     Spacer(Modifier.weight(1f))
     PrimaryButton(if (gate == Gate.DONE) "Continue" else "Allow & Continue") {

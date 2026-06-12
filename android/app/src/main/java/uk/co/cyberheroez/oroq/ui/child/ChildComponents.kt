@@ -163,10 +163,10 @@ fun SuccessCheck(size: Dp = 96.dp) {
 fun CheckRow(text: String) {
     Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(
-            Modifier.size(24.dp).clip(CircleShape).background(OroqColors.Success.copy(alpha = 0.16f)),
+            Modifier.size(24.dp).clip(CircleShape).background(OroqColors.BluePrimary.copy(alpha = 0.16f)),
             contentAlignment = Alignment.Center,
         ) {
-            Canvas(Modifier.size(13.dp)) { drawCheck(OroqColors.Success, widthFactor = 0.18f) }
+            Canvas(Modifier.size(13.dp)) { drawCheck(OroqColors.BluePrimary, widthFactor = 0.18f) }
         }
         Spacer(Modifier.width(12.dp))
         Text(text, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.Medium))
