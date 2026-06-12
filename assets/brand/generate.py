@@ -60,17 +60,42 @@ print("site assets done")
 res = f"{ROOT}/android/app/src/main/res"
 LEGACY = {"mdpi": 48, "hdpi": 72, "xhdpi": 96, "xxhdpi": 144, "xxxhdpi": 192}
 ADAPT  = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}
+
+def navy_tile(px, shape):
+    """Navy gradient tile, masked to a squircle or circle (transparent corners)."""
+    g = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+    gd = ImageDraw.Draw(g)
+    for i in range(px):
+        t = i / px
+        gd.line([(0, i), (px, i)],
+                fill=(int(10 + 8 * t), int(20 + 28 * t), int(32 + 59 * t), 255))
+    m = Image.new("L", (px, px), 0)
+    md = ImageDraw.Draw(m)
+    if shape == "circle":
+        md.ellipse((0, 0, px - 1, px - 1), fill=255)
+    else:
+        md.rounded_rectangle((0, 0, px - 1, px - 1), radius=int(px * 0.22), fill=255)
+    out = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+    out.paste(g, (0, 0), m)
+    return out
+
+# Legacy (API <26): full tile is visible then mask-cropped, so the Q sits at
+# 0.50 of the tile with the navy background baked in — leaves clean margin.
 for d, px in LEGACY.items():
     folder = f"{res}/mipmap-{d}"
     ensure(folder)
-    sq = resize(ICON, px)
-    sq.save(f"{folder}/ic_launcher.png")
-    round_mask(sq).save(f"{folder}/ic_launcher_round.png")
+    fg = fit_center(Q_MIST, px, 0.50)
+    Image.alpha_composite(navy_tile(px, "squircle"), fg).save(f"{folder}/ic_launcher.png")
+    Image.alpha_composite(navy_tile(px, "circle"), fg).save(f"{folder}/ic_launcher_round.png")
+
+# Adaptive (API >=26, mipmap-anydpi-v26): the launcher only shows the inner
+# 72/108 of the canvas, so 0.44-of-108 renders as ~0.66 of the visible circle —
+# the Q stays fully inside with the needle uncropped. Navy gradient background
+# is a vector drawable; this is just the foreground layer.
 for d, px in ADAPT.items():
     folder = f"{res}/mipmap-{d}"
     ensure(folder)
-    # adaptive content lives in the inner safe zone (~0.62 of the 108 canvas)
-    fit_center(Q_MIST, px, 0.62).save(f"{folder}/ic_launcher_fg.png")
+    fit_center(Q_MIST, px, 0.44).save(f"{folder}/ic_launcher_fg.png")
 print("android icons done")
 
 # ---------------------------------------------------------------- PLAY STORE
