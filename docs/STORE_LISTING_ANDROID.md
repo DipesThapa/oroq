@@ -55,7 +55,9 @@ OroQ is built and maintained by CyberHeroez CIC.
 - **Privacy Policy URL:** (host `docs/PRIVACY_ANDROID.md` — e.g. `https://cyberheroez.co.uk/oroq/privacy`)
 - **Website:** https://cyberheroez.co.uk/
 
-## Graphics still needed (sizes)
-- **App icon:** 512×512 PNG (use the OroQ Q-mark on the `#0A1420` squircle).
-- **Feature graphic:** 1024×500 PNG (brand: dark navy, "See Risk. Act With Confidence.", Q mark).
+## Graphics (sizes)
+- **App icon:** ✅ `assets/store/android/icon-512.png` (512×512, OroQ Q-mark on the `#0A1420` squircle). Upload as the Play store icon.
+- **Feature graphic:** ✅ `assets/store/android/feature-graphic-1024x500.png` (1024×500, dark navy + OROQ wordmark + "See Risk. Act With Confidence." + Q mark).
 - **Phone screenshots:** 2–8, the captured set in `assets/store/android/` (1080×2400). Add a one-line caption banner to each in any image editor if you want polish, but raw frames are accepted.
+
+All brand assets above are generated from the source logo set (`Oroq-logo-*.png`). The same marks drive the Android launcher icon (`android/.../res/mipmap-*`) and the site favicon/header (`site/assets/`).
