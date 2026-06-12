@@ -136,12 +136,13 @@ suspend fun awaitParentJoin(show: ShowPairing): PendingLink? {
         val record = familyApi().pairGet(show.pairingId)
         val parentKey = record?.parentPublicKeyB64
         if (record?.paired == true && parentKey != null) {
-            return PendingLink(
-                pairingId = show.pairingId,
-                parentPublicKeyB64 = parentKey,
-                // SAS arg order (parent, child) must match the parent side.
-                sas = FamilyCrypto.sas(parentKey, show.childPublicKeyB64),
-            )
+            // SAS arg order (parent, child) must match the parent side. Guard the
+            // decode so a malformed key from the relay can't crash the child —
+            // we just keep waiting rather than take down the app.
+            val sas = runCatching { FamilyCrypto.sas(parentKey, show.childPublicKeyB64) }.getOrNull()
+            if (sas != null) {
+                return PendingLink(show.pairingId, parentKey, sas)
+            }
         }
     }
     return null
