@@ -120,7 +120,7 @@ private fun RolePickerScreen(onChoose: (DeviceRole) -> Unit) {
         PrimaryButton("Continue") { onChoose(selected) }
         Spacer(Modifier.height(10.dp))
         Text(
-            "Wrong pick? Switch roles anytime in Settings.",
+            "Each phone gets its own role — set up your other phone separately.",
             style = OroqType.Caption,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
