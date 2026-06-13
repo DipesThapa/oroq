@@ -36,6 +36,7 @@ class AppMonitorService : android.app.Service() {
     private fun runLoop() {
         val usage = UsageReader(this)
         val config = ConfigRepository(applicationContext)
+        val systemCritical = systemCriticalApps(applicationContext)
         var tickCount = 0L
         while (running.get()) {
             try {
@@ -43,6 +44,7 @@ class AppMonitorService : android.app.Service() {
                     val foreground = usage.currentForegroundApp()
                     // Never block our own screens (incl. BlockActivity itself).
                     if (foreground != packageName) {
+                        val now = java.time.LocalTime.now()
                         val decision = runBlocking {
                             decideBlock(
                                 foregroundApp = foreground,
@@ -50,18 +52,29 @@ class AppMonitorService : android.app.Service() {
                                 blockedApps = config.getBlockedApps(),
                                 limitMinutes = config.getDailyLimitMinutes(),
                                 extraMinutes = config.getExtraMinutes(),
+                                approvedApps = config.getApprovedApps(),
+                                schedules = config.getSchedules(),
+                                systemCriticalApps = systemCritical,
+                                nowMinuteOfDay = now.hour * 60 + now.minute,
+                                dayOfWeek = java.time.LocalDate.now().dayOfWeek,
                             )
                         }
                         when (decision) {
-                            BlockDecision.BLOCK_APP -> {
+                            BlockDecision.BLOCK_APP, BlockDecision.BLOCK_UNAPPROVED -> {
                                 foreground?.let { pkg ->
                                     if (pkg != lastBlockedApp) {
                                         lastBlockedApp = pkg
                                         blockLog.record("app", appLabel(pkg))
                                     }
                                 }
-                                showBlock(BlockActivity.REASON_APP)
+                                val reason = if (decision == BlockDecision.BLOCK_UNAPPROVED) {
+                                    BlockActivity.REASON_UNAPPROVED
+                                } else {
+                                    BlockActivity.REASON_APP
+                                }
+                                showBlock(reason)
                             }
+                            BlockDecision.BLOCK_SCHEDULE -> showBlock(BlockActivity.REASON_SCHEDULE)
                             BlockDecision.TIME_UP -> showBlock(BlockActivity.REASON_TIME)
                             BlockDecision.ALLOW -> {}
                         }
