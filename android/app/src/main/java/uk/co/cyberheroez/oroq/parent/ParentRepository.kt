@@ -3,6 +3,7 @@ package uk.co.cyberheroez.oroq.parent
 import android.content.Context
 import uk.co.cyberheroez.oroq.family.FamilyCommand
 import uk.co.cyberheroez.oroq.family.FamilyCrypto
+import uk.co.cyberheroez.oroq.family.appSchedulePayload
 import uk.co.cyberheroez.oroq.family.FamilyStore
 import uk.co.cyberheroez.oroq.family.FamilySummary
 import uk.co.cyberheroez.oroq.family.familyApi
@@ -73,6 +74,30 @@ class ParentRepository(context: Context) {
             FamilyCommand(
                 type = FamilyCommand.SET_BLOCKED_APPS,
                 stringValue = packageNames.joinToString(","),
+            ),
+        )
+
+    /** Convenience wrapper: tells the child exactly which apps are approved. */
+    fun sendSetApprovedApps(pairingId: String, packageNames: Set<String>): Boolean =
+        sendCommand(
+            pairingId,
+            FamilyCommand(
+                type = FamilyCommand.SET_APPROVED_APPS,
+                stringValue = packageNames.joinToString(","),
+            ),
+        )
+
+    /** Convenience wrapper: sets (or clears, when [windows] is empty) one app's schedule. */
+    fun sendSetAppSchedule(
+        pairingId: String,
+        pkg: String,
+        windows: List<uk.co.cyberheroez.oroq.monitor.Window>,
+    ): Boolean =
+        sendCommand(
+            pairingId,
+            FamilyCommand(
+                type = FamilyCommand.SET_APP_SCHEDULE,
+                stringValue = appSchedulePayload(pkg, windows),
             ),
         )
 }
