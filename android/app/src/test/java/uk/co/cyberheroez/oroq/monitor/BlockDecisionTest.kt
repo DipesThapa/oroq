@@ -75,4 +75,71 @@ class BlockDecisionTest {
         // New grant 30 should give 30 min from now → extra = 50 + 30 = 80.
         assertEquals(80, newExtraAfterGrant(currentExtra = 30, todayMinutes = 110, limitMinutes = 60, grant = 30))
     }
+
+    private val everyDay = java.time.DayOfWeek.values().toSet()
+
+    @Test fun systemCriticalAppIsAlwaysAllowed() {
+        assertEquals(
+            BlockDecision.ALLOW,
+            decideBlock(
+                foregroundApp = "com.android.settings",
+                todayMinutes = 999, blockedApps = setOf("com.android.settings"),
+                limitMinutes = 60, extraMinutes = 0,
+                approvedApps = emptySet(), systemCriticalApps = setOf("com.android.settings"),
+            ),
+        )
+    }
+
+    @Test fun unapprovedAppIsBlocked() {
+        assertEquals(
+            BlockDecision.BLOCK_UNAPPROVED,
+            decideBlock(
+                foregroundApp = "com.new.app", todayMinutes = 0, blockedApps = emptySet(),
+                limitMinutes = 0, extraMinutes = 0, approvedApps = setOf("com.ok.app"),
+            ),
+        )
+    }
+
+    @Test fun approvedAppInBlockedWindowIsScheduleBlocked() {
+        assertEquals(
+            BlockDecision.BLOCK_SCHEDULE,
+            decideBlock(
+                foregroundApp = "com.tiktok", todayMinutes = 0, blockedApps = emptySet(),
+                limitMinutes = 0, extraMinutes = 0, approvedApps = setOf("com.tiktok"),
+                schedules = mapOf("com.tiktok" to listOf(Window(540, 1020, everyDay))),
+                nowMinuteOfDay = 600, dayOfWeek = java.time.DayOfWeek.MONDAY,
+            ),
+        )
+    }
+
+    @Test fun approvedAppOutsideWindowIsAllowed() {
+        assertEquals(
+            BlockDecision.ALLOW,
+            decideBlock(
+                foregroundApp = "com.tiktok", todayMinutes = 0, blockedApps = emptySet(),
+                limitMinutes = 0, extraMinutes = 0, approvedApps = setOf("com.tiktok"),
+                schedules = mapOf("com.tiktok" to listOf(Window(540, 1020, everyDay))),
+                nowMinuteOfDay = 1100, dayOfWeek = java.time.DayOfWeek.MONDAY,
+            ),
+        )
+    }
+
+    @Test fun unapprovedBeatsScheduleAndLegacyAndTimeUp() {
+        // not approved → BLOCK_UNAPPROVED even though legacy + time-up also apply.
+        assertEquals(
+            BlockDecision.BLOCK_UNAPPROVED,
+            decideBlock(
+                foregroundApp = "com.x", todayMinutes = 999, blockedApps = setOf("com.x"),
+                limitMinutes = 60, extraMinutes = 0, approvedApps = emptySet(),
+            ),
+        )
+    }
+
+    @Test fun nullApprovedAppsKeepsLegacyBehaviour() {
+        // approvedApps default null → approval disabled; legacy blocklist still wins.
+        assertEquals(
+            BlockDecision.BLOCK_APP,
+            decideBlock("com.bad.app", 10, setOf("com.bad.app"), 120, 0),
+        )
+    }
 }
