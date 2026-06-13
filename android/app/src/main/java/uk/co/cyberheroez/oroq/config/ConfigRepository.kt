@@ -8,8 +8,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
+import uk.co.cyberheroez.oroq.monitor.Window
 import uk.co.cyberheroez.oroq.monitor.effectiveExtraMinutes
 import uk.co.cyberheroez.oroq.monitor.newExtraAfterGrant
+import uk.co.cyberheroez.oroq.monitor.schedulesFromJson
+import uk.co.cyberheroez.oroq.monitor.schedulesToJson
 import java.time.LocalDate
 
 private val Context.dataStore by preferencesDataStore(name = "oroq_config")
@@ -35,6 +38,8 @@ class ConfigRepository(context: Context) {
         val EXTRA_DATE = stringPreferencesKey("extra_date")
         val SAFE_SEARCH = booleanPreferencesKey("safe_search_on")
         val YT_RESTRICTED = booleanPreferencesKey("yt_restricted_on")
+        val APPROVED_APPS = stringSetPreferencesKey("approved_apps")
+        val APP_SCHEDULES = stringPreferencesKey("app_schedules_json")
     }
 
     suspend fun isSafeSearchOn(): Boolean = store.data.first()[Keys.SAFE_SEARCH] ?: false
@@ -100,6 +105,27 @@ class ConfigRepository(context: Context) {
 
     suspend fun setBlockedApps(apps: Set<String>) {
         store.edit { it[Keys.BLOCKED_APPS] = apps }
+    }
+
+    /** Packages the parent has approved. Absent = unapproved (default-deny). */
+    suspend fun getApprovedApps(): Set<String> =
+        store.data.first()[Keys.APPROVED_APPS] ?: emptySet()
+
+    suspend fun setApprovedApps(apps: Set<String>) {
+        store.edit { it[Keys.APPROVED_APPS] = apps }
+    }
+
+    /** Per-app blocked-time-window schedules. */
+    suspend fun getSchedules(): Map<String, List<Window>> =
+        schedulesFromJson(store.data.first()[Keys.APP_SCHEDULES] ?: "")
+
+    /** Replaces the schedule for one package; an empty list clears it. */
+    suspend fun setAppSchedule(pkg: String, windows: List<Window>) {
+        store.edit { prefs ->
+            val current = schedulesFromJson(prefs[Keys.APP_SCHEDULES] ?: "").toMutableMap()
+            if (windows.isEmpty()) current.remove(pkg) else current[pkg] = windows
+            prefs[Keys.APP_SCHEDULES] = schedulesToJson(current)
+        }
     }
 
     suspend fun getDailyLimitMinutes(): Int =
