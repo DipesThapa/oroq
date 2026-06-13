@@ -41,6 +41,41 @@ class FamilySummaryTest {
         assertEquals(emptySet<String>(), parsed.blockedApps)
     }
 
+    @Test fun heartbeatAndPerAppFieldsRoundTrip() {
+        val summary = FamilySummary(
+            ts = 123L,
+            protectionOn = true,
+            screenTimeTodayMin = 30,
+            dailyLimitMin = 120,
+            permissionsOk = false,
+            approvedApps = setOf("com.ok"),
+            schedules = mapOf(
+                "com.tiktok" to listOf(
+                    uk.co.cyberheroez.oroq.monitor.Window(
+                        1260, 420, java.time.DayOfWeek.values().toSet(),
+                    ),
+                ),
+            ),
+        )
+        val restored = parseSummary(summary.toJson())
+        assertEquals(false, restored.permissionsOk)
+        assertEquals(setOf("com.ok"), restored.approvedApps)
+        assertEquals(summary.schedules, restored.schedules)
+    }
+
+    @Test fun missingHeartbeatFieldsDefault() {
+        // Old children won't send the new fields; parse must default safely.
+        val json = org.json.JSONObject()
+            .put("ts", 1L).put("protectionOn", true)
+            .put("screenTimeTodayMin", 0).put("dailyLimitMin", 0)
+            .put("webBlockedToday", 0).put("appBlockedToday", 0)
+            .toString()
+        val s = parseSummary(json)
+        assertEquals(true, s.permissionsOk) // default = assume ok for legacy
+        assertEquals(emptySet<String>(), s.approvedApps)
+        assertEquals(emptyMap<String, List<uk.co.cyberheroez.oroq.monitor.Window>>(), s.schedules)
+    }
+
     @Test fun buildSummaryAssemblesFieldsAndTopFive() {
         val usage = linkedMapOf(
             "A" to 50, "B" to 40, "C" to 30, "D" to 20, "E" to 10, "F" to 5,

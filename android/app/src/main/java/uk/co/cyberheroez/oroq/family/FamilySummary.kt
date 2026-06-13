@@ -31,6 +31,12 @@ data class FamilySummary(
     val safeSearchOn: Boolean = false,
     /** Whether DNS-level YouTube Restricted Mode is on (parent toggle). */
     val ytRestrictedOn: Boolean = false,
+    /** Heartbeat: all core child permissions (VPN, usage, overlay) are granted. */
+    val permissionsOk: Boolean = true,
+    /** Packages the parent has approved on the child (default-deny mirror). */
+    val approvedApps: Set<String> = emptySet(),
+    /** Per-app blocked-time-window schedules currently on the child. */
+    val schedules: Map<String, List<uk.co.cyberheroez.oroq.monitor.Window>> = emptyMap(),
 )
 
 /** Serialises the summary to its compact JSON wire form. */
@@ -53,6 +59,8 @@ fun FamilySummary.toJson(): String {
     }
     val blocked = JSONArray()
     for (pkg in blockedApps) blocked.put(pkg)
+    val approved = JSONArray()
+    for (pkg in approvedApps) approved.put(pkg)
     return JSONObject()
         .put("ts", ts)
         .put("protectionOn", protectionOn)
@@ -67,6 +75,9 @@ fun FamilySummary.toJson(): String {
         .put("blockedApps", blocked)
         .put("safeSearchOn", safeSearchOn)
         .put("ytRestrictedOn", ytRestrictedOn)
+        .put("permissionsOk", permissionsOk)
+        .put("approvedApps", approved)
+        .put("schedules", JSONObject(uk.co.cyberheroez.oroq.monitor.schedulesToJson(schedules)))
         .toString()
 }
 
@@ -112,6 +123,14 @@ fun parseSummary(text: String): FamilySummary {
     if (blockedArray != null) {
         for (i in 0 until blockedArray.length()) blocked.add(blockedArray.getString(i))
     }
+    val approved = HashSet<String>()
+    val approvedArray = json.optJSONArray("approvedApps")
+    if (approvedArray != null) {
+        for (i in 0 until approvedArray.length()) approved.add(approvedArray.getString(i))
+    }
+    val schedules = uk.co.cyberheroez.oroq.monitor.schedulesFromJson(
+        json.optJSONObject("schedules")?.toString() ?: "",
+    )
     return FamilySummary(
         ts = json.getLong("ts"),
         protectionOn = json.getBoolean("protectionOn"),
@@ -126,5 +145,8 @@ fun parseSummary(text: String): FamilySummary {
         blockedApps = blocked,
         safeSearchOn = json.optBoolean("safeSearchOn", false),
         ytRestrictedOn = json.optBoolean("ytRestrictedOn", false),
+        permissionsOk = json.optBoolean("permissionsOk", true),
+        approvedApps = approved,
+        schedules = schedules,
     )
 }
