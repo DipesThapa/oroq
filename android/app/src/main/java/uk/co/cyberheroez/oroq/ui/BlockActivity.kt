@@ -88,6 +88,8 @@ class BlockActivity : ComponentActivity() {
         const val EXTRA_REASON = "reason"
         const val REASON_APP = "APP"
         const val REASON_TIME = "TIME"
+        const val REASON_UNAPPROVED = "UNAPPROVED"
+        const val REASON_SCHEDULE = "SCHEDULE"
     }
 }
 
@@ -95,6 +97,21 @@ class BlockActivity : ComponentActivity() {
 private fun BlockScreen(reason: String, onGoHome: () -> Unit) {
     val isTime = reason == BlockActivity.REASON_TIME
     val accent = if (isTime) OroqColors.BluePrimary else OroqColors.Danger
+    val title = when (reason) {
+        BlockActivity.REASON_TIME -> "Screen time's up"
+        BlockActivity.REASON_UNAPPROVED -> "Not allowed yet"
+        BlockActivity.REASON_SCHEDULE -> "Blocked right now"
+        else -> "App blocked"
+    }
+    val body = when (reason) {
+        BlockActivity.REASON_TIME ->
+            "Today's screen-time limit has been reached. A parent can grant more time remotely."
+        BlockActivity.REASON_UNAPPROVED ->
+            "Ask a parent to approve this app before you can use it."
+        BlockActivity.REASON_SCHEDULE ->
+            "This app is outside its allowed hours. It'll unlock automatically later."
+        else -> "This app has been blocked by OroQ."
+    }
     Column(
         Modifier.fillMaxSize().background(OroqColors.BgPrimary).systemBarsPadding()
             .padding(horizontal = OroqDimens.PadScreen),
@@ -107,17 +124,13 @@ private fun BlockScreen(reason: String, onGoHome: () -> Unit) {
         ) { QSymbol(64.dp) }
         Spacer(Modifier.height(26.dp))
         Text(
-            if (isTime) "Screen time's up" else "App blocked",
+            title,
             style = OroqType.H1,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(10.dp))
         Text(
-            if (isTime) {
-                "Today's screen-time limit has been reached. A parent can grant more time remotely."
-            } else {
-                "This app has been blocked by OroQ."
-            },
+            body,
             style = OroqType.Body,
             textAlign = TextAlign.Center,
         )
