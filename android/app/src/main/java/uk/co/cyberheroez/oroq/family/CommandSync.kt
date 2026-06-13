@@ -55,6 +55,18 @@ suspend fun pollAndApplyCommands(context: Context): Int {
                     .toSet()
                 config.setBlockedApps(pkgs)
             }
+            FamilyCommand.SET_APPROVED_APPS -> {
+                val pkgs = command.stringValue
+                    .split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet()
+                config.setApprovedApps(pkgs)
+            }
+            FamilyCommand.SET_APP_SCHEDULE -> {
+                val (pkg, windows) = parseAppSchedulePayload(command.stringValue)
+                config.setAppSchedule(pkg, windows)
+            }
             FamilyCommand.SET_PROTECTION -> {
                 if (command.intValue == 1) {
                     // Can only start if VPN consent already exists; otherwise the
