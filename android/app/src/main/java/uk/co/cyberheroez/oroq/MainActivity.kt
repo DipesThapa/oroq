@@ -72,7 +72,10 @@ class MainActivity : ComponentActivity() {
                     finish()
                 }
                 DeviceRole.PARENT -> {
-                    startActivity(Intent(this@MainActivity, ParentActivity::class.java))
+                    startActivity(
+                        Intent(this@MainActivity, ParentActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+                    )
                     finish()
                 }
                 DeviceRole.CHILD -> setUpChildHome()
@@ -87,7 +90,10 @@ class MainActivity : ComponentActivity() {
 
     private suspend fun setUpChildHome() {
         if (!isReadyToShowHome()) {
-            startActivity(Intent(this, ChildActivity::class.java))
+            startActivity(
+                Intent(this, ChildActivity::class.java)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK),
+            )
             finish()
             return
         }
