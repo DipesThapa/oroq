@@ -50,4 +50,23 @@ class FamilyCommandTest {
         val command = FamilyCommand(FamilyCommand.SET_BLOCKED_APPS, stringValue = "")
         assertEquals(command, parseCommand(command.toJson()))
     }
+
+    @Test fun appSchedulePayloadRoundTrip() {
+        val windows = listOf(
+            uk.co.cyberheroez.oroq.monitor.Window(
+                1260, 420, java.time.DayOfWeek.values().toSet(),
+            ),
+        )
+        val payload = appSchedulePayload("com.tiktok", windows)
+        val (pkg, restored) = parseAppSchedulePayload(payload)
+        assertEquals("com.tiktok", pkg)
+        assertEquals(windows, restored)
+    }
+
+    @Test fun appScheduleEmptyWindowsRoundTrip() {
+        val payload = appSchedulePayload("com.x", emptyList())
+        val (pkg, restored) = parseAppSchedulePayload(payload)
+        assertEquals("com.x", pkg)
+        assertEquals(emptyList<uk.co.cyberheroez.oroq.monitor.Window>(), restored)
+    }
 }

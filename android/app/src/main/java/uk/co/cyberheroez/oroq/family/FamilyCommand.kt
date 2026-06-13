@@ -37,6 +37,8 @@ data class FamilyCommand(
         const val SET_PROTECTION = "set_protection"
         const val SET_SAFE_SEARCH = "set_safe_search"
         const val SET_YT_RESTRICTED = "set_yt_restricted"
+        const val SET_APPROVED_APPS = "set_approved_apps"
+        const val SET_APP_SCHEDULE = "set_app_schedule"
     }
 }
 
@@ -48,4 +50,23 @@ fun parseCommand(text: String): FamilyCommand {
         intValue = json.optInt("intValue", 0),
         stringValue = json.optString("stringValue", ""),
     )
+}
+
+/**
+ * Encodes a SET_APP_SCHEDULE payload: `{ "pkg": "...", "windows": [ ... ] }`.
+ * Windows reuse the same shape as [windowsToJson].
+ */
+fun appSchedulePayload(pkg: String, windows: List<uk.co.cyberheroez.oroq.monitor.Window>): String =
+    JSONObject()
+        .put("pkg", pkg)
+        .put("windows", org.json.JSONArray(uk.co.cyberheroez.oroq.monitor.windowsToJson(windows)))
+        .toString()
+
+/** Parses a SET_APP_SCHEDULE payload back into (package, windows). */
+fun parseAppSchedulePayload(text: String): Pair<String, List<uk.co.cyberheroez.oroq.monitor.Window>> {
+    val o = JSONObject(text)
+    val windows = uk.co.cyberheroez.oroq.monitor.windowsFromJson(
+        o.optJSONArray("windows")?.toString() ?: "[]",
+    )
+    return o.getString("pkg") to windows
 }
