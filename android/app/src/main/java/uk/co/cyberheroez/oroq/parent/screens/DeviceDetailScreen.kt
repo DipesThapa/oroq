@@ -1,5 +1,6 @@
 package uk.co.cyberheroez.oroq.parent.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -7,7 +8,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -17,11 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -29,6 +34,8 @@ import androidx.navigation.NavController
 import uk.co.cyberheroez.oroq.config.Categories
 import uk.co.cyberheroez.oroq.family.FamilyCommand
 import uk.co.cyberheroez.oroq.family.FamilySummary
+import uk.co.cyberheroez.oroq.family.appSchedulePayload
+import uk.co.cyberheroez.oroq.monitor.Window
 import uk.co.cyberheroez.oroq.parent.ParentViewModel
 import uk.co.cyberheroez.oroq.ui.components.OroqCard
 import uk.co.cyberheroez.oroq.ui.components.PrimaryButton
@@ -71,6 +78,11 @@ fun DeviceDetailScreen(vm: ParentViewModel, pairingId: String, nav: NavControlle
         )
         Spacer(Modifier.height(16.dp))
 
+        if (summary != null) {
+            ProtectionBanner(summary)
+            Spacer(Modifier.height(12.dp))
+        }
+
         OroqCard {
             Text("PROTECTION", style = OroqType.Caption)
             Spacer(Modifier.height(6.dp))
@@ -104,6 +116,8 @@ fun DeviceDetailScreen(vm: ParentViewModel, pairingId: String, nav: NavControlle
             ScreenTimeCard(vm, pairingId, summary)
             Spacer(Modifier.height(12.dp))
             CategoryEditor(vm, pairingId, summary.categories)
+            Spacer(Modifier.height(12.dp))
+            AppAccessEditor(vm, pairingId, summary)
             Spacer(Modifier.height(12.dp))
             BlockedAppsEditor(vm, pairingId, summary)
         }
@@ -237,4 +251,197 @@ private fun BlockedAppsEditor(vm: ParentViewModel, pairingId: String, summary: F
             }
         }
     }
+}
+
+private fun minutesToHhmm(m: Int): String = "%02d:%02d".format(m / 60, m % 60)
+
+private fun hhmmToMinutes(text: String): Int? {
+    val parts = text.split(":")
+    if (parts.size != 2) return null
+    val h = parts[0].toIntOrNull() ?: return null
+    val min = parts[1].toIntOrNull() ?: return null
+    if (h !in 0..23 || min !in 0..59) return null
+    return h * 60 + min
+}
+
+/** Top-of-screen heartbeat banner: protection active / permissions off / offline. */
+@Composable
+private fun ProtectionBanner(summary: FamilySummary) {
+    val now = System.currentTimeMillis()
+    val staleMs = now - summary.ts
+    val (text, color) = when {
+        staleMs > 35 * 60 * 1000L -> "Protection offline — last seen ${staleMs / 60000L} min ago" to OroqColors.Danger
+        !summary.permissionsOk -> "Permissions turned off on the child device" to OroqColors.Danger
+        !summary.protectionOn -> "Web protection is off" to OroqColors.Danger
+        else -> "Protection active" to OroqColors.Success
+    }
+    OroqCard {
+        Text(text, style = OroqType.Body.copy(color = color, fontWeight = FontWeight.SemiBold))
+    }
+}
+
+/** App approval (default-deny) + per-app schedule entry point. */
+@Composable
+private fun AppAccessEditor(vm: ParentViewModel, pairingId: String, summary: FamilySummary) {
+    var approved by remember(summary.approvedApps) { mutableStateOf(summary.approvedApps) }
+    var editingPkg by remember { mutableStateOf<String?>(null) }
+    OroqCard {
+        Text("APP ACCESS", style = OroqType.Caption)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            "New apps your child installs stay blocked until you approve them here.",
+            style = OroqType.Caption,
+        )
+        Spacer(Modifier.height(6.dp))
+        if (summary.installedApps.isEmpty()) {
+            Text("Waiting for the child phone to sync its app list…", style = OroqType.Body)
+        } else {
+            for (app in summary.installedApps) {
+                val isApproved = app.packageName in approved
+                ToggleRow(app.label, isApproved) { on ->
+                    approved = if (on) approved + app.packageName else approved - app.packageName
+                }
+                if (isApproved) {
+                    val count = summary.schedules[app.packageName]?.size ?: 0
+                    SecondaryLink(if (count > 0) "Schedule ($count)" else "Set schedule") {
+                        editingPkg = app.packageName
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            PrimaryButton("Save approvals", enabled = approved != summary.approvedApps) {
+                vm.send(
+                    pairingId,
+                    FamilyCommand(FamilyCommand.SET_APPROVED_APPS, stringValue = approved.joinToString(",")),
+                )
+            }
+        }
+    }
+    editingPkg?.let { pkg ->
+        ScheduleDialog(
+            appLabel = summary.installedApps.firstOrNull { it.packageName == pkg }?.label ?: pkg,
+            initial = summary.schedules[pkg] ?: emptyList(),
+            onDismiss = { editingPkg = null },
+            onSave = { windows ->
+                vm.send(
+                    pairingId,
+                    FamilyCommand(FamilyCommand.SET_APP_SCHEDULE, stringValue = appSchedulePayload(pkg, windows)),
+                )
+                editingPkg = null
+            },
+        )
+    }
+}
+
+/** Edits one app's list of blocked-time windows. */
+@Composable
+private fun ScheduleDialog(
+    appLabel: String,
+    initial: List<Window>,
+    onDismiss: () -> Unit,
+    onSave: (List<Window>) -> Unit,
+) {
+    val windows = remember { mutableStateListOf<Window>().apply { addAll(initial) } }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Schedule — $appLabel", style = OroqType.H3) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                Text("Blocked hours. The app works outside these windows.", style = OroqType.Caption)
+                Spacer(Modifier.height(8.dp))
+                windows.forEachIndexed { i, w ->
+                    WindowRow(
+                        window = w,
+                        onChange = { windows[i] = it },
+                        onRemove = { windows.removeAt(i) },
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
+                SecondaryLink("+ Add window") {
+                    windows.add(Window(1260, 420, java.time.DayOfWeek.values().toSet()))
+                }
+            }
+        },
+        confirmButton = {
+            Text(
+                "Save",
+                style = OroqType.BodyOnDark.copy(color = OroqColors.BlueAccent, fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.clickable { onSave(windows.toList()) }.padding(8.dp),
+            )
+        },
+        dismissButton = {
+            Text(
+                "Cancel",
+                style = OroqType.Body.copy(color = OroqColors.TextSecondary),
+                modifier = Modifier.clickable(onClick = onDismiss).padding(8.dp),
+            )
+        },
+        containerColor = OroqColors.BgSurface,
+    )
+}
+
+@Composable
+private fun WindowRow(window: Window, onChange: (Window) -> Unit, onRemove: () -> Unit) {
+    var startText by remember { mutableStateOf(minutesToHhmm(window.startMinute)) }
+    var endText by remember { mutableStateOf(minutesToHhmm(window.endMinute)) }
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TimeField(startText, "From") {
+                startText = it
+                hhmmToMinutes(it)?.let { m -> onChange(window.copy(startMinute = m)) }
+            }
+            Spacer(Modifier.width(8.dp))
+            TimeField(endText, "To") {
+                endText = it
+                hhmmToMinutes(it)?.let { m -> onChange(window.copy(endMinute = m)) }
+            }
+            Spacer(Modifier.width(8.dp))
+            SecondaryLink("Remove") { onRemove() }
+        }
+        Spacer(Modifier.height(6.dp))
+        Row {
+            for (d in java.time.DayOfWeek.values()) {
+                val on = d in window.days
+                DayChip(d.name.take(1), on) {
+                    val days = if (on) window.days - d else window.days + d
+                    onChange(window.copy(days = days))
+                }
+                Spacer(Modifier.width(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimeField(value: String, label: String, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label, style = OroqType.Caption) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.width(104.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = OroqColors.BluePrimary,
+            unfocusedBorderColor = OroqColors.Border,
+            focusedTextColor = OroqColors.TextPrimary,
+            unfocusedTextColor = OroqColors.TextPrimary,
+        ),
+    )
+}
+
+@Composable
+private fun DayChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        style = OroqType.Caption.copy(
+            color = if (selected) OroqColors.TextPrimary else OroqColors.TextSecondary,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+        ),
+        modifier = Modifier
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) OroqColors.BluePrimary else OroqColors.BgSurface2)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+    )
 }
