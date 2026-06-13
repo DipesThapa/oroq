@@ -17,6 +17,9 @@ fun buildSummary(
     blockedApps: Set<String>,
     safeSearchOn: Boolean = false,
     ytRestrictedOn: Boolean = false,
+    permissionsOk: Boolean = true,
+    approvedApps: Set<String> = emptySet(),
+    schedules: Map<String, List<uk.co.cyberheroez.oroq.monitor.Window>> = emptyMap(),
 ): FamilySummary {
     val topApps = usageByApp.entries
         .sortedByDescending { it.value }
@@ -36,5 +39,8 @@ fun buildSummary(
         blockedApps = blockedApps,
         safeSearchOn = safeSearchOn,
         ytRestrictedOn = ytRestrictedOn,
+        permissionsOk = permissionsOk,
+        approvedApps = approvedApps,
+        schedules = schedules,
     )
 }

@@ -35,6 +35,10 @@ class FamilySyncWorker(
         val blockLog = BlockEventLog.forContext(applicationContext)
         val startOfToday = startOfTodayMillis()
 
+        val permissionsOk = usage.hasUsageAccess() &&
+            android.provider.Settings.canDrawOverlays(applicationContext) &&
+            android.net.VpnService.prepare(applicationContext) == null
+
         val summary = buildSummary(
             now = System.currentTimeMillis(),
             protectionOn = OroQVpnService.isActive,
@@ -48,6 +52,9 @@ class FamilySyncWorker(
             blockedApps = config.getBlockedApps(),
             safeSearchOn = config.isSafeSearchOn(),
             ytRestrictedOn = config.isYtRestrictedOn(),
+            permissionsOk = permissionsOk,
+            approvedApps = config.getApprovedApps(),
+            schedules = config.getSchedules(),
         )
 
         val ciphertext = FamilyCrypto.encryptFor(
