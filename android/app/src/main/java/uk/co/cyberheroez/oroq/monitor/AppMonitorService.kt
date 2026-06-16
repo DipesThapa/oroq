@@ -11,6 +11,7 @@ import kotlinx.coroutines.runBlocking
 import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.config.ConfigRepository
 import uk.co.cyberheroez.oroq.family.BlockEventLog
+import uk.co.cyberheroez.oroq.family.listUserApps
 import uk.co.cyberheroez.oroq.family.pollAndApplyCommands
 import uk.co.cyberheroez.oroq.ui.BlockActivity
 import java.util.concurrent.atomic.AtomicBoolean
@@ -37,6 +38,13 @@ class AppMonitorService : android.app.Service() {
         val usage = UsageReader(this)
         val config = ConfigRepository(applicationContext)
         val systemCritical = systemCriticalApps(applicationContext)
+        // First run: approve the apps already on the phone so default-deny only
+        // blocks apps installed later. Idempotent — no-op once seeded.
+        runBlocking {
+            config.seedApprovedAppsIfNeeded(
+                listUserApps(applicationContext).map { it.packageName }.toSet(),
+            )
+        }
         var tickCount = 0L
         while (running.get()) {
             try {

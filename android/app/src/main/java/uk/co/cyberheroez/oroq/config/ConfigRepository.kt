@@ -40,6 +40,7 @@ class ConfigRepository(context: Context) {
         val YT_RESTRICTED = booleanPreferencesKey("yt_restricted_on")
         val APPROVED_APPS = stringSetPreferencesKey("approved_apps")
         val APP_SCHEDULES = stringPreferencesKey("app_schedules_json")
+        val APPROVED_SEEDED = booleanPreferencesKey("approved_apps_seeded")
     }
 
     suspend fun isSafeSearchOn(): Boolean = store.data.first()[Keys.SAFE_SEARCH] ?: false
@@ -113,6 +114,22 @@ class ConfigRepository(context: Context) {
 
     suspend fun setApprovedApps(apps: Set<String>) {
         store.edit { it[Keys.APPROVED_APPS] = apps }
+    }
+
+    /**
+     * One-time bootstrap: on the child's first run, approve every app already
+     * installed so the device stays usable out of the box. Default-deny then
+     * only blocks apps the child installs *afterwards*, which the parent
+     * reviews. No-op once seeded, so the parent's later choices are never
+     * overwritten. The whole check-and-set runs in a single DataStore
+     * transaction, so concurrent callers (monitor + sync worker) seed once.
+     */
+    suspend fun seedApprovedAppsIfNeeded(installed: Set<String>) {
+        store.edit { prefs ->
+            if (prefs[Keys.APPROVED_SEEDED] == true) return@edit
+            prefs[Keys.APPROVED_APPS] = (prefs[Keys.APPROVED_APPS] ?: emptySet()) + installed
+            prefs[Keys.APPROVED_SEEDED] = true
+        }
     }
 
     /** Per-app blocked-time-window schedules. */

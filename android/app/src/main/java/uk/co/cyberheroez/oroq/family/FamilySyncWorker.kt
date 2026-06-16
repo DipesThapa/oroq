@@ -39,6 +39,12 @@ class FamilySyncWorker(
             android.provider.Settings.canDrawOverlays(applicationContext) &&
             android.net.VpnService.prepare(applicationContext) == null
 
+        // First run: approve apps already installed so default-deny only blocks
+        // apps added later. Idempotent — no-op once seeded.
+        config.seedApprovedAppsIfNeeded(
+            listUserApps(applicationContext).map { it.packageName }.toSet(),
+        )
+
         val summary = buildSummary(
             now = System.currentTimeMillis(),
             protectionOn = OroQVpnService.isActive,
