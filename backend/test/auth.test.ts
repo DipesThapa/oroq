@@ -48,4 +48,29 @@ describe("/auth", () => {
     const second = await post("/auth/verify", { email: "erin@example.com", otp: "222222" });
     expect(second.status).toBe(401);
   });
+
+  it("burns the OTP after too many wrong guesses (no brute force)", async () => {
+    await env.KV.put("otp:frank@example.com", await sha256Hex("333333"));
+    // Five wrong guesses exhaust the attempt budget...
+    for (let i = 0; i < 5; i++) {
+      const r = await post("/auth/verify", { email: "frank@example.com", otp: "000000" });
+      expect(r.status).toBe(401);
+    }
+    // ...so even the CORRECT code no longer works — the attacker must request a new one.
+    const correct = await post("/auth/verify", { email: "frank@example.com", otp: "333333" });
+    expect(correct.status).toBe(401);
+    expect(await env.KV.get("otp:frank@example.com")).toBeNull();
+  });
+
+  it("resets the attempt budget when a new code is requested", async () => {
+    await env.KV.put("otp:grace@example.com", await sha256Hex("444444"));
+    for (let i = 0; i < 5; i++) {
+      await post("/auth/verify", { email: "grace@example.com", otp: "000000" });
+    }
+    // A fresh request clears the failure counter and issues a usable code.
+    await post("/auth/request", { email: "grace@example.com" });
+    await env.KV.put("otp:grace@example.com", await sha256Hex("555555"));
+    const res = await post("/auth/verify", { email: "grace@example.com", otp: "555555" });
+    expect(res.status).toBe(200);
+  });
 });
