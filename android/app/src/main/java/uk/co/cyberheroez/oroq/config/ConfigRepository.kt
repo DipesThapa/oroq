@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
+import uk.co.cyberheroez.oroq.monitor.ClockAnchor
 import uk.co.cyberheroez.oroq.monitor.Window
 import uk.co.cyberheroez.oroq.monitor.effectiveExtraMinutes
 import uk.co.cyberheroez.oroq.monitor.newExtraAfterGrant
@@ -41,6 +43,23 @@ class ConfigRepository(context: Context) {
         val APPROVED_APPS = stringSetPreferencesKey("approved_apps")
         val APP_SCHEDULES = stringPreferencesKey("app_schedules_json")
         val APPROVED_SEEDED = booleanPreferencesKey("approved_apps_seeded")
+        val CLOCK_ANCHOR_WALL = longPreferencesKey("clock_anchor_wall")
+        val CLOCK_ANCHOR_ELAPSED = longPreferencesKey("clock_anchor_elapsed")
+    }
+
+    /** The persisted wall-vs-monotonic anchor used to detect clock tampering. */
+    suspend fun getClockAnchor(): ClockAnchor? {
+        val prefs = store.data.first()
+        val wall = prefs[Keys.CLOCK_ANCHOR_WALL] ?: return null
+        val elapsed = prefs[Keys.CLOCK_ANCHOR_ELAPSED] ?: return null
+        return ClockAnchor(wall, elapsed)
+    }
+
+    suspend fun setClockAnchor(anchor: ClockAnchor) {
+        store.edit {
+            it[Keys.CLOCK_ANCHOR_WALL] = anchor.wallMs
+            it[Keys.CLOCK_ANCHOR_ELAPSED] = anchor.elapsedMs
+        }
     }
 
     suspend fun isSafeSearchOn(): Boolean = store.data.first()[Keys.SAFE_SEARCH] ?: false

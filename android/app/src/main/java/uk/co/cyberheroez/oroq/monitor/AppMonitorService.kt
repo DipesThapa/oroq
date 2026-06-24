@@ -50,6 +50,8 @@ class AppMonitorService : android.app.Service() {
             )
         }
         var tickCount = 0L
+        var clockAnchor = runBlocking { config.getClockAnchor() }
+        var clockTampered = false
         while (running.get()) {
             try {
                 if (usage.hasUsageAccess()) {
@@ -57,7 +59,23 @@ class AppMonitorService : android.app.Service() {
                     val foreground = usage.currentForegroundApp()
                     // Never block our own screens (incl. BlockActivity itself).
                     if (foreground != packageName) {
-                        val now = java.time.LocalTime.now()
+                        // Judge schedules/limits against a trusted time projected from
+                        // a monotonic anchor — so changing the device clock can't skip
+                        // a curfew or reset the daily limit. Alert the parent once when
+                        // tampering is first seen.
+                        val check = ClockGuard.check(
+                            clockAnchor, System.currentTimeMillis(),
+                            android.os.SystemClock.elapsedRealtime(),
+                        )
+                        clockAnchor = check.anchor
+                        if (check.tampered && !clockTampered) {
+                            clockTampered = true
+                            runCatching { scheduleNotifySync(applicationContext) }
+                        } else if (!check.tampered) {
+                            clockTampered = false
+                        }
+                        val trusted = java.time.Instant.ofEpochMilli(check.trustedWallMs)
+                            .atZone(java.time.ZoneId.systemDefault())
                         val decision = runBlocking {
                             decideBlock(
                                 foregroundApp = foreground,
@@ -68,8 +86,8 @@ class AppMonitorService : android.app.Service() {
                                 approvedApps = config.getApprovedApps(),
                                 schedules = config.getSchedules(),
                                 systemCriticalApps = systemCritical,
-                                nowMinuteOfDay = now.hour * 60 + now.minute,
-                                dayOfWeek = java.time.LocalDate.now().dayOfWeek,
+                                nowMinuteOfDay = trusted.hour * 60 + trusted.minute,
+                                dayOfWeek = trusted.dayOfWeek,
                             )
                         }
                         when (decision) {
@@ -103,7 +121,12 @@ class AppMonitorService : android.app.Service() {
                 // WorkManager periodic. Runs on a side thread so the 1-s
                 // foreground tick is never blocked by a network call.
                 tickCount++
-                if (tickCount % 60 == 0L) drainCommandsAsync()
+                if (tickCount % 60 == 0L) {
+                    drainCommandsAsync()
+                    // Persist the clock anchor so an app restart can't re-anchor at a
+                    // spoofed time within the same boot session.
+                    clockAnchor?.let { a -> runBlocking { config.setClockAnchor(a) } }
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "monitor tick failed", e)
             }
