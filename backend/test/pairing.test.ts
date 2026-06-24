@@ -43,6 +43,14 @@ describe("/pair (child-led)", () => {
     expect(res.status).toBe(400);
   });
 
+  it("mints a child token on create (returned once, only its hash is stored)", async () => {
+    const res = await childCreate();
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { childToken?: string };
+    expect(typeof body.childToken).toBe("string");
+    expect((body.childToken ?? "").length).toBeGreaterThanOrEqual(32);
+  });
+
   it("rejects pair/join without a token", async () => {
     const create = await childCreate();
     const { code } = (await create.json()) as { code: string };

@@ -2,6 +2,7 @@ import { Env } from "./env";
 import { json, readJson } from "./http";
 import { verifyJwt } from "./crypto";
 import { rateLimit } from "./ratelimit";
+import { requireChildToken } from "./childauth";
 
 const CMD_TTL_SEC = 60 * 60 * 24; // 24 hours
 
@@ -14,7 +15,7 @@ export async function handleCmd(req: Request, env: Env, path: string): Promise<R
   const match = path.match(/^\/cmd\/([0-9a-f-]{36})$/);
   if (!match) return json({ error: "not_found" }, 404);
   if (req.method === "POST") return cmdSend(req, env, match[1]);
-  if (req.method === "GET") return cmdFetch(env, match[1]);
+  if (req.method === "GET") return cmdFetch(req, env, match[1]);
   return json({ error: "not_found" }, 404);
 }
 
@@ -53,8 +54,10 @@ async function cmdSend(req: Request, env: Env, pairingId: string): Promise<Respo
   return json({ id });
 }
 
-/** Child fetches pending commands. */
-async function cmdFetch(env: Env, pairingId: string): Promise<Response> {
+/** Child fetches pending commands. Requires the pairing's child token. */
+async function cmdFetch(req: Request, env: Env, pairingId: string): Promise<Response> {
+  const denied = await requireChildToken(req, env, pairingId);
+  if (denied) return denied;
   return json({ commands: await readQueue(env, pairingId) });
 }
 
@@ -62,6 +65,8 @@ async function cmdFetch(env: Env, pairingId: string): Promise<Response> {
 async function cmdAck(req: Request, env: Env, pairingId: string): Promise<Response> {
   const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
   if (!(await rateLimit(env, `ack:${ip}`, 60, 600))) return json({ error: "rate_limited" }, 429);
+  const denied = await requireChildToken(req, env, pairingId);
+  if (denied) return denied;
   const ids = (await readJson(req)).ids;
   if (!Array.isArray(ids)) return json({ error: "bad_request" }, 400);
   const remove = new Set(ids.map(String));

@@ -61,6 +61,7 @@ class FamilyApi(
         return CreatePairingResult(
             pairingId = json.getString("pairingId"),
             code = json.getString("code"),
+            childToken = json.getString("childToken"),
             expiresInSec = json.optInt("expiresInSec", 600),
         )
     }
@@ -103,9 +104,10 @@ class FamilyApi(
     }
 
     /** Uploads an encrypted summary blob; [notify] asks the server to push the parent. */
-    fun syncUpload(pairingId: String, ciphertextB64: String, notify: Boolean = false): Boolean {
+    fun syncUpload(childToken: String, pairingId: String, ciphertextB64: String, notify: Boolean = false): Boolean {
+        val headers = jsonHeaders + ("x-child-token" to childToken)
         val body = JSONObject().put("ciphertext", ciphertextB64).put("notify", notify).toString()
-        return post("/sync/$pairingId", jsonHeaders, body).status == 200
+        return post("/sync/$pairingId", headers, body).status == 200
     }
 
     /** Registers this parent device's FCM token. Returns true on success. */
@@ -115,13 +117,15 @@ class FamilyApi(
         return post("/push/register", headers, body).status == 200
     }
 
-    /** Fetches the latest encrypted summary blob for a pairing, or null if none. */
-    fun syncFetch(token: String, pairingId: String): String? {
+    /** Fetches the latest encrypted summary blob + server receive time, or null if none. */
+    fun syncFetch(token: String, pairingId: String): FetchedSummary? {
         val headers = mapOf("authorization" to "Bearer $token")
         val res = transport.request("GET", "$baseUrl/sync/$pairingId", headers, null)
         if (res.status != 200) return null
-        val value = JSONObject(res.body).optString("ciphertext")
-        return value.ifEmpty { null }
+        val json = JSONObject(res.body)
+        val ciphertext = json.optString("ciphertext").ifEmpty { return null }
+        val receivedAt = if (json.isNull("receivedAt")) null else json.optLong("receivedAt")
+        return FetchedSummary(ciphertext, receivedAt)
     }
 
     /** Parent: enqueue an encrypted command for a pairing. Returns true on success. */
@@ -132,8 +136,9 @@ class FamilyApi(
     }
 
     /** Child: fetch pending commands as (id, ciphertext) pairs, or null on failure. */
-    fun cmdFetch(pairingId: String): List<Pair<String, String>>? {
-        val res = transport.request("GET", "$baseUrl/cmd/$pairingId", emptyMap(), null)
+    fun cmdFetch(childToken: String, pairingId: String): List<Pair<String, String>>? {
+        val headers = mapOf("x-child-token" to childToken)
+        val res = transport.request("GET", "$baseUrl/cmd/$pairingId", headers, null)
         if (res.status != 200) return null
         val array = JSONObject(res.body).getJSONArray("commands")
         return (0 until array.length()).map { i ->
@@ -143,11 +148,12 @@ class FamilyApi(
     }
 
     /** Child: acknowledge applied commands so the server drops them. */
-    fun cmdAck(pairingId: String, ids: List<String>): Boolean {
+    fun cmdAck(childToken: String, pairingId: String, ids: List<String>): Boolean {
         val array = JSONArray()
         for (id in ids) array.put(id)
+        val headers = jsonHeaders + ("x-child-token" to childToken)
         val body = JSONObject().put("ids", array).toString()
-        return post("/cmd/$pairingId/ack", jsonHeaders, body).status == 200
+        return post("/cmd/$pairingId/ack", headers, body).status == 200
     }
 
     private fun post(path: String, headers: Map<String, String>, body: String): HttpResponse =

@@ -82,16 +82,22 @@ fun DeviceDetailScreen(vm: ParentViewModel, pairingId: String, nav: NavControlle
         Text(
             when {
                 summary == null -> "No data yet — the child's phone hasn't synced."
-                System.currentTimeMillis() - summary.ts > STALE_AFTER_MS -> "Offline • Last seen ${relativeTime(summary.ts)}"
-                else -> "Active • Last seen ${relativeTime(summary.ts)}"
+                else -> {
+                    // Server-stamped receive time (H2); fall back to the in-blob ts
+                    // only for legacy uploads stored before server stamping.
+                    val seen = snap.serverReceivedAt ?: summary.ts
+                    val prefix = if (System.currentTimeMillis() - seen > STALE_AFTER_MS) "Offline" else "Active"
+                    "$prefix • Last seen ${relativeTime(seen)}"
+                }
             },
             style = OroqType.Caption,
         )
         Spacer(Modifier.height(16.dp))
 
         if (summary != null) {
-            ProtectionBanner(summary)
-            if (System.currentTimeMillis() - summary.ts > STALE_AFTER_MS) {
+            val lastSeen = snap.serverReceivedAt ?: summary.ts
+            ProtectionBanner(summary, lastSeen)
+            if (System.currentTimeMillis() - lastSeen > STALE_AFTER_MS) {
                 Spacer(Modifier.height(6.dp))
                 Text(
                     "Changes you make now are saved and applied when the device reconnects.",
@@ -286,13 +292,13 @@ private fun hhmmToMinutes(text: String): Int? {
     return h * 60 + min
 }
 
-/** Top-of-screen heartbeat banner: protection active / permissions off / offline. */
+/** Top-of-screen heartbeat banner: protection active / permissions off / offline.
+ *  [lastSeenMs] is the server-stamped receive time (audit H2), not the in-blob ts. */
 @Composable
-private fun ProtectionBanner(summary: FamilySummary) {
-    val now = System.currentTimeMillis()
-    val staleMs = now - summary.ts
+private fun ProtectionBanner(summary: FamilySummary, lastSeenMs: Long) {
+    val staleMs = System.currentTimeMillis() - lastSeenMs
     val (text, color) = when {
-        staleMs > STALE_AFTER_MS -> "Protection offline — last seen ${relativeTime(summary.ts)}" to OroqColors.Danger
+        staleMs > STALE_AFTER_MS -> "Protection offline — last seen ${relativeTime(lastSeenMs)}" to OroqColors.Danger
         !summary.permissionsOk -> "Permissions turned off on the child device" to OroqColors.Danger
         !summary.protectionOn -> "Web protection is off" to OroqColors.Danger
         else -> "Protection active" to OroqColors.Success

@@ -2,6 +2,7 @@ package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -41,6 +42,15 @@ class FamilyStore(context: Context) {
         val PUBLIC_KEY = stringPreferencesKey("own_public_keyset")
         val CHILDREN = stringSetPreferencesKey("paired_children")
         val PARENT_LINK = stringPreferencesKey("parent_link")
+        val CHILD_TOKEN = stringPreferencesKey("child_token")
+        val LAST_COMMAND_TS = longPreferencesKey("last_command_ts")
+    }
+
+    /** Highest parent send-time (ts) of any command applied — anti-replay floor. */
+    suspend fun getLastCommandTs(): Long = store.data.first()[Keys.LAST_COMMAND_TS] ?: 0L
+
+    suspend fun setLastCommandTs(ts: Long) {
+        store.edit { it[Keys.LAST_COMMAND_TS] = ts }
     }
 
     suspend fun getRole(): DeviceRole? =
@@ -91,6 +101,13 @@ class FamilyStore(context: Context) {
             val current = prefs[Keys.CHILDREN] ?: emptySet()
             prefs[Keys.CHILDREN] = current.filterNot { decodeChild(it)?.pairingId == pairingId }.toSet()
         }
+    }
+
+    /** This child device's per-pairing bearer token (sent on /sync and /cmd). */
+    suspend fun getChildToken(): String? = store.data.first()[Keys.CHILD_TOKEN]
+
+    suspend fun setChildToken(token: String) {
+        store.edit { it[Keys.CHILD_TOKEN] = token }
     }
 
     suspend fun getParentLink(): ParentLink? =

@@ -10,12 +10,38 @@ import java.security.GeneralSecurityException
 
 class FamilyCryptoTest {
 
+    private val AAD = "pairing-1".toByteArray()
+
     @Test fun encryptThenDecryptRoundTrips() {
         val keys = FamilyCrypto.generateKeyPair()
         val message = "hello family".toByteArray()
-        val ciphertext = FamilyCrypto.encryptFor(keys.publicKeysetB64, message)
-        val plaintext = FamilyCrypto.decrypt(keys.privateKeysetB64, ciphertext)
+        val ciphertext = FamilyCrypto.encryptFor(keys.publicKeysetB64, message, AAD)
+        val plaintext = FamilyCrypto.decrypt(keys.privateKeysetB64, ciphertext, AAD)
         assertArrayEquals(message, plaintext)
+    }
+
+    @Test fun ciphertextCarriesTheVersionTag() {
+        val keys = FamilyCrypto.generateKeyPair()
+        val ciphertext = FamilyCrypto.encryptFor(keys.publicKeysetB64, "x".toByteArray(), AAD)
+        assertEquals(1.toByte(), ciphertext[0])
+    }
+
+    @Test fun aMismatchedVersionByteIsRejected() {
+        val keys = FamilyCrypto.generateKeyPair()
+        val ciphertext = FamilyCrypto.encryptFor(keys.publicKeysetB64, "x".toByteArray(), AAD)
+        ciphertext[0] = 9 // unknown version
+        assertThrows(IllegalArgumentException::class.java) {
+            FamilyCrypto.decrypt(keys.privateKeysetB64, ciphertext, AAD)
+        }
+    }
+
+    @Test fun aDifferentAssociatedDataCannotDecrypt() {
+        val keys = FamilyCrypto.generateKeyPair()
+        val ciphertext = FamilyCrypto.encryptFor(keys.publicKeysetB64, "secret".toByteArray(), AAD)
+        // Same key, but a ciphertext bound to pairing-1 won't open under pairing-2.
+        assertThrows(GeneralSecurityException::class.java) {
+            FamilyCrypto.decrypt(keys.privateKeysetB64, ciphertext, "pairing-2".toByteArray())
+        }
     }
 
     @Test fun eachKeyPairIsDistinct() {
@@ -28,9 +54,9 @@ class FamilyCryptoTest {
     @Test fun aDifferentPrivateKeyCannotDecrypt() {
         val alice = FamilyCrypto.generateKeyPair()
         val mallory = FamilyCrypto.generateKeyPair()
-        val ciphertext = FamilyCrypto.encryptFor(alice.publicKeysetB64, "secret".toByteArray())
+        val ciphertext = FamilyCrypto.encryptFor(alice.publicKeysetB64, "secret".toByteArray(), AAD)
         assertThrows(GeneralSecurityException::class.java) {
-            FamilyCrypto.decrypt(mallory.privateKeysetB64, ciphertext)
+            FamilyCrypto.decrypt(mallory.privateKeysetB64, ciphertext, AAD)
         }
     }
 
