@@ -6,7 +6,9 @@ import { Env } from "./env";
  */
 export async function sendOtpEmail(env: Env, email: string, otp: string): Promise<void> {
   if (!env.RESEND_API_KEY || !env.RESEND_FROM) {
-    console.log(`[dev] OTP for ${email}: ${otp}`);
+    // No mail provider configured (local dev / tests). Only echo the code when
+    // DEV is explicitly set, so a misconfigured PROD never leaks OTPs to logs.
+    if (env.DEV === "true") console.log(`[dev] OTP for ${email}: ${otp}`);
     return;
   }
   await fetch("https://api.resend.com/emails", {
