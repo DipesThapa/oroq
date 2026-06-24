@@ -1,0 +1,20 @@
+{
+  "type": "object",
+  "properties": {
+    "telemetryEnabled": {
+      "type": "boolean",
+      "title": "Enable usage telemetry",
+      "description": "When true (and an endpoint is set), OroQ posts safeguarding usage events to the school's own endpoint. Off by default. No third-party analytics."
+    },
+    "telemetryEndpoint": {
+      "type": "string",
+      "title": "Telemetry endpoint (HTTPS)",
+      "description": "HTTPS URL that receives OroQ usage events as JSON. Leave blank to disable."
+    },
+    "telemetryBearerToken": {
+      "type": "string",
+      "title": "Telemetry bearer token",
+      "description": "Optional. Sent as 'Authorization: Bearer <token>' on telemetry requests."
+    }
+  }
+}

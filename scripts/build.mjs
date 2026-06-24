@@ -52,6 +52,7 @@ async function copyInto(targetDir) {
     'data',
     'site',
     'src',
+    'managed_schema.json',
     'LICENSE',
     'README.md'
   ];

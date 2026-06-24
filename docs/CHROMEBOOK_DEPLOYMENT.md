@@ -59,22 +59,27 @@ Students will see OroQ appear; the **Remove** option is greyed out.
 
 ---
 
-## 4. Central configuration (relay URL, locking) — needs one OroQ build step
-You can push settings to every device via **Managed configuration** so students
-never enter a pairing/relay URL and can't change it:
+## 4. Central configuration — school usage logging (no third-party analytics)
+OroQ declares a managed schema, so you can push settings to every device via
+**Managed configuration**. Today the supported keys let the trust receive OroQ's
+**safeguarding usage events at its own HTTPS endpoint** (OroQ sends **nothing** to
+any third-party analytics):
 
-- In the OroQ row (step 1), expand **Policy for extensions** and paste a JSON like:
+- In the OroQ row (step 1), expand **Policy for extensions** and paste:
   ```json
-  { "pairingRelayUrl": "https://<your-oroq-relay>", "pairingRelayLocked": true }
+  {
+    "telemetryEnabled": true,
+    "telemetryEndpoint": "https://<your-trust-logging-endpoint>",
+    "telemetryBearerToken": "<optional-token>"
+  }
   ```
+- OroQ then POSTs usage events (focus mode, weekly-active, access requests, etc.)
+  as JSON to your endpoint, with `Authorization: Bearer <token>` if you set one.
+  Off unless `telemetryEnabled` is true and an endpoint is set.
 
-> ⚠️ **Prerequisite (OroQ side):** for `chrome.storage.managed` to deliver these,
-> the extension must declare a **`managed_schema`** in its manifest
-> (`"storage": { "managed_schema": "managed_schema.json" }`) and ship that schema.
-> As of this writing the OroQ extension does **not** declare one, so a pushed
-> policy is ignored. Until that ships, use **§1 force-install only** (which works
-> today); add the managed schema to enable central config. *(Tracked as a Tier-2
-> finish item.)*
+> The schema (`managed_schema.json`) declares exactly these keys; anything else in
+> the policy JSON is ignored. Pushing a safeguarding-profile / settings-lock
+> centrally is a richer follow-up that needs additional code wiring (Tier-2).
 
 ---
 
@@ -101,13 +106,15 @@ This combination = the "managed = bypass-proof" enforcement OroQ relies on.
 |---|---|
 | Extension didn't appear | Device offline / wrong OU. `chrome://policy` → Reload; confirm the account is in the OU the policy targets. |
 | Student can remove it | Policy is "Allow install", not **Force install**. Re-check step 5. |
-| Pushed config ignored | Expected until OroQ ships a `managed_schema` (§4). |
+| Pushed config ignored | Check the JSON keys exactly match the schema (`telemetryEnabled`/`telemetryEndpoint`/`telemetryBearerToken`); other keys are dropped. |
 | Wrong devices got it | Policy applied to a parent OU — move it to the **Students** OU specifically. |
 
 ## Engineering prerequisites (OroQ side, for a clean rollout)
 1. **Publish to the Chrome Web Store** (Unlisted/Private to domain) to get a stable
    Extension ID — *or* add a fixed `"key"` to the manifest for a deterministic ID.
-2. **Add `storage.managed_schema`** + the schema file to enable central config (§4).
+   **(Still outstanding.)**
+2. ~~Add `storage.managed_schema` to enable central config.~~ ✅ **Done** — the
+   manifest declares it and `managed_schema.json` ships in every build (§4 works).
 
-Both are small, Tier-2 "finish" items. Force-install (§1–§3, §5) works **today**
-once the extension has a Web Store ID.
+So the only remaining prerequisite is the stable Web Store ID. Force-install
+(§1–§3, §5) and central telemetry config (§4) both work **once published**.

@@ -12,6 +12,9 @@
     "alarms",
     "privacy"
   ],
+  "storage": {
+    "managed_schema": "managed_schema.json"
+  },
   "icons": {
     "16": "assets/icons/icon16.png",
     "48": "assets/icons/icon48.png",
