@@ -18,7 +18,7 @@ sequenceDiagram
     W->>R: send 6-digit code
     R-->>P: email with code
     P->>W: POST /auth/verify {email, otp}
-    Note over W: rate-limit by IP;<br/>burn OTP after 5 wrong tries
+    Note over W: rate-limit by IP,<br/>burn OTP after 5 wrong tries
     W->>KV: get otp:{email}, compare
     W-->>P: { token } (JWT HS256, sub=accountId, 30d)
 ```
@@ -89,7 +89,7 @@ sequenceDiagram
     participant W as Worker
     participant KV
     participant C as Child (CommandSync poll)
-    P->>P: cmd = {type, value, ts=now};<br/>ct = HPKE_encrypt(childPubKey, cmd, AAD=pairingId)
+    P->>P: cmd = {type, value, ts=now},<br/>ct = HPKE_encrypt(childPubKey, cmd, AAD=pairingId)
     P->>W: POST /cmd/:id {ciphertext} (JWT + owns pairing)
     W->>KV: append cmds:{id} (id, ct)
     Note over C: every ~60s (or in sync worker)
@@ -97,7 +97,7 @@ sequenceDiagram
     W-->>C: { commands:[{id, ciphertext}] }
     loop each command
         C->>C: cmd = HPKE_decrypt(ownPriv, ct, AAD=pairingId)
-        alt cmd.ts <= last applied ts  (replay)
+        alt cmd.ts ≤ last applied ts (replay)
             C->>C: skip
         else newer
             C->>C: apply (set protection / approve apps / limit / grant time / schedule)
@@ -128,7 +128,7 @@ flowchart TD
     E -->|yes| BS[Block: schedule]
     E -->|no| F{In blocked-apps list?}
     F -->|yes| BA[Block: app]
-    F -->|no| G{Daily limit reached?<br/>today >= limit + extra}
+    F -->|no| G{Daily limit reached?<br/>today ≥ limit + extra}
     G -->|yes| BT[Block: time up]
     G -->|no| Z
 ```
