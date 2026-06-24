@@ -67,6 +67,18 @@ class ParentRepository(context: Context) {
         return serverOk
     }
 
+    /**
+     * Deletes the parent account: server-side (account + all pairings/data) then
+     * local state. Local clear happens even if the server call fails, so the user
+     * can always sign out of a dead account.
+     */
+    fun deleteAccount(): Boolean {
+        val token = store.tokenBlocking()
+        val serverOk = token != null && api.deleteAccount(token)
+        kotlinx.coroutines.runBlocking { store.clearParentAccount() }
+        return serverOk
+    }
+
     /** Convenience wrapper: tells the child to block exactly [categories]. */
     fun sendSetCategories(pairingId: String, categories: Set<String>): Boolean =
         sendCommand(

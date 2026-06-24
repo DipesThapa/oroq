@@ -59,6 +59,14 @@ class ParentViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Deletes the parent account (server + local), then invokes [onDone] on the main thread. */
+    fun deleteAccount(onDone: () -> Unit) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repo.deleteAccount()
+            withContext(Dispatchers.Main) { onDone() }
+        }
+    }
+
     /** Sends [command] to one child (or every child when [pairingId] is null), then refreshes. */
     fun send(pairingId: String?, command: FamilyCommand) {
         viewModelScope.launch(Dispatchers.IO) {

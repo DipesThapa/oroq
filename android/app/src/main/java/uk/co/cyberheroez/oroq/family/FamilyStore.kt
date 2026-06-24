@@ -71,6 +71,14 @@ class FamilyStore(context: Context) {
         store.edit { it.remove(Keys.PARENT_TOKEN) }
     }
 
+    /** Account deletion: wipe the parent session token and all paired-child records. */
+    suspend fun clearParentAccount() {
+        store.edit {
+            it.remove(Keys.PARENT_TOKEN)
+            it.remove(Keys.CHILDREN)
+        }
+    }
+
     /** Returns this device's key pair, generating and storing one on first use. */
     suspend fun getOrCreateKeyPair(): FamilyKeyPair {
         val prefs = store.data.first()
