@@ -21,7 +21,10 @@ data class FamilyKeyPair(val privateKeysetB64: String, val publicKeysetB64: Stri
 object FamilyCrypto {
 
     private const val TEMPLATE = "DHKEM_X25519_HKDF_SHA256_HKDF_SHA256_AES_256_GCM"
-    private val EMPTY = ByteArray(0)
+
+    /** 1-byte format tag prefixed to every ciphertext, so a future primitive
+     *  migration has a clean handshake instead of an ambiguous blob (audit L6). */
+    private const val VERSION: Byte = 1
 
     @Volatile private var registered = false
 
@@ -45,19 +48,28 @@ object FamilyCrypto {
         return FamilyKeyPair(encode(privateBytes), encode(publicBytes))
     }
 
-    /** Encrypts [plaintext] so only the holder of [recipientPublicB64]'s private key can read it. */
-    fun encryptFor(recipientPublicB64: String, plaintext: ByteArray): ByteArray {
+    /**
+     * Encrypts [plaintext] so only the holder of [recipientPublicB64]'s private
+     * key can read it. [associatedData] (the pairing id) is authenticated but not
+     * encrypted: decryption fails unless the same value is supplied, which binds
+     * the ciphertext to its pairing so a blob can't be replayed into another one.
+     */
+    fun encryptFor(recipientPublicB64: String, plaintext: ByteArray, associatedData: ByteArray): ByteArray {
         init()
         val publicHandle = TinkProtoKeysetFormat.parseKeysetWithoutSecret(decode(recipientPublicB64))
-        return publicHandle.getPrimitive(HybridEncrypt::class.java).encrypt(plaintext, EMPTY)
+        val ct = publicHandle.getPrimitive(HybridEncrypt::class.java).encrypt(plaintext, associatedData)
+        return byteArrayOf(VERSION) + ct
     }
 
-    /** Decrypts [ciphertext] addressed to the holder of [privateKeysetB64]. */
-    fun decrypt(privateKeysetB64: String, ciphertext: ByteArray): ByteArray {
+    /** Decrypts [ciphertext] addressed to the holder of [privateKeysetB64]. Throws
+     *  if the version tag or [associatedData] does not match. */
+    fun decrypt(privateKeysetB64: String, ciphertext: ByteArray, associatedData: ByteArray): ByteArray {
         init()
+        require(ciphertext.isNotEmpty() && ciphertext[0] == VERSION) { "unsupported ciphertext version" }
         val privateHandle =
             TinkProtoKeysetFormat.parseKeyset(decode(privateKeysetB64), InsecureSecretKeyAccess.get())
-        return privateHandle.getPrimitive(HybridDecrypt::class.java).decrypt(ciphertext, EMPTY)
+        return privateHandle.getPrimitive(HybridDecrypt::class.java)
+            .decrypt(ciphertext.copyOfRange(1, ciphertext.size), associatedData)
     }
 
     /**

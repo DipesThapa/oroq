@@ -22,16 +22,27 @@ suspend fun pollAndApplyCommands(context: Context): Int {
     val keys = store.getOrCreateKeyPair()
     val applied = AppliedCommandLog.forContext(context)
     val config = ConfigRepository(context)
+    val aad = link.pairingId.toByteArray()
+    // Anti-replay floor: reject any command not newer than the last applied.
+    // Compared against the value captured before the batch, so a legitimate
+    // burst with increasing ts all passes; the high-water mark is saved after.
+    val replayFloor = store.getLastCommandTs()
+    var maxTs = replayFloor
     var appliedCount = 0
 
     for ((id, ciphertextB64) in queue) {
         if (applied.contains(id)) continue
         val command = runCatching {
             val plain = FamilyCrypto.decrypt(
-                keys.privateKeysetB64, Base64.getDecoder().decode(ciphertextB64),
+                keys.privateKeysetB64, Base64.getDecoder().decode(ciphertextB64), aad,
             )
             parseCommand(plain.decodeToString())
         }.getOrNull() ?: continue
+
+        // Drop replays: a stamped command must be strictly newer than the floor.
+        // ts == 0 is an unstamped/legacy command — allowed (no replay info).
+        if (command.ts != 0L && command.ts <= replayFloor) continue
+        if (command.ts > maxTs) maxTs = command.ts
 
         when (command.type) {
             FamilyCommand.GRANT_EXTRA_TIME -> {
@@ -94,8 +105,11 @@ suspend fun pollAndApplyCommands(context: Context): Int {
         appliedCount++
     }
 
+    // Advance the anti-replay floor past everything applied this batch.
+    if (maxTs > replayFloor) store.setLastCommandTs(maxTs)
+
     // Ack every id we saw — applied now or already applied earlier — so the
-    // server drops them.
+    // server drops them (this also clears any rejected replays from the queue).
     familyApi().cmdAck(childToken, link.pairingId, queue.map { it.first })
     return appliedCount
 }

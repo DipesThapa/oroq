@@ -31,7 +31,9 @@ class ParentRepository(context: Context) {
         val summary = runCatching {
             val keys = store.keyPairBlocking()
             val plaintext = FamilyCrypto.decrypt(
-                keys.privateKeysetB64, Base64.getDecoder().decode(fetched.ciphertextB64),
+                keys.privateKeysetB64,
+                Base64.getDecoder().decode(fetched.ciphertextB64),
+                pairingId.toByteArray(), // AAD must match what the child encrypted with
             )
             parseSummary(plaintext.decodeToString())
         }.getOrNull() ?: return null
@@ -45,8 +47,10 @@ class ParentRepository(context: Context) {
     fun sendCommand(pairingId: String, command: FamilyCommand): Boolean {
         val token = store.tokenBlocking() ?: return false
         val child = store.childrenBlocking().firstOrNull { it.pairingId == pairingId } ?: return false
+        // Stamp send time so the child can reject replays of this command.
+        val stamped = command.copy(ts = System.currentTimeMillis())
         val ciphertext = FamilyCrypto.encryptFor(
-            child.childPublicKeyB64, command.toJson().toByteArray(),
+            child.childPublicKeyB64, stamped.toJson().toByteArray(), pairingId.toByteArray(),
         )
         return api.cmdSend(token, pairingId, Base64.getEncoder().encodeToString(ciphertext))
     }

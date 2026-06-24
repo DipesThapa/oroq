@@ -65,7 +65,7 @@ class FamilySyncWorker(
         )
 
         val ciphertext = FamilyCrypto.encryptFor(
-            link.parentPublicKeyB64, summary.toJson().toByteArray(),
+            link.parentPublicKeyB64, summary.toJson().toByteArray(), link.pairingId.toByteArray(),
         )
         val notify = inputData.getBoolean("notify", false)
         val uploaded = familyApi().syncUpload(

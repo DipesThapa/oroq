@@ -22,11 +22,16 @@ data class FamilyCommand(
     val type: String,
     val intValue: Int = 0,
     val stringValue: String = "",
+    /** Parent send-time epoch-ms, stamped at enqueue. The child rejects any
+     *  command whose [ts] is not newer than the last it applied, so a captured
+     *  command can't be replayed (audit, anti-replay). 0 = unstamped/legacy. */
+    val ts: Long = 0,
 ) {
     fun toJson(): String = JSONObject()
         .put("type", type)
         .put("intValue", intValue)
         .put("stringValue", stringValue)
+        .put("ts", ts)
         .toString()
 
     companion object {
@@ -49,6 +54,7 @@ fun parseCommand(text: String): FamilyCommand {
         type = json.getString("type"),
         intValue = json.optInt("intValue", 0),
         stringValue = json.optString("stringValue", ""),
+        ts = json.optLong("ts", 0),
     )
 }
 

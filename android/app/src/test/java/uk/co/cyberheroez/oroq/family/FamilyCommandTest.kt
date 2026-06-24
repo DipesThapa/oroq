@@ -10,6 +10,11 @@ class FamilyCommandTest {
         assertEquals(command, parseCommand(command.toJson()))
     }
 
+    @Test fun timestampRoundTrips() {
+        val command = FamilyCommand(FamilyCommand.SET_PROTECTION, intValue = 0, ts = 1_717_000_000_000)
+        assertEquals(command, parseCommand(command.toJson()))
+    }
+
     @Test fun setDailyLimitRoundTrips() {
         val command = FamilyCommand(FamilyCommand.SET_DAILY_LIMIT, intValue = 90)
         assertEquals(command, parseCommand(command.toJson()))

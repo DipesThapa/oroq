@@ -2,6 +2,7 @@ package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -42,6 +43,14 @@ class FamilyStore(context: Context) {
         val CHILDREN = stringSetPreferencesKey("paired_children")
         val PARENT_LINK = stringPreferencesKey("parent_link")
         val CHILD_TOKEN = stringPreferencesKey("child_token")
+        val LAST_COMMAND_TS = longPreferencesKey("last_command_ts")
+    }
+
+    /** Highest parent send-time (ts) of any command applied — anti-replay floor. */
+    suspend fun getLastCommandTs(): Long = store.data.first()[Keys.LAST_COMMAND_TS] ?: 0L
+
+    suspend fun setLastCommandTs(ts: Long) {
+        store.edit { it[Keys.LAST_COMMAND_TS] = ts }
     }
 
     suspend fun getRole(): DeviceRole? =
