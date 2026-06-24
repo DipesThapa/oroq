@@ -33,9 +33,6 @@ const PARENT_POLL_PERIOD_MIN = 1;
 const FS_BASE = 'https://firestore.googleapis.com/v1/projects/__FS_PROJECT_ID__/databases/(default)/documents';
 const FS_KEY = '__FS_KEY__';
 
-const GA4_MEASUREMENT_ID = '__GA4_MEASUREMENT_ID__';
-const GA4_API_SECRET = '__GA4_API_SECRET__';
-const GA4_ENDPOINT = `https://www.google-analytics.com/mp/collect?measurement_id=${GA4_MEASUREMENT_ID}&api_secret=${GA4_API_SECRET}`;
 const TIP_POOL = [
   'If a headline sounds shocking, open a trusted news site to verify before sharing.',
   'AI images can fake events. Look for odd hands, lighting, or text to spot fakes.',
@@ -597,45 +594,6 @@ async function sendTelemetryEvent(eventName, payload = {}){
   }
 }
 
-// ── GA4 session management (30-min inactivity timeout) ──
-let _ga4SessionId = null;
-let _ga4SessionLastAt = 0;
-const GA4_SESSION_TIMEOUT_MS = 30 * 60 * 1000;
-
-function getGa4SessionId() {
-  const now = Date.now();
-  if (!_ga4SessionId || (now - _ga4SessionLastAt) > GA4_SESSION_TIMEOUT_MS) {
-    _ga4SessionId = String(now);
-  }
-  _ga4SessionLastAt = now;
-  return _ga4SessionId;
-}
-
-async function sendGa4Event(eventName, params = {}) {
-  try {
-    const clientId = await getAnalyticsClientId();
-    const sessionId = getGa4SessionId();
-    const engagementTime = (params && typeof params.engagement_time_msec !== 'undefined')
-      ? params.engagement_time_msec
-      : '1';
-    const restParams = { ...((params && typeof params === 'object') ? params : {}) };
-    delete restParams.engagement_time_msec;
-    await fetch(GA4_ENDPOINT, {
-      method: 'POST',
-      body: JSON.stringify({
-        client_id: clientId,
-        events: [{
-          name: String(eventName || '').slice(0, 40),
-          params: {
-            session_id: sessionId,
-            engagement_time_msec: String(engagementTime),
-            ...restParams
-          }
-        }]
-      })
-    });
-  } catch (_e) {}
-}
 
 async function appendAnalyticsEvent(entry){
   const stored = await chrome.storage.local.get({ analyticsEvents: [] });
@@ -656,7 +614,6 @@ async function trackEvent(name, meta = {}){
     };
     await appendAnalyticsEvent(entry);
     sendTelemetryEvent(eventName, { clientId }).catch(()=>{});
-    sendGa4Event(eventName, meta).catch(()=>{});
     return true;
   } catch(_e){
     return false;
@@ -678,7 +635,6 @@ async function trackOnceEvent(name, meta = {}){
     await chrome.storage.local.set({ analyticsFlags: nextFlags, analyticsEvents: nextEvents });
     const clientId = await getAnalyticsClientId();
     sendTelemetryEvent(eventName, { clientId }).catch(()=>{});
-    sendGa4Event(eventName, meta).catch(()=>{});
     return true;
   } catch(_e){
     return false;
@@ -1150,12 +1106,6 @@ async function rotateWeeklyTip(){
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
-  if (message && message.type === 'sg-ga4-event') {
-    const name = typeof message.name === 'string' ? message.name.trim().slice(0, 40) : '';
-    if (name) sendGa4Event(name, message.params || {}).catch(()=>{});
-    sendResponse({ ok: true });
-    return true;
-  }
   if (message && message.type === 'sg-analytics-activity'){
     const source = message && typeof message.source === 'string' ? message.source : 'activity';
     touchWeeklyActive(source).then(()=>sendResponse({ ok: true })).catch(()=>sendResponse({ ok: false }));

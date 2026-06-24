@@ -257,14 +257,13 @@ try {
   chrome.runtime.sendMessage({ type: 'sg-analytics-activity', source: 'popup' });
 } catch(_e){}
 
-// ── GA4 engagement tracking ──────────────────────────────────────────────────
+// ── Usage events ─────────────────────────────────────────────────────────────
+// Google Analytics (GA4) was removed for privacy parity with the OroQ app — no
+// third-party analytics. sgTrack is a no-op kept so call sites stay simple;
+// meaningful events are still logged on-device by the background worker.
 const _sgPopupOpenedAt = Date.now();
 
-function sgTrack(eventName, params = {}) {
-  try {
-    chrome.runtime.sendMessage({ type: 'sg-ga4-event', name: eventName, params });
-  } catch (_e) {}
-}
+function sgTrack() { /* no-op: GA4 removed */ }
 
 // Fire popup_opened immediately
 sgTrack('popup_opened');
