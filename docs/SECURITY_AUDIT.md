@@ -29,7 +29,7 @@ Severity reflects calibrated impact for a child-safety product. "Verified" = the
 | C1 | **Critical** | Unauthenticated child channel | ✅ **Fixed** | `backend/src/cmd.ts:57-71`, `backend/src/sync.ts:20-44` |
 | C2 | **Critical** | No `BOOT_COMPLETED` receiver — protection off after reboot | ✅ **Fixed** | `android/app/src/main/AndroidManifest.xml` (absent) |
 | H1 | **High** | OTP brute-forceable → account takeover | ✅ **Fixed** | `backend/src/auth.ts:40-50` |
-| H2 | **High** | No replay protection / empty AEAD AAD + child-controlled freshness | 🟡 **Partial** | `FamilyCrypto.kt:52,60`, `FamilySyncWorker.kt:49`, `DeviceDetailScreen.kt:293` |
+| H2 | **High** | No replay protection / empty AEAD AAD + child-controlled freshness | ✅ **Fixed** (server staleness + AAD binding + command anti-replay; e2e sender-auth tracked as M1) | `FamilyCrypto.kt:52,60`, `FamilySyncWorker.kt:49`, `DeviceDetailScreen.kt:293` |
 | H3 | **High** | Parent PIN is dead code; no device-admin | ✅ **Resolved** (Option A: detect-and-alert; dead code removed) | `ConfigRepository.kt:62-95` (no callers) |
 | H4 | **High** | Wall-clock schedule/limit bypass | ✅ **Fixed** | `AppMonitorService.kt:55,66`, `BlockDecision.kt:47`, `UsageReader.kt:54` |
 | M1 | Medium | Commands encrypted but not sender-authenticated | ⬜ Open | `CommandSync.kt:26-92`, `FamilyCrypto.kt:52` |
@@ -42,7 +42,7 @@ Severity reflects calibrated impact for a child-safety product. "Verified" = the
 | L3 | Low | `pairJoin` has no per-code attempt cap (~39-bit code) | ✅ **Fixed** | `backend/src/pairing.ts:62-93` |
 | L4 | Low | IPv4 IHL not lower-bounded before UDP parse (no crash) | ✅ **Fixed** | `vpn/Ipv4Packet.kt:16`, `vpn/UdpPacket.kt:22-31` |
 | L5 | Low | Dev-mode OTP `console.log` when Resend unconfigured | ✅ **Fixed** | `backend/src/email.ts:9` |
-| L6 | Low | No ciphertext version tag (future-migration brittleness) | ⬜ Open (bundle with H2 AEAD hardening — both change ciphertext format) | `FamilyCrypto.kt:23` |
+| L6 | Low | No ciphertext version tag (future-migration brittleness) | ✅ **Fixed** (1-byte version prefix) | `FamilyCrypto.kt:23` |
 
 ---
 
@@ -53,7 +53,7 @@ Seven findings addressed the same day. Direct-to-`main` commits and two PR branc
 | # | Resolution | Commit / branch |
 |---|------------|-----------------|
 | C1 | Per-pairing child bearer token (`x-child-token`); required on `/sync` upload + `/cmd` fetch/ack; only its hash stored. **Needs migration `0004_child_token.sql` applied to prod.** | branch `security/c1-child-channel-auth` |
-| H2 | *(partial)* Server now stamps `receivedAt`; parent judges staleness off it, not the child-supplied `ts`. **Deferred:** AEAD pairingId+counter binding, per-command anti-replay counter. Bounded by the rooted-child reality (full integrity needs Play Integrity attestation). | branch `security/c1-child-channel-auth` |
+| H2 | Server `receivedAt` staleness **+ phase 1 hardening**: pairingId bound into the AEAD associated data (no cross-pairing replay), 1-byte ciphertext version tag (L6), and per-command anti-replay via a parent send-`ts` + child high-water mark. **Deferred:** e2e command *sender authentication* (M1). Bounded by the rooted-child reality (full content integrity needs Play Integrity). | branch `security/c1-child-channel-auth` |
 | H1 | Per-email failed-attempt cap burns the OTP after 5 wrong guesses; per-IP throttle on `/auth/verify`. | branch `security/h1-otp-attempt-cap` |
 | C2 | `BootReceiver` restarts child enforcement after reboot. | `main` |
 | H4 | `ClockGuard` projects trusted time from a monotonic anchor; schedule decisions ignore wall-clock tampering; parent alerted on detection. | `main` |
@@ -67,7 +67,7 @@ Seven findings addressed the same day. Direct-to-`main` commits and two PR branc
 | H3 | **Decision: Option A (detect-and-alert).** Removed the dead PinHasher + ConfigRepository PIN/onboarding code. A local PIN can't gate the real vectors (revoke/force-stop/clear-data/uninstall all live in Settings, not the app UI); OroQ's consumer posture is fast loud detection (M3 + offline banner). True prevention (uninstall-block) needs Device Owner — a future managed-device / schools SKU, not this product. | `main` |
 | M2 | Atomic D1-backed fixed-window rate limiter (migration `0005_rate_limits.sql`) replaces the non-atomic KV one. **Needs migration 0005 applied to prod.** | branch `security/m2-atomic-ratelimit` |
 
-**Still open:** M1 (command sender-auth), L2 (SAS UX), L6 (ciphertext version tag), the keystore-wrap half of L1, and the deferred H2 hardening (AEAD binding + command anti-replay). L6 + H2 hardening both change the ciphertext format and should land together (the **crypto-hardening cluster**). **Device Owner / managed-device prevention** is parked as a separate B2B/schools SKU (see H3).
+**Still open:** M1 (e2e command sender-auth — needs a per-device signing keypair + pairing-handshake change), L2 (SAS UX), and the keystore-wrap half of L1. **Device Owner / managed-device prevention** is parked as a separate B2B/schools SKU (see H3).
 
 ---
 
@@ -260,7 +260,7 @@ A `http://192.168.0.33:8787` base URL and a `usesCleartextTraffic="true"` manife
 
 ## Recommended fix order
 
-1. ~~**C1 + H2 (backend cluster)** — child bearer token on `/sync` + `/cmd`; server `receivedAt`; AAD binding + monotonic counter.~~ ✅ C1 + H2-staleness done (branch `security/c1-child-channel-auth`). 🟡 AAD binding + monotonic counter still deferred.
+1. ~~**C1 + H2 (channel cluster)** — child bearer token on `/sync` + `/cmd`; server `receivedAt`; AAD pairingId binding; ciphertext version tag (L6); command anti-replay.~~ ✅ Done (branch `security/c1-child-channel-auth`). Only e2e command *sender-auth* (M1) remains.
 2. ~~**C2** — boot receiver + worker re-assertion.~~ ✅ done (`main`).
 3. ~~**H1** — OTP attempt cap + verify rate-limit~~ ✅ done (branch `security/h1-otp-attempt-cap`). M2 (atomic counter) still open.
 4. **H3 / H4 / M3** — enforcement durability: ✅ H3 resolved (Option A — detect-and-alert; dead PIN code removed); ✅ H4 (clock-tamper) done; ✅ M3 (loud fail-open) done.
