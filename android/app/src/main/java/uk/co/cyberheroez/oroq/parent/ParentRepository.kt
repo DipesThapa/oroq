@@ -10,6 +10,9 @@ import uk.co.cyberheroez.oroq.family.familyApi
 import uk.co.cyberheroez.oroq.family.parseSummary
 import java.util.Base64
 
+/** A decrypted summary plus the server's receive time (used for staleness). */
+data class FetchedChildSummary(val summary: FamilySummary, val serverReceivedAt: Long?)
+
 /** Fetches and decrypts a child's latest activity summary for the parent UI. */
 class ParentRepository(context: Context) {
 
@@ -17,19 +20,22 @@ class ParentRepository(context: Context) {
     private val api = familyApi()
 
     /**
-     * Returns the child's latest summary, or null if not signed in, nothing has
-     * been uploaded yet, or the blob could not be decrypted.
+     * Returns the child's latest summary plus the server's receive time, or null
+     * if not signed in, nothing has been uploaded yet, or the blob could not be
+     * decrypted. Staleness is judged off [FetchedChildSummary.serverReceivedAt]
+     * (server-stamped) rather than the child-supplied ts inside the blob.
      */
-    fun fetchSummary(pairingId: String): FamilySummary? {
+    fun fetchSummary(pairingId: String): FetchedChildSummary? {
         val token = store.tokenBlocking() ?: return null
-        val ciphertextB64 = api.syncFetch(token, pairingId) ?: return null
-        return runCatching {
+        val fetched = api.syncFetch(token, pairingId) ?: return null
+        val summary = runCatching {
             val keys = store.keyPairBlocking()
             val plaintext = FamilyCrypto.decrypt(
-                keys.privateKeysetB64, Base64.getDecoder().decode(ciphertextB64),
+                keys.privateKeysetB64, Base64.getDecoder().decode(fetched.ciphertextB64),
             )
             parseSummary(plaintext.decodeToString())
-        }.getOrNull()
+        }.getOrNull() ?: return null
+        return FetchedChildSummary(summary, fetched.receivedAt)
     }
 
     /**

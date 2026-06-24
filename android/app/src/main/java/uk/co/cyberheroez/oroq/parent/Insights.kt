@@ -2,12 +2,15 @@ package uk.co.cyberheroez.oroq.parent
 
 import uk.co.cyberheroez.oroq.family.FamilySummary
 
-/** One paired child's latest summary plus when the parent fetched it. */
+/** One paired child's latest summary plus when the parent fetched it.
+ *  [serverReceivedAt] is when the server last received an upload — staleness is
+ *  judged off this, not the child-supplied summary.ts (audit H2). */
 data class ChildSnapshot(
     val pairingId: String,
     val label: String,
     val summary: FamilySummary?,
     val fetchedAt: Long,
+    val serverReceivedAt: Long? = null,
 )
 
 /** Derived dashboard stats (deck panel 06). All windows are 7 days. */

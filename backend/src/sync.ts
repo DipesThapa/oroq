@@ -39,7 +39,11 @@ async function syncUpload(req: Request, env: Env, pairingId: string): Promise<Re
   if (!row) return json({ error: "not_found" }, 404);
   if (!row.child_public_key) return json({ error: "not_paired" }, 409);
 
-  await env.KV.put(`summary:${pairingId}`, ciphertext, { expirationTtl: SUMMARY_TTL_SEC });
+  // Stamp the server receive time alongside the blob. The parent drives staleness
+  // off this (not the child-supplied ts inside the ciphertext), so a child can't
+  // fake "last seen just now" by sending a future-dated summary (audit H2).
+  const record = JSON.stringify({ c: ciphertext, r: Date.now() });
+  await env.KV.put(`summary:${pairingId}`, record, { expirationTtl: SUMMARY_TTL_SEC });
   if (notify) {
     await notifyAccount(env, row.account_id, pairingId, row.child_label ?? "your child");
   }
@@ -60,6 +64,19 @@ async function syncFetch(req: Request, env: Env, pairingId: string): Promise<Res
   if (!row) return json({ error: "not_found" }, 404);
   if (row.account_id !== accountId) return json({ error: "forbidden" }, 403);
 
-  const ciphertext = await env.KV.get(`summary:${pairingId}`);
-  return json({ ciphertext });
+  const stored = await env.KV.get(`summary:${pairingId}`);
+  if (!stored) return json({ ciphertext: null, receivedAt: null });
+  // Records are {c, r}; tolerate a legacy bare-ciphertext value (no receivedAt).
+  let ciphertext: string | null = stored;
+  let receivedAt: number | null = null;
+  try {
+    const parsed = JSON.parse(stored) as { c?: string; r?: number };
+    if (parsed && typeof parsed.c === "string") {
+      ciphertext = parsed.c;
+      receivedAt = typeof parsed.r === "number" ? parsed.r : null;
+    }
+  } catch {
+    // legacy plain-string ciphertext — leave receivedAt null
+  }
+  return json({ ciphertext, receivedAt });
 }

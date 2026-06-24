@@ -42,7 +42,11 @@ describe("/sync", () => {
       headers: { authorization: `Bearer ${await token(ACCOUNT)}` },
     });
     expect(get.status).toBe(200);
-    expect(await get.json()).toMatchObject({ ciphertext: "BLOB-1" });
+    const fetched = (await get.json()) as { ciphertext: string; receivedAt: number };
+    expect(fetched.ciphertext).toBe("BLOB-1");
+    // The server stamps its own receive time so staleness can't be spoofed.
+    expect(typeof fetched.receivedAt).toBe("number");
+    expect(fetched.receivedAt).toBeGreaterThan(0);
   });
 
   it("overwrites with the newest upload", async () => {

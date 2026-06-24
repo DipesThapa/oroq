@@ -117,13 +117,15 @@ class FamilyApi(
         return post("/push/register", headers, body).status == 200
     }
 
-    /** Fetches the latest encrypted summary blob for a pairing, or null if none. */
-    fun syncFetch(token: String, pairingId: String): String? {
+    /** Fetches the latest encrypted summary blob + server receive time, or null if none. */
+    fun syncFetch(token: String, pairingId: String): FetchedSummary? {
         val headers = mapOf("authorization" to "Bearer $token")
         val res = transport.request("GET", "$baseUrl/sync/$pairingId", headers, null)
         if (res.status != 200) return null
-        val value = JSONObject(res.body).optString("ciphertext")
-        return value.ifEmpty { null }
+        val json = JSONObject(res.body)
+        val ciphertext = json.optString("ciphertext").ifEmpty { return null }
+        val receivedAt = if (json.isNull("receivedAt")) null else json.optLong("receivedAt")
+        return FetchedSummary(ciphertext, receivedAt)
     }
 
     /** Parent: enqueue an encrypted command for a pairing. Returns true on success. */

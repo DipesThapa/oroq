@@ -23,3 +23,10 @@ data class PairingRecord(
     val childPublicKeyB64: String?,
     val paired: Boolean,
 )
+
+/** Result of `GET /sync/:id`: the encrypted blob plus the server's receive time
+ *  ([receivedAt] is null for legacy uploads stored before H2). */
+data class FetchedSummary(
+    val ciphertextB64: String,
+    val receivedAt: Long?,
+)

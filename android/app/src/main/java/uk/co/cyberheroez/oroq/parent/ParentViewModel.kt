@@ -32,11 +32,13 @@ class ParentViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             val snapshots = store.getChildren().map { child ->
+                val fetched = repo.fetchSummary(child.pairingId)
                 ChildSnapshot(
                     pairingId = child.pairingId,
                     label = child.label,
-                    summary = repo.fetchSummary(child.pairingId),
+                    summary = fetched?.summary,
                     fetchedAt = now,
+                    serverReceivedAt = fetched?.serverReceivedAt,
                 )
             }
             _state.value = ParentUiState(

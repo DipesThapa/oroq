@@ -153,11 +153,22 @@ class FamilyApiTest {
         assertTrue(sent.contains("\"childLabel\":\"Aarav\""))
     }
 
-    @Test fun syncFetchReturnsTheCiphertext() {
+    @Test fun syncFetchReturnsTheCiphertextAndReceivedAt() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "GET $base/sync/pid-1" to HttpResponse(200, """{"ciphertext":"BLOB","receivedAt":1717000000000}"""),
+        )))
+        val fetched = api.syncFetch("jwt-123", "pid-1")
+        assertEquals("BLOB", fetched?.ciphertextB64)
+        assertEquals(1717000000000L, fetched?.receivedAt)
+    }
+
+    @Test fun syncFetchToleratesMissingReceivedAt() {
         val api = FamilyApi(base, FakeTransport(mapOf(
             "GET $base/sync/pid-1" to HttpResponse(200, """{"ciphertext":"BLOB"}"""),
         )))
-        assertEquals("BLOB", api.syncFetch("jwt-123", "pid-1"))
+        val fetched = api.syncFetch("jwt-123", "pid-1")
+        assertEquals("BLOB", fetched?.ciphertextB64)
+        assertNull(fetched?.receivedAt)
     }
 
     @Test fun syncFetchReturnsNullWhenEmpty() {
