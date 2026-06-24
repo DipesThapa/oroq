@@ -24,25 +24,44 @@ None of these are committed *shipping* regressions, but several are committed *c
 
 Severity reflects calibrated impact for a child-safety product. "Verified" = the cited code was read and the behaviour confirmed during this audit.
 
-| # | Severity | Finding | Location |
-|---|----------|---------|----------|
-| C1 | **Critical** | Unauthenticated child channel | `backend/src/cmd.ts:57-71`, `backend/src/sync.ts:20-44` |
-| C2 | **Critical** | No `BOOT_COMPLETED` receiver — protection off after reboot | `android/app/src/main/AndroidManifest.xml` (absent) |
-| H1 | **High** | OTP brute-forceable → account takeover | `backend/src/auth.ts:40-50` |
-| H2 | **High** | No replay protection / empty AEAD AAD + child-controlled freshness | `FamilyCrypto.kt:52,60`, `FamilySyncWorker.kt:49`, `DeviceDetailScreen.kt:293` |
-| H3 | **High** | Parent PIN is dead code; no device-admin | `ConfigRepository.kt:62-95` (no callers) |
-| H4 | **High** | Wall-clock schedule/limit bypass | `AppMonitorService.kt:55,66`, `BlockDecision.kt:47`, `UsageReader.kt:54` |
-| M1 | Medium | Commands encrypted but not sender-authenticated | `CommandSync.kt:26-92`, `FamilyCrypto.kt:52` |
-| M2 | Medium | Rate limiter non-atomic on eventually-consistent KV | `backend/src/ratelimit.ts:16-20` |
-| M3 | Medium | Fail-open + silent on permission revocation | `AppMonitorService.kt:51`, `OroQVpnService.kt:63` |
-| M4 | Medium | Default-deny race (~1s window) for new installs | `AppMonitorService.kt:49-101` |
-| M5 | Medium | Child DNS browsing history logged to logcat in release | `OroQVpnService.kt:106-141`, `proguard-rules.pro` |
-| L1 | Low | Private keyset stored unencrypted at rest (cloud-backup vector closed 2026-06-24) | `FamilyStore.kt:40,71` |
-| L2 | Low | SAS is 6-digit (~20-bit) and self-attested, not typed/scanned | `FamilyCrypto.kt:68-76` |
-| L3 | Low | `pairJoin` has no per-code attempt cap (~39-bit code) | `backend/src/pairing.ts:62-93` |
-| L4 | Low | IPv4 IHL not lower-bounded before UDP parse (no crash) | `vpn/Ipv4Packet.kt:16`, `vpn/UdpPacket.kt:22-31` |
-| L5 | Low | Dev-mode OTP `console.log` when Resend unconfigured | `backend/src/email.ts:9` |
-| L6 | Low | No ciphertext version tag (future-migration brittleness) | `FamilyCrypto.kt:23` |
+| # | Severity | Finding | Status | Location |
+|---|----------|---------|--------|----------|
+| C1 | **Critical** | Unauthenticated child channel | ✅ **Fixed** | `backend/src/cmd.ts:57-71`, `backend/src/sync.ts:20-44` |
+| C2 | **Critical** | No `BOOT_COMPLETED` receiver — protection off after reboot | ✅ **Fixed** | `android/app/src/main/AndroidManifest.xml` (absent) |
+| H1 | **High** | OTP brute-forceable → account takeover | ✅ **Fixed** | `backend/src/auth.ts:40-50` |
+| H2 | **High** | No replay protection / empty AEAD AAD + child-controlled freshness | 🟡 **Partial** | `FamilyCrypto.kt:52,60`, `FamilySyncWorker.kt:49`, `DeviceDetailScreen.kt:293` |
+| H3 | **High** | Parent PIN is dead code; no device-admin | ⬜ Open — needs decision | `ConfigRepository.kt:62-95` (no callers) |
+| H4 | **High** | Wall-clock schedule/limit bypass | ✅ **Fixed** | `AppMonitorService.kt:55,66`, `BlockDecision.kt:47`, `UsageReader.kt:54` |
+| M1 | Medium | Commands encrypted but not sender-authenticated | ⬜ Open | `CommandSync.kt:26-92`, `FamilyCrypto.kt:52` |
+| M2 | Medium | Rate limiter non-atomic on eventually-consistent KV | ⬜ Open (H1 partly mitigates) | `backend/src/ratelimit.ts:16-20` |
+| M3 | Medium | Fail-open + silent on permission revocation | ✅ **Fixed** | `AppMonitorService.kt:51`, `OroQVpnService.kt:63` |
+| M4 | Medium | Default-deny race (~1s window) for new installs | ⬜ Open | `AppMonitorService.kt:49-101` |
+| M5 | Medium | Child DNS browsing history logged to logcat in release | ✅ **Fixed** | `OroQVpnService.kt:106-141`, `proguard-rules.pro` |
+| L1 | Low | Private keyset stored unencrypted at rest | 🟡 **Partial** (cloud-backup closed; keystore-wrap open) | `FamilyStore.kt:40,71` |
+| L2 | Low | SAS is 6-digit (~20-bit) and self-attested, not typed/scanned | ⬜ Open | `FamilyCrypto.kt:68-76` |
+| L3 | Low | `pairJoin` has no per-code attempt cap (~39-bit code) | ⬜ Open | `backend/src/pairing.ts:62-93` |
+| L4 | Low | IPv4 IHL not lower-bounded before UDP parse (no crash) | ⬜ Open | `vpn/Ipv4Packet.kt:16`, `vpn/UdpPacket.kt:22-31` |
+| L5 | Low | Dev-mode OTP `console.log` when Resend unconfigured | ⬜ Open | `backend/src/email.ts:9` |
+| L6 | Low | No ciphertext version tag (future-migration brittleness) | ⬜ Open | `FamilyCrypto.kt:23` |
+
+---
+
+## Remediation log (2026-06-24)
+
+Seven findings addressed the same day. Direct-to-`main` commits and two PR branches (auth/API changes per `CLAUDE.md` §11):
+
+| # | Resolution | Commit / branch |
+|---|------------|-----------------|
+| C1 | Per-pairing child bearer token (`x-child-token`); required on `/sync` upload + `/cmd` fetch/ack; only its hash stored. **Needs migration `0004_child_token.sql` applied to prod.** | branch `security/c1-child-channel-auth` |
+| H2 | *(partial)* Server now stamps `receivedAt`; parent judges staleness off it, not the child-supplied `ts`. **Deferred:** AEAD pairingId+counter binding, per-command anti-replay counter. Bounded by the rooted-child reality (full integrity needs Play Integrity attestation). | branch `security/c1-child-channel-auth` |
+| H1 | Per-email failed-attempt cap burns the OTP after 5 wrong guesses; per-IP throttle on `/auth/verify`. | branch `security/h1-otp-attempt-cap` |
+| C2 | `BootReceiver` restarts child enforcement after reboot. | `main` |
+| H4 | `ClockGuard` projects trusted time from a monotonic anchor; schedule decisions ignore wall-clock tampering; parent alerted on detection. | `main` |
+| M3 | Loud fail-open: expedited parent push + degraded notification when Usage Access / VPN is lost. | `main` |
+| M5 | R8 strips `Log.v`/`Log.d` (DNS domains) from release. | `main` |
+| L1 | *(partial)* Cloud-backup of the keyset DataStore excluded (`backup_rules.xml` / `data_extraction_rules.xml`). Keystore-wrapping the keyset remains open. | `main` |
+
+**Still open:** H3 (PIN/device-admin — product decision), M1, M2, M4, L2–L6, and the deferred H2 hardening. Severity ratings of the fixed items are re-confirmed below; the H2/L1 entries are annotated with what remains.
 
 ---
 
@@ -235,11 +254,17 @@ A `http://192.168.0.33:8787` base URL and a `usesCleartextTraffic="true"` manife
 
 ## Recommended fix order
 
-1. **C1 + H2 (backend cluster)** — child bearer token on `/sync` + `/cmd`; server `receivedAt`; AAD binding + monotonic counter. *Touches auth + API contract → land via PR(s) with What/Why/Risk/Rollback writeups.*
-2. **C2** — boot receiver + worker re-assertion.
-3. **H1** — OTP attempt cap + verify rate-limit (and M2 — atomic counter).
-4. **H3 / H4 / M3** — enforcement durability: PIN decision + device-admin, clock-tamper detection, loud fail-open.
-5. **M5** — strip release domain logging.
-6. **Lows** as cleanup; add the CI release-hygiene guard.
+1. ~~**C1 + H2 (backend cluster)** — child bearer token on `/sync` + `/cmd`; server `receivedAt`; AAD binding + monotonic counter.~~ ✅ C1 + H2-staleness done (branch `security/c1-child-channel-auth`). 🟡 AAD binding + monotonic counter still deferred.
+2. ~~**C2** — boot receiver + worker re-assertion.~~ ✅ done (`main`).
+3. ~~**H1** — OTP attempt cap + verify rate-limit~~ ✅ done (branch `security/h1-otp-attempt-cap`). M2 (atomic counter) still open.
+4. **H3 / H4 / M3** — enforcement durability: ⬜ H3 (PIN/device-admin) needs a product decision; ✅ H4 (clock-tamper) done; ✅ M3 (loud fail-open) done.
+5. ~~**M5** — strip release domain logging.~~ ✅ done (`main`).
+6. **Lows + M4** as cleanup (M4 default-deny `PACKAGE_ADDED`, L3 `pairJoin` cap, L4 IHL bound, L5 dev-OTP log, L6 version tag, L1 keystore-wrap, L2 SAS UX); add the CI release-hygiene guard.
+
+### Outstanding operator actions
+- Push and open PRs for `security/c1-child-channel-auth` (C1 + H2) and `security/h1-otp-attempt-cap` (H1).
+- Apply migration `backend/migrations/0004_child_token.sql` to prod before the C1 PR deploys (existing dev pairings must re-pair).
+- Revert the local `FamilyConfig.kt` http/LAN change to the `https://…workers.dev` URL before any release build.
+- Decide the H3 tamper model (wire PIN + device-admin, or delete the dead PIN code).
 
 > All migrations remain human-applied to production (per `CLAUDE.md` §13). Backend auth/API changes go via PR.
