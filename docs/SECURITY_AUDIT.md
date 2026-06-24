@@ -35,14 +35,14 @@ Severity reflects calibrated impact for a child-safety product. "Verified" = the
 | M1 | Medium | Commands encrypted but not sender-authenticated | ⬜ Open | `CommandSync.kt:26-92`, `FamilyCrypto.kt:52` |
 | M2 | Medium | Rate limiter non-atomic on eventually-consistent KV | ⬜ Open (H1 partly mitigates) | `backend/src/ratelimit.ts:16-20` |
 | M3 | Medium | Fail-open + silent on permission revocation | ✅ **Fixed** | `AppMonitorService.kt:51`, `OroQVpnService.kt:63` |
-| M4 | Medium | Default-deny race (~1s window) for new installs | ⬜ Open | `AppMonitorService.kt:49-101` |
+| M4 | Medium | Default-deny race (~1s window) for new installs | ✅ **Fixed** (install alert; ~1s race inherent) | `AppMonitorService.kt:49-101` |
 | M5 | Medium | Child DNS browsing history logged to logcat in release | ✅ **Fixed** | `OroQVpnService.kt:106-141`, `proguard-rules.pro` |
 | L1 | Low | Private keyset stored unencrypted at rest | 🟡 **Partial** (cloud-backup closed; keystore-wrap open) | `FamilyStore.kt:40,71` |
 | L2 | Low | SAS is 6-digit (~20-bit) and self-attested, not typed/scanned | ⬜ Open | `FamilyCrypto.kt:68-76` |
-| L3 | Low | `pairJoin` has no per-code attempt cap (~39-bit code) | ⬜ Open | `backend/src/pairing.ts:62-93` |
-| L4 | Low | IPv4 IHL not lower-bounded before UDP parse (no crash) | ⬜ Open | `vpn/Ipv4Packet.kt:16`, `vpn/UdpPacket.kt:22-31` |
-| L5 | Low | Dev-mode OTP `console.log` when Resend unconfigured | ⬜ Open | `backend/src/email.ts:9` |
-| L6 | Low | No ciphertext version tag (future-migration brittleness) | ⬜ Open | `FamilyCrypto.kt:23` |
+| L3 | Low | `pairJoin` has no per-code attempt cap (~39-bit code) | ✅ **Fixed** | `backend/src/pairing.ts:62-93` |
+| L4 | Low | IPv4 IHL not lower-bounded before UDP parse (no crash) | ✅ **Fixed** | `vpn/Ipv4Packet.kt:16`, `vpn/UdpPacket.kt:22-31` |
+| L5 | Low | Dev-mode OTP `console.log` when Resend unconfigured | ✅ **Fixed** | `backend/src/email.ts:9` |
+| L6 | Low | No ciphertext version tag (future-migration brittleness) | ⬜ Open (bundle with H2 AEAD hardening — both change ciphertext format) | `FamilyCrypto.kt:23` |
 
 ---
 
@@ -60,8 +60,12 @@ Seven findings addressed the same day. Direct-to-`main` commits and two PR branc
 | M3 | Loud fail-open: expedited parent push + degraded notification when Usage Access / VPN is lost. | `main` |
 | M5 | R8 strips `Log.v`/`Log.d` (DNS domains) from release. | `main` |
 | L1 | *(partial)* Cloud-backup of the keyset DataStore excluded (`backup_rules.xml` / `data_extraction_rules.xml`). Keystore-wrapping the keyset remains open. | `main` |
+| M4 | Runtime `PACKAGE_ADDED` receiver fires an expedited parent alert on a new install. The ~1s foreground poll race before the block screen is inherent to the poll model (needs UsageStats event callbacks). | `main` |
+| L4 | `parseUdp` rejects IHL < 20 (RFC 791 minimum). | `main` |
+| L3 | Per-IP rate limit (10/10min) on `POST /pair/join`. | branch `security/backend-hardening` |
+| L5 | Dev OTP log gated behind `env.DEV === "true"` (was: whenever Resend unconfigured). | branch `security/backend-hardening` |
 
-**Still open:** H3 (PIN/device-admin — product decision), M1, M2, M4, L2–L6, and the deferred H2 hardening. Severity ratings of the fixed items are re-confirmed below; the H2/L1 entries are annotated with what remains.
+**Still open:** H3 (PIN/device-admin — product decision), M1 (command sender-auth), M2 (atomic rate limiter), L2 (SAS UX), L6 (ciphertext version tag), the keystore-wrap half of L1, and the deferred H2 hardening (AEAD binding + command anti-replay). L6 + H2 hardening both change the ciphertext format and should land together.
 
 ---
 
@@ -262,7 +266,7 @@ A `http://192.168.0.33:8787` base URL and a `usesCleartextTraffic="true"` manife
 6. **Lows + M4** as cleanup (M4 default-deny `PACKAGE_ADDED`, L3 `pairJoin` cap, L4 IHL bound, L5 dev-OTP log, L6 version tag, L1 keystore-wrap, L2 SAS UX); add the CI release-hygiene guard.
 
 ### Outstanding operator actions
-- Push and open PRs for `security/c1-child-channel-auth` (C1 + H2) and `security/h1-otp-attempt-cap` (H1).
+- Push and open PRs for `security/c1-child-channel-auth` (C1 + H2), `security/h1-otp-attempt-cap` (H1), and `security/backend-hardening` (L3 + L5).
 - Apply migration `backend/migrations/0004_child_token.sql` to prod before the C1 PR deploys (existing dev pairings must re-pair).
 - Revert the local `FamilyConfig.kt` http/LAN change to the `https://…workers.dev` URL before any release build.
 - Decide the H3 tamper model (wire PIN + device-admin, or delete the dead PIN code).
