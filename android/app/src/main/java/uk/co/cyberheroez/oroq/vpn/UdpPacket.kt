@@ -20,6 +20,7 @@ fun parseUdp(ipPacket: ByteArray): UdpPacket? {
     if (!Ipv4Packet.isIpv4(ipPacket)) return null
     if (Ipv4Packet.protocol(ipPacket) != Ipv4Packet.PROTOCOL_UDP) return null
     val ihl = Ipv4Packet.headerLength(ipPacket)
+    if (ihl < 20) return null // RFC 791 minimum; a smaller IHL would read ports from inside the IP header
     if (ipPacket.size < ihl + UDP_HEADER_LEN) return null
     val srcPort = ((ipPacket[ihl].toInt() and 0xFF) shl 8) or (ipPacket[ihl + 1].toInt() and 0xFF)
     val dstPort = ((ipPacket[ihl + 2].toInt() and 0xFF) shl 8) or (ipPacket[ihl + 3].toInt() and 0xFF)
