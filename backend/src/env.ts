@@ -10,6 +10,8 @@ export interface Env {
   FCM_SERVICE_ACCOUNT?: string;
   /** Firebase project id for the FCM v1 endpoint (var); unset disables push send. */
   FCM_PROJECT_ID?: string;
+  /** "true" only in local dev — gates echoing the OTP to logs. Never set in prod. */
+  DEV?: string;
 }
 
 /** Throws if a required binding or secret is missing — the Worker must not run half-configured. */
