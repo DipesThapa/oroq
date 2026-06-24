@@ -3,10 +3,13 @@ package uk.co.cyberheroez.oroq.monitor
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.IBinder
 import android.util.Log
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.runBlocking
 import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.config.ConfigRepository
@@ -27,12 +30,14 @@ class AppMonitorService : android.app.Service() {
     // True once we've detected Usage Access is gone — used to alert the parent
     // exactly once per transition rather than every tick.
     private var degraded = false
+    private var installReceiver: BroadcastReceiver? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (running.compareAndSet(false, true)) {
             startForeground(NOTIFICATION_ID, buildNotification())
+            registerInstallReceiver()
             worker = Thread { runLoop() }.also { it.start() }
         }
         return START_STICKY
@@ -162,9 +167,34 @@ class AppMonitorService : android.app.Service() {
         }
     }
 
+    /**
+     * Registers a runtime receiver for new-app installs. Default-deny already
+     * blocks an unapproved app on the next foreground tick, but this tells the
+     * parent the moment one is installed rather than waiting for the 15-min sync.
+     * Runtime registration avoids the manifest implicit-broadcast restriction and
+     * lives as long as this foreground service.
+     */
+    private fun registerInstallReceiver() {
+        if (installReceiver != null) return
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_PACKAGE_ADDED &&
+                    !intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                ) {
+                    runCatching { scheduleNotifySync(applicationContext) }
+                }
+            }
+        }
+        val filter = IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply { addDataScheme("package") }
+        ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        installReceiver = receiver
+    }
+
     override fun onDestroy() {
         running.set(false)
         worker?.interrupt()
+        installReceiver?.let { runCatching { unregisterReceiver(it) } }
+        installReceiver = null
         super.onDestroy()
     }
 
