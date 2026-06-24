@@ -33,7 +33,7 @@ Severity reflects calibrated impact for a child-safety product. "Verified" = the
 | H3 | **High** | Parent PIN is dead code; no device-admin | ✅ **Resolved** (Option A: detect-and-alert; dead code removed) | `ConfigRepository.kt:62-95` (no callers) |
 | H4 | **High** | Wall-clock schedule/limit bypass | ✅ **Fixed** | `AppMonitorService.kt:55,66`, `BlockDecision.kt:47`, `UsageReader.kt:54` |
 | M1 | Medium | Commands encrypted but not sender-authenticated | ⬜ Open | `CommandSync.kt:26-92`, `FamilyCrypto.kt:52` |
-| M2 | Medium | Rate limiter non-atomic on eventually-consistent KV | ⬜ Open (H1 partly mitigates) | `backend/src/ratelimit.ts:16-20` |
+| M2 | Medium | Rate limiter non-atomic on eventually-consistent KV | ✅ **Fixed** | `backend/src/ratelimit.ts:16-20` |
 | M3 | Medium | Fail-open + silent on permission revocation | ✅ **Fixed** | `AppMonitorService.kt:51`, `OroQVpnService.kt:63` |
 | M4 | Medium | Default-deny race (~1s window) for new installs | ✅ **Fixed** (install alert; ~1s race inherent) | `AppMonitorService.kt:49-101` |
 | M5 | Medium | Child DNS browsing history logged to logcat in release | ✅ **Fixed** | `OroQVpnService.kt:106-141`, `proguard-rules.pro` |
@@ -65,8 +65,9 @@ Seven findings addressed the same day. Direct-to-`main` commits and two PR branc
 | L3 | Per-IP rate limit (10/10min) on `POST /pair/join`. | branch `security/backend-hardening` |
 | L5 | Dev OTP log gated behind `env.DEV === "true"` (was: whenever Resend unconfigured). | branch `security/backend-hardening` |
 | H3 | **Decision: Option A (detect-and-alert).** Removed the dead PinHasher + ConfigRepository PIN/onboarding code. A local PIN can't gate the real vectors (revoke/force-stop/clear-data/uninstall all live in Settings, not the app UI); OroQ's consumer posture is fast loud detection (M3 + offline banner). True prevention (uninstall-block) needs Device Owner — a future managed-device / schools SKU, not this product. | `main` |
+| M2 | Atomic D1-backed fixed-window rate limiter (migration `0005_rate_limits.sql`) replaces the non-atomic KV one. **Needs migration 0005 applied to prod.** | branch `security/m2-atomic-ratelimit` |
 
-**Still open:** M1 (command sender-auth), M2 (atomic rate limiter), L2 (SAS UX), L6 (ciphertext version tag), the keystore-wrap half of L1, and the deferred H2 hardening (AEAD binding + command anti-replay). L6 + H2 hardening both change the ciphertext format and should land together. **Device Owner / managed-device prevention** is parked as a separate B2B/schools SKU (see H3).
+**Still open:** M1 (command sender-auth), L2 (SAS UX), L6 (ciphertext version tag), the keystore-wrap half of L1, and the deferred H2 hardening (AEAD binding + command anti-replay). L6 + H2 hardening both change the ciphertext format and should land together (the **crypto-hardening cluster**). **Device Owner / managed-device prevention** is parked as a separate B2B/schools SKU (see H3).
 
 ---
 
@@ -267,8 +268,8 @@ A `http://192.168.0.33:8787` base URL and a `usesCleartextTraffic="true"` manife
 6. **Lows + M4** as cleanup (M4 default-deny `PACKAGE_ADDED`, L3 `pairJoin` cap, L4 IHL bound, L5 dev-OTP log, L6 version tag, L1 keystore-wrap, L2 SAS UX); add the CI release-hygiene guard.
 
 ### Outstanding operator actions
-- Push and open PRs for `security/c1-child-channel-auth` (C1 + H2), `security/h1-otp-attempt-cap` (H1), and `security/backend-hardening` (L3 + L5).
-- Apply migration `backend/migrations/0004_child_token.sql` to prod before the C1 PR deploys (existing dev pairings must re-pair).
+- Merge PRs #15 (C1+H2), #16 (H1), #17 (L3+L5), #18 (M2 atomic rate limiter).
+- Apply migrations to prod before the matching PR deploys: `0004_child_token.sql` (#15; dev pairings must re-pair) and `0005_rate_limits.sql` (#18).
 - Revert the local `FamilyConfig.kt` http/LAN change to the `https://…workers.dev` URL before any release build. *(done 2026-06-24)*
 - ~~Decide the H3 tamper model~~ — decided: Option A (detect-and-alert); dead PIN code removed.
 
