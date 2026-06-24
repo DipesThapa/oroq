@@ -17,6 +17,7 @@ import uk.co.cyberheroez.oroq.config.ConfigRepository
 import uk.co.cyberheroez.oroq.filter.DnsFilter
 import uk.co.cyberheroez.oroq.filter.DnsMessage
 import uk.co.cyberheroez.oroq.family.BlockEventLog
+import uk.co.cyberheroez.oroq.family.scheduleNotifySync
 import uk.co.cyberheroez.oroq.filter.loadBlocklistRepository
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -61,6 +62,9 @@ class OroQVpnService : VpnService() {
             .establish()
         Log.i(TAG, "establish() -> ${if (descriptor == null) "NULL" else "ok"}")
         if (descriptor == null) {
+            // VPN consent was revoked or another VPN took over — web filtering is
+            // down. Push the parent (notify=true) instead of failing silently.
+            runCatching { scheduleNotifySync(applicationContext) }
             stopVpn()
             return
         }
