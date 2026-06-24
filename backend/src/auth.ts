@@ -7,6 +7,7 @@ import { verifyGoogleIdToken } from "./googletoken";
 
 const OTP_TTL_SEC = 600; // 10 minutes
 const JWT_TTL_SEC = 60 * 60 * 24 * 30; // 30 days
+const OTP_MAX_ATTEMPTS = 5; // wrong guesses before the code is burned
 
 /** Routes the /auth/* paths. */
 export async function handleAuth(req: Request, env: Env, path: string): Promise<Response> {
@@ -33,6 +34,7 @@ async function authRequest(req: Request, env: Env): Promise<Response> {
 
   const otp = randomOtp();
   await env.KV.put(`otp:${email}`, await sha256Hex(otp), { expirationTtl: OTP_TTL_SEC });
+  await env.KV.delete(`otpfail:${email}`); // fresh code → fresh attempt budget
   await sendOtpEmail(env, email, otp);
   return json({ ok: true });
 }
@@ -43,16 +45,42 @@ async function authVerify(req: Request, env: Env): Promise<Response> {
   const otp = typeof body.otp === "string" ? body.otp.trim() : "";
   if (!email || !otp) return json({ error: "bad_request" }, 400);
 
+  // Throttle verify by IP — the request-side limiter doesn't cover this path.
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rateLimit(env, `verify:${ip}`, 10, OTP_TTL_SEC))) {
+    return json({ error: "rate_limited" }, 429);
+  }
+
   const stored = await env.KV.get(`otp:${email}`);
   if (!stored || stored !== (await sha256Hex(otp))) {
+    await registerOtpFailure(env, email);
     return json({ error: "bad_otp" }, 401);
   }
   await env.KV.delete(`otp:${email}`);
+  await env.KV.delete(`otpfail:${email}`);
 
   const accountId = await upsertAccount(env, email);
   const exp = Math.floor(Date.now() / 1000) + JWT_TTL_SEC;
   const token = await signJwt({ sub: accountId, exp }, env.JWT_SECRET);
   return json({ token });
+}
+
+/**
+ * Counts a wrong OTP guess and burns the code once too many pile up, so a
+ * 6-digit OTP can't be brute-forced within its 10-minute lifetime. After
+ * OTP_MAX_ATTEMPTS failures the stored OTP is deleted, forcing the attacker to
+ * request a fresh code (which is IP-rate-limited on /auth/request).
+ *
+ * Note: the counter is KV read-modify-write, so a concurrent burst can squeeze
+ * a few extra guesses past the cap — bounded, not exact (audit M2). The per-IP
+ * verify throttle above is the second layer. An atomic counter (Durable Object
+ * / D1) is the hardening follow-up.
+ */
+async function registerOtpFailure(env: Env, email: string): Promise<void> {
+  const key = `otpfail:${email}`;
+  const fails = parseInt((await env.KV.get(key)) ?? "0", 10) + 1;
+  await env.KV.put(key, String(fails), { expirationTtl: OTP_TTL_SEC });
+  if (fails >= OTP_MAX_ATTEMPTS) await env.KV.delete(`otp:${email}`);
 }
 
 /**
