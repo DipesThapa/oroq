@@ -6,8 +6,9 @@ How to fill the Play Console **Data safety** form for `uk.co.cyberheroez.oroq`, 
 
 - **Does your app collect or share any of the required user data types?** → **Yes.**
 - **Is all of the user data encrypted in transit?** → **Yes** (HTTPS to the worker; the activity summary is additionally end-to-end encrypted).
-- **Do you provide a way for users to request that their data is deleted?** → **Yes** — email deletion request to `dipesh@cyberheroez.co.uk`; uninstall stops collection and local data is removed; the server-side encrypted summary auto-expires in 7 days.
-- **Privacy policy URL:** host `docs/PRIVACY_ANDROID.md` at a public URL and link it here (e.g. `https://cyberheroez.co.uk/oroq/privacy`).
+- **Do you provide a way for users to request that their data is deleted?** → **Yes** — in-app: "Remove this device" unpairs and deletes that child's server data (`DELETE /pair/:id` clears the pairing row + its encrypted summary + command queue); plus an email deletion request to `dipesh@cyberheroez.co.uk`. Uninstall stops collection and removes local data; the server-side encrypted summary auto-expires in 7 days.
+  - ⚠️ **Account deletion gap (action needed):** Google's account-deletion policy requires deleting the *account itself*, not just data. Today "Remove this device" deletes pairings/data but the parent `accounts` row (email) persists, and there is no in-app "delete account" nor a web deletion URL. **Before submission:** add an in-app account-deletion action (delete the `accounts` row + `push_tokens`) **or** publish a web deletion-request URL and declare it in the Data Safety "deletion" section. The email-request path is the minimum Google accepts, but a self-serve path is expected for account-based apps.
+- **Privacy policy URL:** the page is already built at `site/privacy-app.html`. Host the `site/` folder publicly (Firebase Hosting / GitHub Pages / cyberheroez.co.uk) and use the resulting URL (e.g. `https://cyberheroez.co.uk/privacy-app.html`). `docs/PRIVACY_ANDROID.md` is the source-of-truth copy.
 
 ## Data types — declare each as follows
 
@@ -20,7 +21,7 @@ For every "collected" type below: **Collected = Yes**, **Shared = No** (processo
 | **App activity → Installed apps** | Yes | Child's installed-apps list for the parent block picker | Purpose: App functionality. This is sensitive — keep the in-app rationale visible. |
 | **App activity → Other user-generated content** | Yes | Block events: blocked **domain** or app name + category + timestamp | Purpose: App functionality. **No full URLs or page content.** |
 | **App info & performance → Other** | Yes | Sync timestamps used to derive uptime/last-seen | Purpose: App functionality. |
-| **Device or other IDs** | Yes | Random **app-generated** pairing UUID + device public key | Declare as an app-generated identifier, not a hardware/advertising ID. |
+| **Device or other IDs** | Yes | Random **app-generated** pairing UUID + device public key; **FCM registration token** (parent device, for push) | Declare as app-generated / messaging identifiers, **not** a hardware or advertising ID. The FCM token is stored server-side (`push_tokens`) only to deliver parent notifications. |
 
 ### Explicitly answer **No / not collected** for:
 - Location (precise or approximate)
