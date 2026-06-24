@@ -77,16 +77,21 @@ class FamilySummaryTest {
     }
 
     @Test fun buildSummaryAssemblesFieldsAndTopFive() {
+        val apps = listOf(
+            InstalledApp("com.a", "App A"),
+            InstalledApp("com.b", "App B"),
+            InstalledApp("com.c", "App C"),
+            InstalledApp("com.d", "App D"),
+            InstalledApp("com.e", "App E"),
+            InstalledApp("com.f", "App F"),
+        )
         val usage = linkedMapOf(
-            "A" to 50, "B" to 40, "C" to 30, "D" to 20, "E" to 10, "F" to 5,
+            "com.a" to 50, "com.b" to 40, "com.c" to 30,
+            "com.d" to 20, "com.e" to 10, "com.f" to 5,
         )
         val events = listOf(
             BlockEvent(10, "web", "x.com"),
             BlockEvent(20, "app", "TikTok"),
-        )
-        val apps = listOf(
-            InstalledApp("com.a", "App A"),
-            InstalledApp("com.b", "App B"),
         )
         val summary = buildSummary(
             now = 999,
@@ -106,5 +111,31 @@ class FamilySummaryTest {
         assertEquals(setOf("adult", "social"), summary.categories)
         assertEquals(apps, summary.installedApps)
         assertEquals(setOf("com.a"), summary.blockedApps)
+    }
+
+    @Test fun buildSummaryDropsSystemAppsFromBreakdown() {
+        // Usage includes the launcher, Play Services, and OroQ itself — none of
+        // which are in the launchable user-app list. The breakdown must list only
+        // the recognised app, while the total still counts all foreground time.
+        val usage = linkedMapOf(
+            "com.google.android.apps.nexuslauncher" to 38,
+            "com.google.android.gms" to 16,
+            "uk.co.cyberheroez.oroq" to 1,
+            "com.instagram.android" to 22,
+        )
+        val summary = buildSummary(
+            now = 1L,
+            protectionOn = true,
+            dailyLimitMinutes = 0,
+            usageByApp = usage,
+            recentEvents = emptyList(),
+            webBlockedToday = 0,
+            appBlockedToday = 0,
+            categories = emptySet(),
+            installedApps = listOf(InstalledApp("com.instagram.android", "Instagram")),
+            blockedApps = emptySet(),
+        )
+        assertEquals(77, summary.screenTimeTodayMin) // total counts every app
+        assertEquals(listOf(TopApp("com.instagram.android", 22)), summary.topApps)
     }
 }

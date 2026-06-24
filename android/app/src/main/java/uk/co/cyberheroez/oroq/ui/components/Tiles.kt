@@ -93,8 +93,12 @@ fun ToggleRow(label: String, checked: Boolean, enabled: Boolean = true, onChange
         Switch(
             checked = checked, onCheckedChange = onChange, enabled = enabled,
             colors = SwitchDefaults.colors(
+                checkedThumbColor = OroqColors.TextPrimary,
                 checkedTrackColor = OroqColors.BluePrimary,
+                checkedBorderColor = OroqColors.BluePrimary,
+                uncheckedThumbColor = OroqColors.TextSecondary,
                 uncheckedTrackColor = OroqColors.BgSurface2,
+                uncheckedBorderColor = OroqColors.Border,
             ),
         )
     }

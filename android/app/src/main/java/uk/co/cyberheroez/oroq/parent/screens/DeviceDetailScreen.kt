@@ -46,7 +46,14 @@ import uk.co.cyberheroez.oroq.ui.theme.OroqColors
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
 
-private fun formatMinutes(m: Int): String = if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m"
+private fun formatMinutes(m: Int): String = when {
+    m >= 60 && m % 60 == 0 -> "${m / 60}h"
+    m >= 60 -> "${m / 60}h ${m % 60}m"
+    else -> "${m}m"
+}
+
+/** No heartbeat for this long → the child is treated as offline. */
+private const val STALE_AFTER_MS = 35 * 60 * 1000L
 
 @Composable
 fun DeviceDetailScreen(vm: ParentViewModel, pairingId: String, nav: NavController) {
@@ -73,13 +80,24 @@ fun DeviceDetailScreen(vm: ParentViewModel, pairingId: String, nav: NavControlle
         SecondaryLink("‹ Back") { nav.popBackStack() }
         Text(snap.label, style = OroqType.H2)
         Text(
-            if (summary != null) "Active • Last seen ${relativeTime(summary.ts)}" else "No data yet — the child's phone hasn't synced.",
+            when {
+                summary == null -> "No data yet — the child's phone hasn't synced."
+                System.currentTimeMillis() - summary.ts > STALE_AFTER_MS -> "Offline • Last seen ${relativeTime(summary.ts)}"
+                else -> "Active • Last seen ${relativeTime(summary.ts)}"
+            },
             style = OroqType.Caption,
         )
         Spacer(Modifier.height(16.dp))
 
         if (summary != null) {
             ProtectionBanner(summary)
+            if (System.currentTimeMillis() - summary.ts > STALE_AFTER_MS) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Changes you make now are saved and applied when the device reconnects.",
+                    style = OroqType.Caption,
+                )
+            }
             Spacer(Modifier.height(12.dp))
         }
 
@@ -177,8 +195,12 @@ private fun ScreenTimeCard(vm: ParentViewModel, pairingId: String, summary: Fami
             else "No daily limit set",
             style = OroqType.Caption,
         )
+        // topApps carries package names; resolve to friendly labels where we have them.
+        val appLabels = remember(summary.installedApps) {
+            summary.installedApps.associate { it.packageName to it.label }
+        }
         for (app in summary.topApps) {
-            Text("${app.label} — ${formatMinutes(app.minutes)}", style = OroqType.Body)
+            Text("${appLabels[app.label] ?: app.label} — ${formatMinutes(app.minutes)}", style = OroqType.Body)
         }
         Spacer(Modifier.height(10.dp))
         PrimaryButton("Grant 30 minutes") {
@@ -270,7 +292,7 @@ private fun ProtectionBanner(summary: FamilySummary) {
     val now = System.currentTimeMillis()
     val staleMs = now - summary.ts
     val (text, color) = when {
-        staleMs > 35 * 60 * 1000L -> "Protection offline — last seen ${staleMs / 60000L} min ago" to OroqColors.Danger
+        staleMs > STALE_AFTER_MS -> "Protection offline — last seen ${relativeTime(summary.ts)}" to OroqColors.Danger
         !summary.permissionsOk -> "Permissions turned off on the child device" to OroqColors.Danger
         !summary.protectionOn -> "Web protection is off" to OroqColors.Danger
         else -> "Protection active" to OroqColors.Success
