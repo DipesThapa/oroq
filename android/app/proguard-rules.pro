@@ -52,3 +52,12 @@
 # Firebase Messaging and Credential Manager ship their own consumer rules;
 # suppress notes for their optional transitive deps.
 -dontwarn com.google.android.gms.**
+
+# --- Strip verbose/debug logging from release builds ------------------------
+# The VPN logs DNS query domains (the child's browsing history) at Log.d. This
+# removes Log.v/Log.d calls in release so none of that PII reaches logcat in a
+# shipped build; info/warn/error are kept. (Audit M5.)
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}
