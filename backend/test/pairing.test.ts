@@ -129,4 +129,15 @@ describe("/pair (child-led)", () => {
     });
     expect(del.status).toBe(403);
   });
+
+  it("rate-limits repeated join attempts (brute-force guard)", async () => {
+    const token = await accountToken("acc-bruteforce");
+    // 10 wrong-code joins are allowed (each 404); the 11th from the same IP is throttled.
+    for (let i = 0; i < 10; i++) {
+      const r = await parentJoin(token, "BADCODE0");
+      expect(r.status).toBe(404);
+    }
+    const throttled = await parentJoin(token, "BADCODE0");
+    expect(throttled.status).toBe(429);
+  });
 });

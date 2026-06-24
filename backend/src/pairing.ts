@@ -63,6 +63,12 @@ async function pairJoin(req: Request, env: Env): Promise<Response> {
   const accountId = await authAccount(req, env);
   if (!accountId) return json({ error: "unauthorized" }, 401);
 
+  // Throttle join attempts per IP so the ~39-bit code can't be brute-forced.
+  const ip = req.headers.get("cf-connecting-ip") ?? "unknown";
+  if (!(await rateLimit(env, `join:${ip}`, 10, CODE_TTL_SEC))) {
+    return json({ error: "rate_limited" }, 429);
+  }
+
   const body = await readJson(req);
   const code = typeof body.code === "string" ? body.code.trim().toUpperCase() : "";
   if (!code || !isPublicKey(body.parentPublicKey)) return json({ error: "bad_request" }, 400);
