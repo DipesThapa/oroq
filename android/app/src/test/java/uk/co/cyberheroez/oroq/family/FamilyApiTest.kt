@@ -197,6 +197,22 @@ class FamilyApiTest {
         assertEquals("B", queue?.get(1)?.second)
     }
 
+    @Test fun deleteAccountSendsDeleteWithAuth() {
+        val transport = FakeTransport(mapOf(
+            "DELETE $base/account" to HttpResponse(200, """{"ok":true}"""),
+        ))
+        val api = FamilyApi(base, transport)
+        assertTrue(api.deleteAccount("jwt-del"))
+        assertTrue(transport.sent.single().contains("Bearer jwt-del"))
+    }
+
+    @Test fun deleteAccountReturnsFalseOnRejection() {
+        val api = FamilyApi(base, FakeTransport(mapOf(
+            "DELETE $base/account" to HttpResponse(401, """{"error":"unauthorized"}"""),
+        )))
+        assertEquals(false, api.deleteAccount("bad"))
+    }
+
     @Test fun cmdAckReturnsTrueOn200() {
         val api = FamilyApi(base, FakeTransport(mapOf(
             "POST $base/cmd/pid-1/ack" to HttpResponse(200, """{"ok":true}"""),

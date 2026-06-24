@@ -89,6 +89,12 @@ class FamilyApi(
         return transport.request("DELETE", "$baseUrl/pair/$pairingId", headers, null).status == 200
     }
 
+    /** Parent: delete the whole account + all pairings/data server-side. True on success. */
+    fun deleteAccount(token: String): Boolean {
+        val headers = mapOf("authorization" to "Bearer $token")
+        return transport.request("DELETE", "$baseUrl/account", headers, null).status == 200
+    }
+
     /** Fetches a pairing record, or null if it does not exist or the request fails. */
     fun pairGet(pairingId: String): PairingRecord? {
         val res = transport.request("GET", "$baseUrl/pair/$pairingId", emptyMap(), null)
