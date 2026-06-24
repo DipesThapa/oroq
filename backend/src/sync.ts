@@ -3,6 +3,7 @@ import { json, readJson } from "./http";
 import { verifyJwt } from "./crypto";
 import { rateLimit } from "./ratelimit";
 import { notifyAccount } from "./push";
+import { requireChildToken } from "./childauth";
 
 const SUMMARY_TTL_SEC = 60 * 60 * 24 * 7; // 7 days
 
@@ -22,6 +23,8 @@ async function syncUpload(req: Request, env: Env, pairingId: string): Promise<Re
   if (!(await rateLimit(env, `sync:${ip}`, 30, 600))) {
     return json({ error: "rate_limited" }, 429);
   }
+  const denied = await requireChildToken(req, env, pairingId);
+  if (denied) return denied;
   const body = await readJson(req);
   const ciphertext = body.ciphertext;
   const notify = body.notify === true;

@@ -15,7 +15,8 @@ import java.util.Base64
 suspend fun pollAndApplyCommands(context: Context): Int {
     val store = FamilyStore(context)
     val link = store.getParentLink() ?: return 0
-    val queue = familyApi().cmdFetch(link.pairingId) ?: return 0
+    val childToken = store.getChildToken() ?: return 0
+    val queue = familyApi().cmdFetch(childToken, link.pairingId) ?: return 0
     if (queue.isEmpty()) return 0
 
     val keys = store.getOrCreateKeyPair()
@@ -95,7 +96,7 @@ suspend fun pollAndApplyCommands(context: Context): Int {
 
     // Ack every id we saw — applied now or already applied earlier — so the
     // server drops them.
-    familyApi().cmdAck(link.pairingId, queue.map { it.first })
+    familyApi().cmdAck(childToken, link.pairingId, queue.map { it.first })
     return appliedCount
 }
 

@@ -1,6 +1,6 @@
 import { Env } from "./env";
 import { json, readJson } from "./http";
-import { randomCode, verifyJwt } from "./crypto";
+import { randomCode, randomToken, sha256Hex, verifyJwt } from "./crypto";
 import { rateLimit } from "./ratelimit";
 
 const CODE_TTL_SEC = 600; // 10 minutes
@@ -43,15 +43,18 @@ async function pairCreate(req: Request, env: Env): Promise<Response> {
 
   const id = crypto.randomUUID();
   const code = randomCode(8);
+  // Mint a bearer token the child keeps and presents on /sync + /cmd. Only its
+  // hash is stored; the plaintext is returned to the child exactly once here.
+  const childToken = randomToken();
   await env.DB.prepare(
-    `INSERT INTO pairings (id, child_public_key, created_at)
-     VALUES (?, ?, ?)`,
+    `INSERT INTO pairings (id, child_public_key, child_token_hash, created_at)
+     VALUES (?, ?, ?, ?)`,
   )
-    .bind(id, body.childPublicKey, Date.now())
+    .bind(id, body.childPublicKey, await sha256Hex(childToken), Date.now())
     .run();
   await env.KV.put(`code:${code}`, id, { expirationTtl: CODE_TTL_SEC });
 
-  return json({ pairingId: id, code, expiresInSec: CODE_TTL_SEC });
+  return json({ pairingId: id, code, childToken, expiresInSec: CODE_TTL_SEC });
 }
 
 /**

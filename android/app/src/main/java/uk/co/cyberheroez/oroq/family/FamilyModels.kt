@@ -1,9 +1,11 @@
 package uk.co.cyberheroez.oroq.family
 
-/** Result of `POST /pair/create` (called by the child). */
+/** Result of `POST /pair/create` (called by the child). The [childToken] is the
+ *  per-pairing bearer secret the child keeps and presents on /sync and /cmd. */
 data class CreatePairingResult(
     val pairingId: String,
     val code: String,
+    val childToken: String,
     val expiresInSec: Int,
 )
 

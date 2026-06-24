@@ -41,6 +41,7 @@ class FamilyStore(context: Context) {
         val PUBLIC_KEY = stringPreferencesKey("own_public_keyset")
         val CHILDREN = stringSetPreferencesKey("paired_children")
         val PARENT_LINK = stringPreferencesKey("parent_link")
+        val CHILD_TOKEN = stringPreferencesKey("child_token")
     }
 
     suspend fun getRole(): DeviceRole? =
@@ -91,6 +92,13 @@ class FamilyStore(context: Context) {
             val current = prefs[Keys.CHILDREN] ?: emptySet()
             prefs[Keys.CHILDREN] = current.filterNot { decodeChild(it)?.pairingId == pairingId }.toSet()
         }
+    }
+
+    /** This child device's per-pairing bearer token (sent on /sync and /cmd). */
+    suspend fun getChildToken(): String? = store.data.first()[Keys.CHILD_TOKEN]
+
+    suspend fun setChildToken(token: String) {
+        store.edit { it[Keys.CHILD_TOKEN] = token }
     }
 
     suspend fun getParentLink(): ParentLink? =

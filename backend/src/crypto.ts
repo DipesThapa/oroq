@@ -23,6 +23,22 @@ export function randomOtp(): string {
   return n.toString().padStart(6, "0");
 }
 
+/** A high-entropy URL-safe bearer token (default 32 bytes ≈ 256 bits). */
+export function randomToken(bytes = 32): string {
+  return b64urlEncode(crypto.getRandomValues(new Uint8Array(bytes)));
+}
+
+/**
+ * Constant-time string comparison — avoids leaking how many leading characters
+ * matched. Both inputs here are fixed-length SHA-256 hex digests.
+ */
+export function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 function b64urlEncode(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-")

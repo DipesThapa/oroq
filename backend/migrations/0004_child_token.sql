@@ -1,0 +1,14 @@
+-- Migration 0004: per-pairing child bearer token.
+--
+-- The child device holds no account, so child-side endpoints (POST /sync upload,
+-- GET /cmd fetch, POST /cmd/:id/ack) previously authenticated nothing beyond
+-- knowing the pairingId — which is NOT a secret (it travels in request URLs and
+-- is returned by the unauthenticated GET /pair/:id). Anyone who learned a
+-- pairingId could read the command queue, ack-and-drop a parent's pending
+-- commands, or overwrite the summary blob.
+--
+-- This adds a high-entropy token minted at pair/create and required on those
+-- endpoints. Only its SHA-256 hash is stored server-side; the plaintext token
+-- is returned once to the child and kept on-device. Nullable so existing rows
+-- migrate cleanly — those pairings must re-pair to obtain a token.
+ALTER TABLE pairings ADD COLUMN child_token_hash TEXT;

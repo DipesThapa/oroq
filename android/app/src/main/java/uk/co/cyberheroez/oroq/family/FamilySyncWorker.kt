@@ -29,6 +29,7 @@ class FamilySyncWorker(
     override suspend fun doWork(): Result {
         val store = FamilyStore(applicationContext)
         val link = store.getParentLink() ?: return Result.success() // not paired — nothing to do
+        val childToken = store.getChildToken() ?: return Result.success() // no token — re-pair needed
 
         val config = ConfigRepository(applicationContext)
         val usage = UsageReader(applicationContext)
@@ -68,7 +69,7 @@ class FamilySyncWorker(
         )
         val notify = inputData.getBoolean("notify", false)
         val uploaded = familyApi().syncUpload(
-            link.pairingId, Base64.getEncoder().encodeToString(ciphertext), notify,
+            childToken, link.pairingId, Base64.getEncoder().encodeToString(ciphertext), notify,
         )
         runCatching { pollAndApplyCommands(applicationContext) }
         return if (uploaded) Result.success() else Result.retry()

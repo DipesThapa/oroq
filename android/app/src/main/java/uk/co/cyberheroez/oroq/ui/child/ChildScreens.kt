@@ -126,6 +126,9 @@ suspend fun createPairing(context: Context): ShowPairing? {
     val store = FamilyStore(context)
     val keys = store.getOrCreateKeyPair()
     val result = familyApi().pairCreate(keys.publicKeysetB64) ?: return null
+    // Persist the bearer token now so it survives the await-join screens; it
+    // authenticates this device on every later /sync and /cmd call.
+    store.setChildToken(result.childToken)
     return ShowPairing(result.pairingId, result.code, keys.publicKeysetB64)
 }
 

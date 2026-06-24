@@ -1,18 +1,21 @@
 import { SELF, env } from "cloudflare:test";
 import { describe, it, expect, beforeAll } from "vitest";
-import { signJwt } from "../src/crypto";
+import { signJwt, sha256Hex } from "../src/crypto";
 
 const ACCOUNT = "acc-sync";
+const CHILD_TOKEN = "child-token-sync";
 
 /** Inserts a paired pairing owned by ACCOUNT and returns its id. */
 async function seedPairing(paired: boolean): Promise<string> {
   const id = crypto.randomUUID();
   await env.DB.prepare(
-    `INSERT INTO pairings (id, account_id, child_label, parent_public_key, child_public_key, created_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).bind(id, ACCOUNT, "Tablet", "PK", paired ? "CK" : null, Date.now()).run();
+    `INSERT INTO pairings (id, account_id, child_label, parent_public_key, child_public_key, child_token_hash, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  ).bind(id, ACCOUNT, "Tablet", "PK", paired ? "CK" : null, await sha256Hex(CHILD_TOKEN), Date.now()).run();
   return id;
 }
+
+const childHeaders = { "content-type": "application/json", "x-child-token": CHILD_TOKEN };
 
 let pairedId = "";
 let unpairedId = "";
@@ -30,7 +33,7 @@ describe("/sync", () => {
   it("stores then returns the latest ciphertext", async () => {
     const put = await SELF.fetch(`https://x/sync/${pairedId}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: childHeaders,
       body: JSON.stringify({ ciphertext: "BLOB-1" }),
     });
     expect(put.status).toBe(200);
@@ -43,9 +46,8 @@ describe("/sync", () => {
   });
 
   it("overwrites with the newest upload", async () => {
-    const headers = { "content-type": "application/json" };
     await SELF.fetch(`https://x/sync/${pairedId}`, {
-      method: "POST", headers, body: JSON.stringify({ ciphertext: "BLOB-2" }),
+      method: "POST", headers: childHeaders, body: JSON.stringify({ ciphertext: "BLOB-2" }),
     });
     const get = await SELF.fetch(`https://x/sync/${pairedId}`, {
       headers: { authorization: `Bearer ${await token(ACCOUNT)}` },
@@ -56,7 +58,7 @@ describe("/sync", () => {
   it("accepts a notify flag and still stores the blob (best-effort push)", async () => {
     const res = await SELF.fetch(`https://x/sync/${pairedId}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: childHeaders,
       body: JSON.stringify({ ciphertext: "BLOB-NOTIFY", notify: true }),
     });
     expect(res.status).toBe(200);
@@ -69,10 +71,19 @@ describe("/sync", () => {
   it("rejects an upload to an unpaired pairing", async () => {
     const res = await SELF.fetch(`https://x/sync/${unpairedId}`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: childHeaders,
       body: JSON.stringify({ ciphertext: "BLOB" }),
     });
     expect(res.status).toBe(409);
+  });
+
+  it("rejects an upload without the child token", async () => {
+    const res = await SELF.fetch(`https://x/sync/${pairedId}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ciphertext: "BLOB" }),
+    });
+    expect(res.status).toBe(401);
   });
 
   it("rejects a GET without a token", async () => {
