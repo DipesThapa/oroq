@@ -19,6 +19,14 @@ fun systemCriticalPackages(home: String?, dialer: String?, ownPackage: String): 
         "com.google.android.dialer",    // common stock dialer
         "com.android.phone",            // emergency / telephony UI
         "com.android.emergency",
+        // Runtime-permission dialogs + app installer surface during onboarding
+        // and grants; blocking them would trap the user. Names are stable across
+        // AOSP/GMS, so static (no PackageManager visibility needed — matched by
+        // the foreground package name).
+        "com.android.permissioncontroller",
+        "com.google.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
     )
     if (!home.isNullOrBlank()) set.add(home)
     if (!dialer.isNullOrBlank()) set.add(dialer)

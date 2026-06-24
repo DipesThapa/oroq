@@ -21,4 +21,14 @@ class SystemAppsTest {
         assertTrue("com.vendor.launcher" in set)
         assertTrue("com.vendor.dialer" in set)
     }
+
+    @Test fun includesPermissionControllerAndInstaller() {
+        // These surface during onboarding/permission grants; blocking them traps
+        // the user. Both AOSP and GMS variants must be covered.
+        val set = systemCriticalPackages(home = null, dialer = null, ownPackage = "uk.co.cyberheroez.oroq")
+        assertTrue("com.android.permissioncontroller" in set)
+        assertTrue("com.google.android.permissioncontroller" in set)
+        assertTrue("com.android.packageinstaller" in set)
+        assertTrue("com.google.android.packageinstaller" in set)
+    }
 }

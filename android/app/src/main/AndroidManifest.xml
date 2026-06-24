@@ -14,6 +14,13 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
+        <!-- Resolve the home launcher so it lands in systemCriticalApps and is
+             never default-denied. The launcher has no LAUNCHER activity, so the
+             filter above can't see it under Android 11+ package visibility. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
     </queries>
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
