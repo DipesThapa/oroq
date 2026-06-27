@@ -21,10 +21,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -48,19 +44,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import uk.co.cyberheroez.oroq.R
 import uk.co.cyberheroez.oroq.family.DeviceRole
 import uk.co.cyberheroez.oroq.family.FamilyStore
-import uk.co.cyberheroez.oroq.family.familyApi
-import uk.co.cyberheroez.oroq.ui.components.PrimaryButton
 import uk.co.cyberheroez.oroq.ui.theme.OroqColors
 import uk.co.cyberheroez.oroq.ui.theme.OroqDimens
 import uk.co.cyberheroez.oroq.ui.theme.OroqType
@@ -87,10 +78,6 @@ private fun LoginFlow(onSignedIn: () -> Unit, onClose: () -> Unit) {
     val scope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
     val store = remember { FamilyStore(context) }
-    val api = remember { familyApi() }
-    var email by remember { mutableStateOf("") }
-    var otp by remember { mutableStateOf("") }
-    var stage by remember { mutableStateOf("email") }
     var error by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
 
@@ -100,9 +87,7 @@ private fun LoginFlow(onSignedIn: () -> Unit, onClose: () -> Unit) {
     ) {
         // Top bar: back chip on the left, OROQ wordmark centred over the row.
         Box(Modifier.fillMaxWidth().padding(top = 12.dp), contentAlignment = Alignment.Center) {
-            BackChip(Modifier.align(Alignment.CenterStart)) {
-                if (stage == "otp") { stage = "email"; error = null } else onClose()
-            }
+            BackChip(Modifier.align(Alignment.CenterStart)) { onClose() }
             Wordmark()
         }
 
@@ -110,88 +95,35 @@ private fun LoginFlow(onSignedIn: () -> Unit, onClose: () -> Unit) {
         Text("Sign in or create your account", style = OroqType.H1)
         Spacer(Modifier.height(8.dp))
         Text(
-            if (stage == "email") {
-                "We'll email you a 6-digit code. No password needed."
-            } else {
-                "Enter the 6-digit code we sent to ${email.trim()}."
-            },
+            "Sign in with your Google account — no password needed.",
             style = OroqType.Body,
         )
         Spacer(Modifier.height(28.dp))
 
-        if (stage == "email") {
-            FieldLabel("Email address")
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = email, onValueChange = { email = it; error = null },
-                placeholder = { Text("you@example.com", style = OroqType.Body) },
-                singleLine = true,
-                leadingIcon = { Canvas(Modifier.size(20.dp)) { drawEnvelope(OroqColors.TextSecondary) } },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                shape = RoundedCornerShape(OroqDimens.RadiusTile),
-                colors = fieldColors(),
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(16.dp))
-            PrimaryButton(if (busy) "Sending…" else "Send code", enabled = !busy && email.contains("@")) {
+        if (GoogleSignIn.isConfigured) {
+            GoogleButton(enabled = !busy) {
                 busy = true
                 scope.launch {
-                    val ok = withContext(Dispatchers.IO) { api.authRequest(email.trim()) }
-                    busy = false
-                    if (ok) stage = "otp" else error = "Couldn't send the code — check your connection"
-                }
-            }
-
-            if (GoogleSignIn.isConfigured) {
-                Spacer(Modifier.height(24.dp))
-                DividerLabel("or continue with")
-                Spacer(Modifier.height(16.dp))
-                GoogleButton(enabled = !busy) {
-                    busy = true
-                    scope.launch {
-                        when (val result = GoogleSignIn.signIn(context)) {
-                            is GoogleSignInResult.Success -> {
-                                store.setParentToken(result.sessionToken)
-                                store.setRole(DeviceRole.PARENT)
-                                onSignedIn()
-                            }
-                            GoogleSignInResult.Cancelled -> { /* silent — the email form is right here */ }
-                            GoogleSignInResult.Unavailable ->
-                                error = "Google sign-in isn't available on this device"
-                            GoogleSignInResult.Rejected ->
-                                error = "Google sign-in failed — try the email code instead"
+                    when (val result = GoogleSignIn.signIn(context)) {
+                        is GoogleSignInResult.Success -> {
+                            store.setParentToken(result.sessionToken)
+                            store.setRole(DeviceRole.PARENT)
+                            onSignedIn()
                         }
-                        busy = false
+                        GoogleSignInResult.Cancelled -> { /* silent — the button is right here */ }
+                        GoogleSignInResult.Unavailable ->
+                            error = "Google sign-in isn't available on this device"
+                        GoogleSignInResult.Rejected ->
+                            error = "Google sign-in failed — please try again"
                     }
+                    busy = false
                 }
             }
         } else {
-            FieldLabel("6-digit code")
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = otp, onValueChange = { otp = it.filter { c -> c.isDigit() }; error = null },
-                placeholder = { Text("123456", style = OroqType.Body) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                shape = RoundedCornerShape(OroqDimens.RadiusTile),
-                colors = fieldColors(),
-                modifier = Modifier.fillMaxWidth(),
+            Text(
+                "Sign-in is temporarily unavailable. Please try again later.",
+                style = OroqType.Body.copy(color = OroqColors.Danger),
             )
-            Spacer(Modifier.height(16.dp))
-            PrimaryButton(if (busy) "Verifying…" else "Verify", enabled = !busy && otp.length >= 6) {
-                busy = true
-                scope.launch {
-                    val token = withContext(Dispatchers.IO) { api.authVerify(email.trim(), otp.trim()) }
-                    busy = false
-                    if (token == null) {
-                        error = "Wrong or expired code"
-                    } else {
-                        store.setParentToken(token)
-                        store.setRole(DeviceRole.PARENT)
-                        onSignedIn()
-                    }
-                }
-            }
         }
 
         if (error != null) {
@@ -232,24 +164,6 @@ private fun BackChip(modifier: Modifier = Modifier, onClick: () -> Unit) {
             }
             drawPath(path, OroqColors.TextPrimary, style = Stroke(size.width * 0.12f, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
-    }
-}
-
-@Composable
-private fun FieldLabel(text: String) {
-    Text(text, style = OroqType.BodyOnDark.copy(fontWeight = FontWeight.SemiBold))
-}
-
-@Composable
-private fun DividerLabel(text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        HorizontalDivider(Modifier.weight(1f), color = OroqColors.Border)
-        Text(
-            text,
-            style = OroqType.Caption,
-            modifier = Modifier.padding(horizontal = 12.dp),
-        )
-        HorizontalDivider(Modifier.weight(1f), color = OroqColors.Border)
     }
 }
 
@@ -303,35 +217,6 @@ private fun Footer() {
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
     )
-}
-
-@Composable
-private fun fieldColors() = OutlinedTextFieldDefaults.colors(
-    focusedBorderColor = OroqColors.BluePrimary,
-    unfocusedBorderColor = OroqColors.Border,
-    focusedContainerColor = OroqColors.BgSurface,
-    unfocusedContainerColor = OroqColors.BgSurface,
-    focusedTextColor = OroqColors.TextPrimary,
-    unfocusedTextColor = OroqColors.TextPrimary,
-)
-
-private fun DrawScope.drawEnvelope(color: Color) {
-    val w = size.width
-    val h = size.height
-    val s = w * 0.08f
-    drawRoundRect(
-        color,
-        topLeft = Offset(w * 0.08f, h * 0.22f),
-        size = Size(w * 0.84f, h * 0.56f),
-        cornerRadius = CornerRadius(w * 0.1f),
-        style = Stroke(s),
-    )
-    val flap = Path().apply {
-        moveTo(w * 0.14f, h * 0.3f)
-        lineTo(w * 0.5f, h * 0.56f)
-        lineTo(w * 0.86f, h * 0.3f)
-    }
-    drawPath(flap, color, style = Stroke(s, cap = StrokeCap.Round, join = StrokeJoin.Round))
 }
 
 private fun DrawScope.drawLock(color: Color) {
