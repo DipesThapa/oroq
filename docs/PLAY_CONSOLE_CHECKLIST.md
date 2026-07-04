@@ -36,6 +36,10 @@ Expect manual review.
 
 ## 2. Foreground service permissions — *App content → "Foreground service permissions"*
 
+> **Full justification + reviewer rebuttals:** `docs/FGS_SPECIAL_USE_JUSTIFICATION.md`
+> (type-elimination matrix, pushback responses, demo-video guidance). This is the
+> item most likely to draw a manual-review challenge — read that file first.
+
 Two services use `FOREGROUND_SERVICE_SPECIAL_USE`. For each, paste:
 
 - **VPN service** (`On-device parental DNS filtering`):
@@ -81,10 +85,12 @@ Two services use `FOREGROUND_SERVICE_SPECIAL_USE`. For each, paste:
 
 ## 5. Privacy policy URL — *Store listing + Data safety*
 
-- The page exists: `site/privacy-app.html`. Host the `site/` folder publicly
-  (Firebase Hosting / GitHub Pages / cyberheroez.co.uk).
-- Paste the resulting URL (e.g. `https://cyberheroez.co.uk/privacy-app.html`)
+- The page is live: `site/` is deployed to Cloudflare Pages (project
+  `oroq-site`, via `npx wrangler pages deploy site --project-name=oroq-site`).
+- Paste the live URL `https://oroq-site.pages.dev/privacy-app`
   into **Store listing → Privacy policy** and the **Data safety** form.
+  (Do not use `cyberheroez.co.uk` — that domain currently points at a Vercel
+  coming-soon app, not this Pages project.)
 
 ## 6. Store listing — *Grow → Store presence → Main store listing*
 

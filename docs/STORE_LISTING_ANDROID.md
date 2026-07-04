@@ -52,7 +52,7 @@ OroQ is built and maintained by CyberHeroez CIC.
 - **App category:** Parenting (or Tools).
 - **Tags:** parental controls, screen time, web filter, child safety, family.
 - **Contact email:** dipesh@cyberheroez.co.uk
-- **Privacy Policy URL:** (host `docs/PRIVACY_ANDROID.md` — e.g. `https://cyberheroez.co.uk/oroq/privacy`)
+- **Privacy Policy URL:** `https://oroq-site.pages.dev/privacy-app` (live — `site/privacy-app.html` on Cloudflare Pages; source copy in `docs/PRIVACY_ANDROID.md`)
 - **Website:** https://cyberheroez.co.uk/
 
 ## Graphics (sizes)
