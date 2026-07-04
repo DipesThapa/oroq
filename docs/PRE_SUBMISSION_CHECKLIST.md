@@ -113,7 +113,9 @@ Source: `docs/PLAY_CONSOLE_CHECKLIST.md` has the exact text for each.
 - [ ] **E2. Foreground service (specialUse) ×2** 🌐 — paste from checklist §2;
   full defense in `docs/FGS_SPECIAL_USE_JUSTIFICATION.md`.
 - [ ] **E3. Data safety** 🌐 — from `docs/PLAY_DATA_SAFETY.md` (collected=yes,
-  shared=no, on-device, no browsing history, no ad ID).
+  shared=no, on-device, no browsing history, no ad ID). Account deletion URL:
+  `https://oroq-site.pages.dev/delete-account` (live 2026-07-04; in-app path
+  More → Delete account already shipped).
 - [ ] **E4. Target audience & content rating** 🌐 — adult-operated parental
   control, "appeals to children? No", from checklist §4.
 - [ ] **E5. Privacy policy URL** 🌐 — paste the C1 URL into store listing + Data safety.
