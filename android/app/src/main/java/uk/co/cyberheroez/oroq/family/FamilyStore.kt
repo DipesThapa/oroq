@@ -1,6 +1,7 @@
 package uk.co.cyberheroez.oroq.family
 
 import android.content.Context
+import androidx.annotation.VisibleForTesting
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -79,15 +80,31 @@ class FamilyStore(context: Context) {
         }
     }
 
-    /** Returns this device's key pair, generating and storing one on first use. */
+    /**
+     * Returns this device's key pair, generating and storing one on first use.
+     *
+     * The private keyset is sealed at rest with [KeyVault] (hardware-backed
+     * envelope encryption) so it never sits on disk in the clear. A private
+     * keyset written before hardening is detected on read and re-sealed in
+     * place, so existing installs migrate transparently on next launch.
+     */
     suspend fun getOrCreateKeyPair(): FamilyKeyPair {
         val prefs = store.data.first()
-        val priv = prefs[Keys.PRIVATE_KEY]
+        val storedPriv = prefs[Keys.PRIVATE_KEY]
         val pub = prefs[Keys.PUBLIC_KEY]
-        if (priv != null && pub != null) return FamilyKeyPair(priv, pub)
+        if (storedPriv != null && pub != null) {
+            val opened = KeyVault.open(storedPriv)
+            if (opened != null) {
+                return FamilyKeyPair(opened.toString(Charsets.UTF_8), pub)
+            }
+            // Legacy plaintext keyset from a pre-hardening install: re-seal in
+            // place so it is never persisted unwrapped again, then return it.
+            store.edit { it[Keys.PRIVATE_KEY] = KeyVault.seal(storedPriv.toByteArray(Charsets.UTF_8)) }
+            return FamilyKeyPair(storedPriv, pub)
+        }
         val fresh = FamilyCrypto.generateKeyPair()
         store.edit {
-            it[Keys.PRIVATE_KEY] = fresh.privateKeysetB64
+            it[Keys.PRIVATE_KEY] = KeyVault.seal(fresh.privateKeysetB64.toByteArray(Charsets.UTF_8))
             it[Keys.PUBLIC_KEY] = fresh.publicKeysetB64
         }
         return fresh
@@ -136,6 +153,28 @@ class FamilyStore(context: Context) {
 
     /** Blocking read of the paired children — for use off the main thread only. */
     fun childrenBlocking(): List<PairedChild> = kotlinx.coroutines.runBlocking { getChildren() }
+
+    /** Test hook: seed an UNSEALED (pre-hardening) private keyset to exercise
+     *  the transparent re-seal migration in [getOrCreateKeyPair]. */
+    @VisibleForTesting
+    internal suspend fun seedLegacyPrivateKeyForTest(plaintextPrivB64: String, pubB64: String) {
+        store.edit {
+            it[Keys.PRIVATE_KEY] = plaintextPrivB64
+            it[Keys.PUBLIC_KEY] = pubB64
+        }
+    }
+
+    /** Test hook: read the raw stored private-key value exactly as persisted
+     *  (sealed blob in production), without unwrapping. */
+    @VisibleForTesting
+    internal suspend fun rawStoredPrivateKeyForTest(): String? = store.data.first()[Keys.PRIVATE_KEY]
+
+    /** Test hook: clear all persisted state (in-memory cache and disk) so each
+     *  test starts clean despite the process-wide DataStore singleton. */
+    @VisibleForTesting
+    internal suspend fun clearAllForTest() {
+        store.edit { it.clear() }
+    }
 
     private fun encodeChild(c: PairedChild): String =
         JSONObject().put("id", c.pairingId).put("label", c.label).put("pk", c.childPublicKeyB64).toString()
