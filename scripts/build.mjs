@@ -48,7 +48,9 @@ async function ensureEmptyDir(dirPath) {
 
 async function copyInto(targetDir) {
   const items = [
-    'assets',
+    // Only the icons — assets/store (Play screenshots) and assets/brand are
+    // repo collateral, not extension files, and must not ship in the package.
+    'assets/icons',
     'data',
     'site',
     'src',
