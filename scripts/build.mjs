@@ -52,14 +52,27 @@ async function copyInto(targetDir) {
     // repo collateral, not extension files, and must not ship in the package.
     'assets/icons',
     'data',
-    'site',
     'src',
     'managed_schema.json',
-    'LICENSE',
-    'README.md'
+    'LICENSE'
   ];
   for (const item of items) {
     await cp(path.join(ROOT, item), path.join(targetDir, item), { recursive: true });
+  }
+  // site/: only the support page (opened via chrome.runtime.getURL) and its
+  // direct dependencies ship in the extension. The rest of site/ is the
+  // marketing/Play-policy website — deployed to Cloudflare Pages, not here.
+  const siteFiles = [
+    'site/support.html',
+    'site/assets/styles.css',
+    'site/assets/site.js',
+    'site/assets/favicon-16.png',
+    'site/assets/favicon-32.png',
+    'site/assets/favicon.ico',
+    'site/assets/apple-touch-icon.png'
+  ];
+  for (const f of siteFiles) {
+    await cp(path.join(ROOT, f), path.join(targetDir, f));
   }
 }
 

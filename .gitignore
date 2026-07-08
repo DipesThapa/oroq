@@ -1,6 +1,9 @@
 node_modules
 .DS_Store
 dist
+
+# Chrome-generated when the extension is loaded unpacked — never commit/ship
+_metadata/
 docs/idea-to-store-flow.md
 .env
 .wrangler

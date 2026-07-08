@@ -2,34 +2,44 @@
 
 - Listing basics
   - Title: OroQ
-  - Short description: Privacy‑first web safety — blocklist, SafeSearch, simple heuristics; one-click Focus Mode for homework.
-  - Full description: Features, Focus Mode (Kid Homework Mode), AI captions/object detection (local-only mini model for NSFW/violence/weapons), permissions rationale, privacy statement, how to use.
+  - Short description: Privacy‑first web safety — blocklist, SafeSearch, on-device content scanning; one-click Focus Mode for homework.
+  - Full description: Features, Focus Mode (Kid Homework Mode), on-device image/content scanning (pixel heuristics for NSFW/violence/weapon signals — no cloud, no images leave the browser), permissions rationale, privacy statement, how to use.
   - Store copy snippets:
     - Line 1: “One-click homework Focus Mode; blocks social/gaming/streaming and leaves educational sites open.”
-    - Line 2: “Local-only AI scans catch NSFW/violence/weapons; privacy preserved.”
+    - Line 2: “On-device image and keyword scanning flags NSFW/violence/weapon signals — everything stays in your browser.”
   - Category: Productivity or Family
+  - IMPORTANT: do NOT claim a bundled "AI model" in listing copy — current build uses on-device pixel/keyword heuristics only (no ONNX/TFLite model shipped). Revisit copy if/when a real model is bundled.
 - Focus Mode (Kid Homework Mode)
   - One-click toggle blocks social, gaming, streaming/video; only educational sites allowed during session.
   - Session timer options: 30/45/60 minutes; countdown visible in popup and badge.
   - Default allowlist: Wikipedia, Khan Academy, .edu/.org domains; user can extend allowlist.
   - Optional PIN to end early; override prompt noted in UI.
   - SafeSearch enforced while active.
-- AI captions/object detection (local-only)
-  - Lightweight model (ONNX Runtime Web or TFLite WASM) for NSFW/violence/weapon classes; no images leave device.
-  - Runs on-demand against thumbnails/screenshots; cached per-URL; throttled to limit battery/CPU.
-  - If risky: trigger interstitial, log signal for override review, and optionally show a short caption.
-  - Messaging: “On-device AI scan — no data leaves your browser.”
+- On-device content scanning (local-only)
+  - Pixel-feature heuristics (skin-tone density, red/dark ratios, edge density) plus keyword analysis for NSFW/violence/weapon signals; no images or page content leave the device.
+  - Runs on-demand against page images; cached per-URL; throttled to limit battery/CPU.
+  - If risky: trigger interstitial and log signal for override review.
+  - Messaging: “On-device scan — no data leaves your browser.”
+  - Optional TF.js model hook exists in code but is NOT bundled; leave disabled unless model ships in-package (no remote code allowed by CWS policy).
 - Assets
   - Icons (128/48/16) — already present under `assets/icons/`
-  - Screenshots (1280×800 or 640×400): popup, interstitial, allowlist management, Focus Mode toggle with timer countdown, interstitial showing “on-device AI scan” note
+  - Screenshots (1280×800 or 640×400): popup, interstitial, allowlist management, Focus Mode toggle with timer countdown, interstitial showing “on-device scan” note
   - Optional promo video (YouTube)
 - Privacy & policy
   - Link `PRIVACY.md` (no data collection; storage for settings only)
   - No remote servers; on‑device processing
-- Manifest & permissions
-  - `storage` and `declarativeNetRequest` only
+- Manifest & permissions (must match `manifest.json`)
+  - Actual permissions: `storage`, `declarativeNetRequest`, `tabs`, `alarms`, `privacy`
+  - Dashboard justifications (paste into CWS "Privacy practices" tab):
+    - `storage`: Save user settings, allowlist/blocklist, PIN hash, and encrypted override logs locally. No data leaves the device.
+    - `declarativeNetRequest`: Block harmful domains and redirect search engines to SafeSearch without reading request contents.
+    - `tabs`: Read the active tab's URL to show block status in the popup and apply Focus Mode rules to open tabs. No browsing history is collected or transmitted.
+    - `alarms`: Run the Focus Mode countdown timer and periodic rule refresh reliably in the MV3 service worker.
+    - `privacy`: Enforce SafeSearch at the browser level (chrome.privacy.services.safeBrowsing / websites settings) so children cannot bypass it via search settings.
+  - Single purpose statement: "Family web-safety filtering: blocks harmful sites, enforces SafeSearch, and provides a supervised homework Focus Mode."
+  - Remote code: NO (all scripts bundled; no eval, no CDN scripts).
   - Content scripts restricted to `http/https` matches
-  - Web-accessible resources limited to HTTPS contexts; no localhost/LAN
+  - Web-accessible resources limited to HTTPS contexts; no localhost/LAN; no dead paths (model/* removed)
 - Privacy: override logs encrypted at rest (AES-GCM) and exclude full URLs; HTTPS-only alerts
 - QA scenarios
   - Toggle enabled ON/OFF from popup
@@ -43,7 +53,7 @@
   - Edit allowlist during Focus Mode -> rules update without ending session
   - Multiple windows/tabs -> same session state; interstitial still appears on blocked domains
   - Focus duration dropdown -> persists selection; 2-minute test works; badge/countdown reflect chosen duration
-  - AI scan: mixed content pages (cartoons vs. real images), small thumbnails, low-light images; confirm local inference blocks NSFW/violence/weapons and SafeSearch/DNR still apply
+  - Image scan: mixed content pages (cartoons vs. real images), small thumbnails, low-light images; confirm on-device heuristics block NSFW/violence/weapon signals and SafeSearch/DNR still apply
 - Release process
   - Tag `vX.Y.Z` -> GitHub Release artifact via workflow
   - Upload the same zip to Chrome Web Store for review

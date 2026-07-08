@@ -22,12 +22,14 @@ Legend: 🖥️ VS Code / Claude Code · 🌐 Claude in Chrome (you click final)
   ```
   Existing suite must stay green (nothing there touches the new keystore path).
 
-- [ ] **A3. Run instrumented tests on a device/emulator** 🖥️
+- [x] **A3. Run instrumented tests on a device/emulator** 🖥️ — ✅ DONE 2026-07-04
   ```bash
   cd android && ./gradlew connectedDebugAndroidTest
   ```
   Proves the keyset hardening: `KeyVaultTest` + `FamilyStorePrivateKeyTest` pass.
   This is the go/no-go gate for the security change — do not ship without it.
+  Evidence: 16/16 green on Pixel 7 (AVD, API 16-emu) at 15:48, exit code 0 —
+  `android/app/build/outputs/androidTest-results/connected/debug/`.
 
 - [ ] **A4. Manual on-device sanity** 👤
   Fresh install → generate a pair → relaunch → confirm a synced summary still
@@ -80,24 +82,27 @@ Reference: `docs/RELEASE_CONSOLE_RUNBOOK.md` (full click-by-click + guardrails).
   ready turns a multi-week rejection into a one-pass approval.
   See `docs/FGS_SPECIAL_USE_JUSTIFICATION.md` §4.
 
-- [ ] **C3. Confirm store images** 👤
-  Icon 512, feature graphic 1024×500, 2–8 phone shots exist in
-  `assets/store/android/`. (Optional: re-shoot `09-device-detail.png`.)
+- [x] **C3. Confirm store images** 👤 — ✅ verified 2026-07-08
+  Icon 512×512, feature graphic 1024×500, and 9 phone shots (all 1080×2400)
+  present in `assets/store/android/`. (Optional: re-shoot `09-device-detail.png`.)
 
 ---
 
 ## Phase D — Build & upload the release
 
-- [ ] **D1. Ensure `android/keystore.properties` exists** 👤
-  Points at your release keystore (gitignored). Without it the release build is
-  unsigned. Back up the keystore + passwords somewhere safe — losing it is
+- [x] **D1. Ensure `android/keystore.properties` exists** 👤 — ✅ present, gitignored
+  (verified 2026-07-08: `keystore.properties` + `oroq-upload.jks` untracked by git).
+  Back up the keystore + passwords somewhere safe — losing it is
   unrecoverable once Play App Signing is enrolled with it.
 
-- [ ] **D2. Build the release AAB** 🖥️
+- [x] **D2. Build the release AAB** 🖥️ — ✅ DONE 2026-07-04 15:53
   ```bash
   cd android && ./gradlew bundleRelease
   # output: app/build/outputs/bundle/release/app-release.aab
   ```
+  Verified 2026-07-08: AAB is signed with the upload key (`META-INF/OROQ-UPL.RSA`)
+  and contains the hardened `KeyVault` class (built from the post-hardening tree;
+  the only later android commit is debug-only cleartext config, no release impact).
 
 - [ ] **D3. Upload to Internal testing** 🌐/👤
   Play Console → Testing → **Internal testing** → Create release → upload AAB.
