@@ -59,43 +59,6 @@
 <!-- ═══════════════════════════════════════ MAIN ═══ -->
 <main>
 
-<!-- ══════════════════════ ONBOARDING ══ -->
-<div id="sgOnboarding" hidden>
-  <div class="sg-view">
-    <div class="sg-view__icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
-      </svg>
-    </div>
-    <h2 class="sg-view__title">Welcome to OroQ</h2>
-    <p class="sg-view__body">Are you a parent setting up protection, or a child with an invite code?</p>
-    <div id="sgOnboardingHome" class="sg-view__actions">
-      <button id="onboardParentBtn" class="btn btn--primary" type="button">Set up as Parent</button>
-      <button id="onboardChildBtn" class="btn btn--ghost" type="button">I have an invite code</button>
-    </div>
-    <div id="sgOnboardingChild" class="sg-view__code-form" hidden>
-      <p class="sg-view__code-label">Enter your invite code</p>
-      <input id="inviteCodeInput" type="text" class="code-input" placeholder="e.g. A3F9B2K7" maxlength="8" autocomplete="off">
-      <button id="redeemInviteBtn" class="btn btn--primary" type="button">Join family</button>
-      <button id="onboardBackBtn" class="btn btn--ghost btn--sm" type="button">Back</button>
-      <small id="inviteRedeemMsg" class="message"></small>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════ CHILD VIEW ══ -->
-<div id="sgChildView" hidden>
-  <div class="sg-view">
-    <div class="sg-view__icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z"/>
-      </svg>
-    </div>
-    <h2 class="sg-view__title">Your device is protected</h2>
-    <p class="sg-view__body">Managed by your parent. Adult content, phishing, and harmful sites are blocked.</p>
-    <p class="sg-view__hint">If a site is blocked and you need access, tap "Request parent approval" on the blocked page.</p>
-  </div>
-</div>
 
   <!-- ─────────────────────── PARENT / CLASSROOM CARD ─── -->
   <section class="card" id="cardParent" hidden>
@@ -278,8 +241,8 @@
           <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"/></svg>
         </div>
         <div class="panel-row__body">
-          <span class="panel-row__title">Device pairing</span>
-          <span id="parentPairingStatus" class="panel-row__meta">Loading…</span>
+          <span class="panel-row__title">One-time unlock PIN</span>
+          <span id="parentPairingStatus" class="panel-row__meta">Generate single-use codes</span>
         </div>
         <button id="parentPairingBtn" class="btn btn--ghost btn--xs" type="button">Manage</button>
       </div>
@@ -491,56 +454,12 @@
     </div>
 
     <div class="subsection" id="parentPairingSection" hidden>
-      <h3 class="subsection__title">Device pairing</h3>
-      <p class="subsection__desc">Set the same passphrase on both parent and child devices to link them via the cloud.</p>
-
-      <!-- Device role toggle -->
-      <div class="inline-card">
-        <label class="toggle">
-          <input id="isParentDeviceToggle" type="checkbox">
-          <span class="toggle__switch" aria-hidden="true"></span>
-          <span class="toggle__content">
-            <span class="toggle__label">This is the parent device</span>
-            <span class="toggle__desc">Turn ON on the parent's device. Leave OFF on the child's device.</span>
-          </span>
-        </label>
-      </div>
-
-      <!-- Pending child approvals (parent device only) -->
-      <div class="inline-card" id="pendingApprovalsCard" style="display:none;">
-        <div class="inline-card__header">
-          <div class="inline-card__icon inline-card__icon--amber">
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/></svg>
-          </div>
-          <h3 class="inline-card__title">Pending Approvals</h3>
-        </div>
-        <ul id="pendingApprovalsList" class="approval-list"></ul>
-        <p id="pendingApprovalsEmpty" class="empty-state">No pending requests from your child.</p>
-      </div>
-
-      <!-- ── Passphrase ── -->
-      <div class="inline-card">
-        <div class="inline-card__header">
-          <div class="inline-card__icon inline-card__icon--purple">
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-          </div>
-          <h3 class="inline-card__title">Family passphrase</h3>
-        </div>
-        <p class="inline-card__desc">Set the same passphrase on both parent and child devices to link them securely.</p>
-        <div class="field field--stack">
-          <label class="field__label" for="familyPassphrase">Passphrase</label>
-          <input id="familyPassphrase" type="password" placeholder="Choose a shared passphrase" autocomplete="off">
-        </div>
-        <div class="actions actions--wrap">
-          <button id="savePassphrase" class="btn btn--primary" type="button">Save passphrase</button>
-          <button id="showPassphrase" class="btn btn--ghost btn--sm" type="button">Show</button>
-        </div>
-        <small id="passphraseMessage" class="message"></small>
-      </div>
+      <h3 class="subsection__title">One-time unlock PIN</h3>
+      <p class="subsection__desc">Create single-use PIN codes to temporarily unlock a blocked site on this device. PINs expire automatically and work only once.</p>
 
 
       <!-- ── Temp PIN (parent only) ── -->
-      <div class="inline-card" id="tempPinCard" hidden>
+      <div class="inline-card" id="tempPinCard">
 
         <div class="inline-card__header">
           <div class="inline-card__icon inline-card__icon--green">
@@ -589,12 +508,6 @@
             <button id="tempPinCopyBtn" class="btn btn--ghost btn--xs" type="button">Copy</button>
           </div>
           <span id="tempPinVal" class="pin-display__value"></span>
-          <div class="pin-display__divider"></div>
-          <div class="pin-display__send-row">
-            <p class="pin-display__send-label">Send directly to child's extension</p>
-            <button id="tempPinSendBtn" class="btn btn--primary btn--sm" type="button">Send to child</button>
-          </div>
-          <small id="tempPinSendMsg" class="message"></small>
         </div>
 
         <!-- Active PINs list -->
@@ -603,28 +516,6 @@
           <ul id="tempPinItems" class="pin-list"></ul>
         </div>
 
-      </div>
-
-      <!-- ── Invite child device (parent only) ── -->
-      <div class="inline-card" id="inviteChildCard" hidden>
-        <div class="inline-card__header">
-          <div class="inline-card__icon inline-card__icon--blue">
-            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/></svg>
-          </div>
-          <h3 class="inline-card__title">Invite a child device</h3>
-        </div>
-        <p class="inline-card__desc">Generate a one-time code. Your child enters it in their extension to join this family.</p>
-        <div class="actions">
-          <button id="generateInviteBtn" class="btn btn--primary" type="button">Generate invite code</button>
-        </div>
-        <div id="inviteCodeOut" hidden>
-          <p class="section-label" style="margin-bottom:8px;">Share with your child (expires in 24 hours)</p>
-          <div class="invite-code-display">
-            <strong id="inviteCodeVal" class="invite-code-display__value"></strong>
-            <button id="inviteCodeCopyBtn" class="btn btn--ghost btn--sm" type="button">Copy</button>
-          </div>
-        </div>
-        <small id="inviteCodeMsg" class="message"></small>
       </div>
 
     </div>

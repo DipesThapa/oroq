@@ -61,8 +61,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   // false positives from comments, video descriptions, or thumbnails of innocent content.
   const RISKY_MEDIA_HOSTS = ['youtube.com','youtu.be','music.youtube.com','instagram.com','cdninstagram.com','twitter.com','x.com','tiktok.com','facebook.com','fbcdn.net','messenger.com','snapchat.com','reddit.com','discord.com','pinimg.com','spotify.com','soundcloud.com','vimeo.com'];
   // Leave empty to disable TF.js when the file is not bundled; prevents CSP fetch errors
-  const TFJS_SRC = ''; // set to chrome.runtime.getURL('model/nsfw/tf.min.js') if bundled
-  const NSFW_MODEL_PATH = 'model/nsfw/model.json'; // optional bundled model; place under /model/nsfw/
   const TF_NSWF_CONF_THRESHOLD = 0.9; // only blur when TF.js model is very confident
   const PHISHING_BRANDS = [
     { name: 'PayPal', keywords: ['paypal','pay pal'], domains: ['paypal.com', 'paypalobjects.com'] },
@@ -275,11 +273,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   let phishObserver = null;
   let phishObserverTimer = null;
   const visionCache = new Map(); // local-only image inference cache
-  let tfImportPromise = null;
-  let nsfwModelPromise = null;
-  let tfLib = null;
-  let nsfwModel = null;
-  const tfDetectionCache = new Map();
   const LOG_KEY_BYTES = 32;
   let nudgeConfig = { enabled: NUDGE_DEFAULT_ENABLED, snoozeUntil: 0, dailyCount: 0, lastNudgeAt: 0 };
   let nudgeCooldownUntil = 0;
@@ -1022,7 +1015,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       if (key) visionCache.set(key, null);
       return null;
     }
-    const detections = [...(classifyWithTf(img) || [])];
+    const detections = [];
     const nsfwConfidence = clamp01((features.skinRatio - 0.18) / 0.28);
     if (nsfwConfidence > 0.35){
       detections.push({
@@ -1050,89 +1043,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const result = { detections, features };
     if (key) visionCache.set(key, result);
     return result;
-  }
-
-  async function loadTf(){
-    if (tfImportPromise) return tfImportPromise;
-    tfImportPromise = (async ()=>{
-      if (typeof window.tf !== 'undefined') return window.tf;
-      if (!TFJS_SRC){
-        return null;
-      }
-      try{
-        await import(TFJS_SRC);
-        return window.tf || null;
-      }catch(_e){
-        return null;
-      }
-    })();
-    return tfImportPromise;
-  }
-
-  async function loadNsfwModel(){
-    if (nsfwModelPromise) return nsfwModelPromise;
-    nsfwModelPromise = (async ()=>{
-      const tf = await loadTf();
-      if (!tf) return null;
-      try{
-        const url = chrome.runtime.getURL(NSFW_MODEL_PATH);
-        const model = await tf.loadGraphModel(url);
-        return model;
-      }catch(_e){
-        return null;
-      }
-    })();
-    return nsfwModelPromise;
-  }
-
-  async function ensureTfReady(){
-    if (tfLib && nsfwModel) return true;
-    tfLib = await loadTf();
-    if (!tfLib) return false;
-    nsfwModel = await loadNsfwModel();
-    return Boolean(tfLib && nsfwModel);
-  }
-
-  function classifyWithTf(img){
-    if (!TFJS_SRC) return [];
-    try{
-      if (!img || !img.naturalWidth || !img.naturalHeight) return [];
-      const w = img.naturalWidth;
-      const h = img.naturalHeight;
-      if (w < 60 || h < 60) return [];
-      const key = img.currentSrc || img.src || '';
-      if (!key) return [];
-      if (tfDetectionCache.has(key)){
-        const det = tfDetectionCache.get(key);
-        return Array.isArray(det) ? det : [];
-      }
-      // kick off load; if not ready, skip for now
-      ensureTfReady().then((ready)=>{
-        if (!ready) return;
-        try{
-          const input = tfLib.tidy(()=>{
-            const tensor = tfLib.browser.fromPixels(img);
-            const resized = tfLib.image.resizeBilinear(tensor, [224, 224], true);
-            const normalized = resized.div(255);
-            return normalized.expandDims(0);
-          });
-          const logits = nsfwModel.predict(input);
-          const probs = logits.dataSync ? logits.dataSync() : [];
-          tfLib.dispose([input, logits]);
-          const nsfwProb = Array.from(probs || [])[1] || 0;
-          if (nsfwProb > 0){
-            tfDetectionCache.set(key, [{ label: 'nsfw', confidence: clamp01(nsfwProb), meta: 'TF.js model' }]);
-          } else {
-            tfDetectionCache.set(key, []);
-          }
-        }catch(_e){
-          tfDetectionCache.set(key, []);
-        }
-      });
-      return [];
-    }catch(_e){
-      return [];
-    }
   }
 
   function sampleImageFeatures(img){
@@ -1482,9 +1392,9 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
         return `${d.label.toUpperCase()}${conf ? ` (${conf})` : ''}${d.meta ? ` — ${d.meta}` : ''}`;
       }).filter(Boolean);
       signals.push({
-        id: 'visual-ai',
-        icon: 'AI',
-        label: `On-device AI flagged: ${unique.join(', ')}`,
+        id: 'visual-scan',
+        icon: 'SCAN',
+        label: `On-device image scan flagged: ${unique.join(', ')}`,
         detail: detailParts.join('; '),
         weight: Math.max(...visualEval.aiDetections.map((d)=>{
           return clamp01(d.confidence || 0) * 10 + 2;
@@ -3264,7 +3174,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const hostName = getHost();
     const fallbackSignals = [
       { id: 'host', icon: 'URL', label: 'Site', detail: hostName || 'Unknown host', weight: 0 },
-      { id: 'trigger', icon: 'AI', label: 'Trigger', detail: String(reason || 'Policy enforcement'), weight: 0 },
+      { id: 'trigger', icon: 'SYS', label: 'Trigger', detail: String(reason || 'Policy enforcement'), weight: 0 },
       { id: 'tip', icon: 'TIP', label: 'Next steps', detail: 'Review allowlist options with a safeguarding lead if this needs access.', weight: 0 }
     ];
     const displaySignals = (signals.length ? signals : fallbackSignals).slice(0, 5);
@@ -3611,72 +3521,21 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     requestBtn.textContent = 'Request access';
     requestBtn.addEventListener('click', ()=>{
       requestBtn.disabled = true;
-      requestBtn.textContent = 'Sending…';
+      requestBtn.textContent = 'Sending\u2026';
       requestStatus.style.display = 'block';
       requestStatus.innerHTML = '';
-
-      let pollInterval = null;
-
-      const startPolling = (requestId) => {
-        try { sessionStorage.setItem('sg-pending-req:' + getHost(), requestId); } catch(_e) {}
-        requestBtn.disabled = true;
-        requestBtn.textContent = '✓ Request sent';
-        requestStatus.style.display = 'block';
-        requestStatus.textContent = 'Waiting for parent to approve…';
-        pollInterval = setInterval(() => {
-          chrome.runtime.sendMessage({ type: 'sg-fb-check-approval', requestId }, (r) => {
-            if (chrome.runtime.lastError || !r) return;
-            if (r.status === 'approved') {
-              clearInterval(pollInterval);
-              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
-              requestStatus.textContent = '✅ Approved! Reloading…';
-              try { sessionStorage.setItem('sg-ov:' + getHost(), '1'); } catch(_e) {}
-              chrome.runtime.sendMessage({ type: 'sg-parent-approved', domain: getHost() }, () => {
-                location.reload();
-              });
-            } else if (r.status === 'denied') {
-              clearInterval(pollInterval);
-              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
-              requestStatus.textContent = '❌ Request denied by parent.';
-              requestBtn.disabled = false;
-              requestBtn.textContent = 'Request access';
-            } else if (r.status === 'expired') {
-              clearInterval(pollInterval);
-              try { sessionStorage.removeItem('sg-pending-req:' + getHost()); } catch(_e) {}
-              requestStatus.textContent = 'Request expired. Try again.';
-              requestBtn.disabled = false;
-              requestBtn.textContent = 'Request access';
-            }
-          });
-        }, 15000);
-      };
-
-      // Resume polling if a request was already sent before reload
-      try {
-        const pendingId = sessionStorage.getItem('sg-pending-req:' + getHost());
-        if (pendingId) { startPolling(pendingId); return; }
-      } catch(_e) {}
-
-      chrome.runtime.sendMessage({ type: 'sg-fb-send-request', domain: getHost() }, (resp) => {
-        if (chrome.runtime.lastError || !resp) {
+      chrome.runtime.sendMessage({ type: 'sg-access-request', host: getHost(), url: location.href }, (resp) => {
+        if (chrome.runtime.lastError || !resp || !resp.ok) {
           requestStatus.textContent = 'Could not reach OroQ. Try reloading the page.';
           requestBtn.disabled = false;
           requestBtn.textContent = 'Request access';
           return;
         }
-        if (resp.error === 'no-passphrase') {
-          requestStatus.textContent = 'Your device is not linked to a family account. Ask your parent to set up OroQ and share an invite code.';
-          requestBtn.disabled = false;
-          requestBtn.textContent = 'Request access';
-          return;
-        }
-        if (resp.error === 'firebase-error') {
-          requestStatus.textContent = 'Could not send request. Check your internet connection.';
-          requestBtn.disabled = false;
-          requestBtn.textContent = 'Request access';
-          return;
-        }
-        if (resp.requestId) { startPolling(resp.requestId); }
+        requestBtn.textContent = '\u2713 Request sent';
+        const code = resp.request && resp.request.code ? resp.request.code : '';
+        requestStatus.textContent = code
+          ? 'Request sent. Ask a parent to approve it in the OroQ popup (code ' + code + ').'
+          : 'Request sent. Ask a parent to approve it in the OroQ popup.';
       });
     });
     actions.appendChild(requestBtn);
@@ -3708,14 +3567,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     pinEntry.appendChild(pinForm);
     pinEntry.appendChild(tpMsg);
     actions.appendChild(pinEntry);
-    // Auto-fill if parent sent a PIN via Firebase
-    chrome.runtime.sendMessage({ type: 'sg-get-sent-pins' }, (resp) => {
-      if (chrome.runtime.lastError || !resp || !resp.pins || !resp.pins.length) return;
-      pinToggle.style.display = 'none';
-      pinForm.style.display = 'flex';
-      tpInput.value = resp.pins[0];
-      tpMsg.textContent = '📨 Your parent sent you a PIN — click Unlock to continue.';
-    });
 
     pinToggle.addEventListener('click', () => {
       const visible = pinForm.style.display !== 'none';
@@ -3746,11 +3597,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     });
     tpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tpSubmit.click(); });
 
-    // Auto-resume polling if page was reloaded while waiting for approval
-    try {
-      const pendingId = sessionStorage.getItem('sg-pending-req:' + getHost());
-      if (pendingId) { requestBtn.click(); }
-    } catch(_e) {}
 
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;

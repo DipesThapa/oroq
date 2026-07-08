@@ -107,7 +107,6 @@ const parentReportBtn = document.getElementById('parentReportBtn');
 const parentAccessBtn = document.getElementById('parentAccessBtn');
 const parentPairingBtn = document.getElementById('parentPairingBtn');
 const parentTipBtn = document.getElementById('parentTipBtn');
-const parentPairingRowEl = document.getElementById('parentPairingRow');
 const parentAlertsSectionEl = document.getElementById('parentAlertsSection');
 const parentOverrideSectionEl = document.getElementById('parentOverrides');
 const parentProfilesSectionEl = document.getElementById('parentProfilesSection');
@@ -121,12 +120,6 @@ const parentConversationSectionEl = document.getElementById('parentConversationS
 const parentReportSectionEl = document.getElementById('parentReportSection');
 const parentAccessSectionEl = document.getElementById('parentAccessSection');
 const parentPairingSectionEl = document.getElementById('parentPairingSection');
-const pendingApprovalsCardEl = document.getElementById('pendingApprovalsCard');
-const pendingApprovalsListEl = document.getElementById('pendingApprovalsList');
-const sgOnboardingEl = document.getElementById('sgOnboarding');
-const sgChildViewEl = document.getElementById('sgChildView');
-const inviteChildCardEl = document.getElementById('inviteChildCard');
-const tempPinCardEl = document.getElementById('tempPinCard');
 const genTempPinBtn = document.getElementById('genTempPinBtn');
 const tempPinExpiryEl = document.getElementById('tempPinExpiry');
 const tempPinCustomWrapEl = document.getElementById('tempPinCustomWrap');
@@ -135,12 +128,9 @@ const tempPinCustomUnitEl = document.getElementById('tempPinCustomUnit');
 const tempPinOutEl = document.getElementById('tempPinOut');
 const tempPinValEl = document.getElementById('tempPinVal');
 const tempPinCopyBtn = document.getElementById('tempPinCopyBtn');
-const tempPinSendBtn = document.getElementById('tempPinSendBtn');
-const tempPinSendMsgEl = document.getElementById('tempPinSendMsg');
 const tempPinListEl = document.getElementById('tempPinList');
 const tempPinItemsEl = document.getElementById('tempPinItems');
 const tempPinMsgEl = document.getElementById('tempPinMsg');
-const tabNavEl = document.querySelector('.tab-nav');
 const parentTipSectionEl = document.getElementById('parentTipSection');
 const parentCardEl = document.getElementById('cardParent');
 const parentPanelEl = document.querySelector('.parent-panel');
@@ -150,11 +140,6 @@ const accessRequestMessageEl = document.getElementById('accessRequestMessage');
 const accessRequestClearBtn = document.getElementById('accessRequestClear');
 const tempAllowListEl = document.getElementById('tempAllowList');
 const tempAllowMessageEl = document.getElementById('tempAllowMessage');
-const isParentDeviceToggleEl = document.getElementById('isParentDeviceToggle');
-const familyPassphraseEl = document.getElementById('familyPassphrase');
-const savePassphraseBtn = document.getElementById('savePassphrase');
-const showPassphraseBtn = document.getElementById('showPassphrase');
-const passphraseMessageEl = document.getElementById('passphraseMessage');
 const approverCardEl = document.getElementById('cardApprover');
 const focusToggleEl = document.getElementById('focusToggle');
 const focusDurationSelect = document.getElementById('focusDurationSelect');
@@ -241,7 +226,6 @@ const pinModalCancel = document.getElementById('pinModalCancel');
 const pinModalSubmit = document.getElementById('pinModalSubmit');
 const THEME_KEY = 'themePreference';
 const TOUR_PENDING_KEY = 'onboardingPending';
-const PAIRING_UI_ENABLED = true;
 const prefersDarkQuery = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 const cachedThemePreference = (() => {
   try {
@@ -378,17 +362,6 @@ if (parentPairingSectionEl){
 }
 if (parentTipSectionEl){
   parentTipSectionEl.dataset.expanded = parentTipSectionEl.dataset.expanded || '0';
-}
-
-if (!PAIRING_UI_ENABLED){
-  if (parentPairingRowEl) parentPairingRowEl.hidden = true;
-  if (parentPairingSectionEl){
-    parentPairingSectionEl.hidden = true;
-    parentPairingSectionEl.dataset.expanded = '0';
-    parentPairingSectionEl.classList.remove('parent-section--active');
-  }
-} else {
-  if (parentPairingRowEl) parentPairingRowEl.hidden = false;
 }
 
 if (profileApplyBtn) profileApplyBtn.disabled = true;
@@ -1176,48 +1149,7 @@ function expandAccessSection(){
   scrollToCard(parentAccessSectionEl);
 }
 
-function renderPendingApprovals(pending) {
-  if (!pendingApprovalsListEl) return;
-  const emptyEl = document.getElementById('pendingApprovalsEmpty');
-  pendingApprovalsListEl.innerHTML = '';
-  if (!pending || pending.length === 0) {
-    if (emptyEl) emptyEl.style.display = '';
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = 'none';
-  if (pendingApprovalsCardEl) pendingApprovalsCardEl.style.display = '';
-  pending.forEach(req => {
-    const li = document.createElement('li');
-    li.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);gap:8px;';
-    li.innerHTML = `
-      <span style="font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${req.domain || 'Unknown site'}</span>
-      <button class="sg-approve-btn" data-id="${req._id}" style="background:#22c55e;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">Approve</button>
-      <button class="sg-deny-btn" data-id="${req._id}" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;">Deny</button>
-    `;
-    pendingApprovalsListEl.appendChild(li);
-  });
-  pendingApprovalsListEl.querySelectorAll('.sg-approve-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      btn.disabled = true;
-      chrome.runtime.sendMessage({ type: 'sg-fb-approve', requestId: id }, () => {
-        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
-      });
-    });
-  });
-  pendingApprovalsListEl.querySelectorAll('.sg-deny-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.dataset.id;
-      btn.disabled = true;
-      chrome.runtime.sendMessage({ type: 'sg-fb-deny', requestId: id }, () => {
-        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
-      });
-    });
-  });
-}
-
 function expandPairingSection(){
-  if (!PAIRING_UI_ENABLED) return;
   if (!parentPairingSectionEl) return;
   collapseParentSections('pairing');
   parentPairingSectionEl.dataset.expanded = '1';
@@ -1311,7 +1243,6 @@ if (tabHomeBtn){
 if (parentModeBtn){
   parentModeBtn.addEventListener('click', ()=>{
     setParentCardMode('parent');
-    chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
     sgTrack('tab_viewed', { tab: 'parent' });
   });
 }
@@ -3240,15 +3171,12 @@ if (parentAccessBtn){
     expandAccessSection();
   });
 }
-
 if (parentPairingBtn){
-  if (PAIRING_UI_ENABLED){
-    parentPairingBtn.addEventListener('click', ()=>{
-      ensureParentCardVisible();
-      scrollToCard(parentCardEl);
-      expandPairingSection();
-    });
-  }
+  parentPairingBtn.addEventListener('click', ()=>{
+    ensureParentCardVisible();
+    scrollToCard(parentCardEl);
+    expandPairingSection();
+  });
 }
 
 if (parentTipBtn){
@@ -3306,50 +3234,6 @@ if (accessRequestClearBtn){
   });
 }
 
-// ── Family passphrase (no-relay approval) ──────────────────────────────────
-
-function setPassphraseMessage(text, tone = 'muted'){
-  if (!passphraseMessageEl) return;
-  passphraseMessageEl.textContent = text;
-  passphraseMessageEl.classList.remove('message--success','message--error');
-  if (tone === 'success') passphraseMessageEl.classList.add('message--success');
-  else if (tone === 'error') passphraseMessageEl.classList.add('message--error');
-}
-
-// ── Role-based UI ──────────────────────────────────────────────────────────
-
-function showOnboarding() {
-  if (sgOnboardingEl) sgOnboardingEl.hidden = false;
-  if (sgChildViewEl) sgChildViewEl.hidden = true;
-  if (tabNavEl) tabNavEl.style.display = 'none';
-  document.querySelectorAll('main > section, main > .card').forEach(el => { el.hidden = true; });
-}
-
-function showChildUI() {
-  if (sgOnboardingEl) sgOnboardingEl.hidden = true;
-  if (sgChildViewEl) sgChildViewEl.hidden = false;
-  if (tabNavEl) tabNavEl.style.display = 'none';
-  document.querySelectorAll('main > section, main > .card').forEach(el => { el.hidden = true; });
-}
-
-function showParentUI() {
-  if (sgOnboardingEl) sgOnboardingEl.hidden = true;
-  if (sgChildViewEl) sgChildViewEl.hidden = true;
-  if (tabNavEl) tabNavEl.style.display = '';
-  // don't touch section visibility — existing tab logic handles it
-}
-
-// Check role on popup open
-chrome.storage.local.get({ deviceRole: null }, ({ deviceRole }) => {
-  if (deviceRole === 'child') {
-    showChildUI();
-  } else if (deviceRole === 'parent') {
-    showParentUI();
-  } else {
-    showOnboarding();
-  }
-});
-
 function renderTempPins() {
   chrome.runtime.sendMessage({ type: 'sg-get-temp-pins' }, (resp) => {
     if (chrome.runtime.lastError || !resp) return;
@@ -3379,131 +3263,9 @@ function renderTempPins() {
   });
 }
 
-function applyParentDeviceUI(isParent) {
-  if (pendingApprovalsCardEl) pendingApprovalsCardEl.style.display = isParent ? '' : 'none';
-  if (inviteChildCardEl) inviteChildCardEl.hidden = !isParent;
-  if (tempPinCardEl) tempPinCardEl.hidden = !isParent;
-  if (isParent) renderTempPins();
-}
+// Render any active one-time PINs on open
+renderTempPins();
 
-// Load saved passphrase + parent device role on open
-chrome.storage.local.get({ familyPassphrase: '', isParentDevice: false, deviceRole: null }, (cfg)=>{
-  if (cfg.familyPassphrase && familyPassphraseEl){
-    familyPassphraseEl.placeholder = '●●●●●●●● (saved)';
-  }
-  if (isParentDeviceToggleEl) isParentDeviceToggleEl.checked = Boolean(cfg.isParentDevice);
-  applyParentDeviceUI(Boolean(cfg.isParentDevice));
-  if (cfg.isParentDevice){
-    chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
-  }
-  if (!cfg.deviceRole) { /* onboarding already shown above */ }
-  else if (cfg.deviceRole === 'parent') chrome.storage.local.set({ isParentDevice: true });
-});
-
-if (isParentDeviceToggleEl){
-  isParentDeviceToggleEl.addEventListener('change', ()=>{
-    const isParent = isParentDeviceToggleEl.checked;
-    chrome.storage.local.set({ isParentDevice: isParent }, ()=>{
-      applyParentDeviceUI(isParent);
-      if (isParent){
-        chrome.runtime.sendMessage({ type: 'sg-fb-get-pending' }, r => renderPendingApprovals(r && r.pending));
-      }
-    });
-  });
-}
-
-// Onboarding handlers
-const onboardParentBtnEl = document.getElementById('onboardParentBtn');
-const onboardChildBtnEl = document.getElementById('onboardChildBtn');
-const onboardBackBtnEl = document.getElementById('onboardBackBtn');
-const redeemInviteBtnEl = document.getElementById('redeemInviteBtn');
-const inviteCodeInputEl = document.getElementById('inviteCodeInput');
-const inviteRedeemMsgEl = document.getElementById('inviteRedeemMsg');
-
-if (onboardParentBtnEl) {
-  onboardParentBtnEl.addEventListener('click', () => {
-    chrome.storage.local.set({ deviceRole: 'parent', isParentDevice: true }, () => {
-      showParentUI();
-      applyParentDeviceUI(true);
-      if (isParentDeviceToggleEl) isParentDeviceToggleEl.checked = true;
-    });
-  });
-}
-
-if (onboardChildBtnEl) {
-  onboardChildBtnEl.addEventListener('click', () => {
-    document.getElementById('sgOnboardingHome').style.display = 'none';
-    const childPanel = document.getElementById('sgOnboardingChild');
-    childPanel.removeAttribute('hidden');
-    childPanel.style.display = 'flex';
-    childPanel.style.flexDirection = 'column';
-  });
-}
-
-if (onboardBackBtnEl) {
-  onboardBackBtnEl.addEventListener('click', () => {
-    document.getElementById('sgOnboardingHome').style.display = 'flex';
-    const childPanel = document.getElementById('sgOnboardingChild');
-    childPanel.setAttribute('hidden', '');
-    childPanel.style.display = 'none';
-  });
-}
-
-if (redeemInviteBtnEl) {
-  redeemInviteBtnEl.addEventListener('click', () => {
-    const code = inviteCodeInputEl ? inviteCodeInputEl.value.trim().toUpperCase() : '';
-    if (!code || code.length < 6) {
-      if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = 'Enter a valid invite code.'; inviteRedeemMsgEl.className = 'message message--error'; }
-      return;
-    }
-    if (redeemInviteBtnEl) { redeemInviteBtnEl.disabled = true; redeemInviteBtnEl.textContent = 'Joining\u2026'; }
-    chrome.runtime.sendMessage({ type: 'sg-redeem-invite', code }, (resp) => {
-      if (resp && resp.ok) {
-        if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = '\u2713 Joined! Your device is now protected.'; inviteRedeemMsgEl.className = 'message message--success'; }
-        setTimeout(() => showChildUI(), 1200);
-      } else {
-        if (inviteRedeemMsgEl) { inviteRedeemMsgEl.textContent = (resp && resp.error) || 'Failed. Check the code and try again.'; inviteRedeemMsgEl.className = 'message message--error'; }
-        if (redeemInviteBtnEl) { redeemInviteBtnEl.disabled = false; redeemInviteBtnEl.textContent = 'Join family'; }
-      }
-    });
-  });
-}
-
-// Generate invite code (parent)
-const generateInviteBtnEl = document.getElementById('generateInviteBtn');
-const inviteCodeOutEl = document.getElementById('inviteCodeOut');
-const inviteCodeValEl = document.getElementById('inviteCodeVal');
-const inviteCodeCopyBtnEl = document.getElementById('inviteCodeCopyBtn');
-const inviteCodeMsgEl = document.getElementById('inviteCodeMsg');
-
-if (generateInviteBtnEl) {
-  generateInviteBtnEl.addEventListener('click', () => {
-    generateInviteBtnEl.disabled = true;
-    generateInviteBtnEl.textContent = 'Generating\u2026';
-    chrome.runtime.sendMessage({ type: 'sg-generate-invite' }, (resp) => {
-      generateInviteBtnEl.disabled = false;
-      generateInviteBtnEl.textContent = 'Generate invite code';
-      if (resp && resp.ok) {
-        if (inviteCodeValEl) inviteCodeValEl.textContent = resp.code;
-        if (inviteCodeOutEl) inviteCodeOutEl.hidden = false;
-        if (inviteCodeMsgEl) { inviteCodeMsgEl.textContent = 'Code valid for 24 hours.'; inviteCodeMsgEl.className = 'message message--success'; }
-      } else {
-        if (inviteCodeMsgEl) { inviteCodeMsgEl.textContent = (resp && resp.error) || 'Failed to generate code.'; inviteCodeMsgEl.className = 'message message--error'; }
-      }
-    });
-  });
-}
-
-if (inviteCodeCopyBtnEl) {
-  inviteCodeCopyBtnEl.addEventListener('click', () => {
-    const val = inviteCodeValEl ? inviteCodeValEl.textContent : '';
-    if (val) {
-      navigator.clipboard.writeText(val).catch(() => {});
-      inviteCodeCopyBtnEl.textContent = 'Copied!';
-      setTimeout(() => { inviteCodeCopyBtnEl.textContent = 'Copy'; }, 2000);
-    }
-  });
-}
 
 if (tempPinExpiryEl) {
   tempPinExpiryEl.addEventListener('change', () => {
@@ -3531,7 +3293,6 @@ if (genTempPinBtn) {
       if (resp && resp.pin) {
         if (tempPinValEl) tempPinValEl.textContent = resp.pin;
         if (tempPinOutEl) tempPinOutEl.hidden = false;
-        if (tempPinSendMsgEl) tempPinSendMsgEl.textContent = '';
         const isCustom = tempPinExpiryEl && tempPinExpiryEl.value === 'custom';
         const label = isCustom
           ? `${minutes} minute${minutes !== 1 ? 's' : ''}`
@@ -3553,44 +3314,6 @@ if (tempPinCopyBtn) {
       tempPinCopyBtn.textContent = 'Copied!';
       setTimeout(() => { tempPinCopyBtn.textContent = 'Copy'; }, 2000);
     }
-  });
-}
-
-if (tempPinSendBtn) {
-  tempPinSendBtn.addEventListener('click', () => {
-    const pin = tempPinValEl ? tempPinValEl.textContent : '';
-    if (!pin) return;
-    tempPinSendBtn.disabled = true;
-    tempPinSendBtn.textContent = 'Sending…';
-    chrome.runtime.sendMessage({ type: 'sg-send-pin-to-child', pin }, (resp) => {
-      tempPinSendBtn.disabled = false;
-      tempPinSendBtn.textContent = 'Send to child';
-      if (resp && resp.ok) {
-        if (tempPinSendMsgEl) { tempPinSendMsgEl.textContent = '✓ PIN sent — child will see it on the blocked page.'; tempPinSendMsgEl.className = 'message message--success'; }
-      } else {
-        if (tempPinSendMsgEl) { tempPinSendMsgEl.textContent = (resp && resp.error) || 'Could not send. Check passphrase is set.'; tempPinSendMsgEl.className = 'message message--error'; }
-      }
-    });
-  });
-}
-
-if (savePassphraseBtn){
-  savePassphraseBtn.addEventListener('click', async ()=>{
-    const val = familyPassphraseEl ? familyPassphraseEl.value.trim() : '';
-    if (!val){ setPassphraseMessage('Enter a passphrase first.', 'error'); return; }
-    if (val.length < 6){ setPassphraseMessage('Passphrase must be at least 6 characters.', 'error'); return; }
-    chrome.storage.local.set({ familyPassphrase: val }, ()=>{
-      if (familyPassphraseEl){ familyPassphraseEl.value = ''; familyPassphraseEl.placeholder = '●●●●●●●● (saved)'; }
-      setPassphraseMessage('Passphrase saved. Set the same passphrase on the child device.', 'success');
-    });
-  });
-}
-
-if (showPassphraseBtn && familyPassphraseEl){
-  showPassphraseBtn.addEventListener('click', ()=>{
-    const isHidden = familyPassphraseEl.type === 'password';
-    familyPassphraseEl.type = isHidden ? 'text' : 'password';
-    showPassphraseBtn.textContent = isHidden ? 'Hide' : 'Show';
   });
 }
 
@@ -3841,9 +3564,6 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     approverPromptEnabled = Boolean(changes.approverPromptEnabled.newValue);
     if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
     setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
-  }
-  if (area === 'local' && changes.pendingApprovals) {
-    renderPendingApprovals(changes.pendingApprovals.newValue || []);
   }
 });
 

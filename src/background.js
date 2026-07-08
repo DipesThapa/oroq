@@ -28,10 +28,6 @@ const BLOCK_EVENT_LIMIT = 200;
 const FOCUS_SESSION_LIMIT = 200;
 const ACCESS_REQUEST_LIMIT = 60;
 const TEMP_ALLOWLIST_LIMIT = 200;
-const PARENT_POLL_ALARM = 'sg-parent-poll';
-const PARENT_POLL_PERIOD_MIN = 1;
-const FS_BASE = 'https://firestore.googleapis.com/v1/projects/__FS_PROJECT_ID__/databases/(default)/documents';
-const FS_KEY = '__FS_KEY__';
 
 const TIP_POOL = [
   'If a headline sounds shocking, open a trusted news site to verify before sharing.',
@@ -312,7 +308,6 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
       console.error('[OroQ] Weekly tip rotation failed', err);
     });
   }
-  if (alarm && alarm.name === PARENT_POLL_ALARM){ fbPollParentRequests().catch(()=>{}); return; }
 });
 
 const TOUR_KEY = 'onboardingComplete';
@@ -330,7 +325,6 @@ chrome.runtime.onInstalled.addListener((details)=>{
   recoverFocusSession();
   scheduleWeeklyTipAlarm();
   rotateWeeklyTip().catch((_e)=>{});
-  chrome.alarms.create(PARENT_POLL_ALARM, { periodInMinutes: PARENT_POLL_PERIOD_MIN });
 });
 
 function formatFocusBadge(remainingMs){
@@ -517,23 +511,6 @@ function randomClientId(){
   } catch(_e){
     return String(Date.now());
   }
-}
-
-function randomCodeFromCharset(length, charset){
-  const chars = String(charset || '');
-  const size = Math.max(0, Number(length) || 0);
-  if (!chars || !size) return '';
-  const unbiasedUpperBound = Math.floor(256 / chars.length) * chars.length;
-  const out = [];
-  while (out.length < size){
-    const bytes = crypto.getRandomValues(new Uint8Array(size - out.length));
-    for (const byte of bytes){
-      if (byte >= unbiasedUpperBound) continue;
-      out.push(chars[byte % chars.length]);
-      if (out.length === size) break;
-    }
-  }
-  return out.join('');
 }
 
 async function getAnalyticsClientId(){
@@ -916,137 +893,6 @@ async function recordKidReport(payload = {}){
   await chrome.storage.local.set({ kidReportEvents: events.slice(0, CONVERSATION_EVENT_LIMIT) });
 }
 
-// ── Firebase Firestore helpers ──────────────────────────────────────────────
-
-async function getFamilyId() {
-  const { familyPassphrase = '' } = await chrome.storage.local.get({ familyPassphrase: '' });
-  if (!familyPassphrase) return null;
-  const enc = new TextEncoder().encode(familyPassphrase);
-  const hashBuf = await crypto.subtle.digest('SHA-256', enc);
-  return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
-}
-
-function fsRandomId() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
-}
-
-function fsToFields(obj) {
-  const f = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (typeof v === 'string') f[k] = { stringValue: v };
-    else if (typeof v === 'number') f[k] = { integerValue: String(v) };
-  }
-  return f;
-}
-
-function fsFromDoc(doc) {
-  if (!doc || !doc.fields) return null;
-  const obj = { _id: doc.name.split('/').pop() };
-  for (const [k, v] of Object.entries(doc.fields)) {
-    obj[k] = v.stringValue ?? v.integerValue ?? null;
-  }
-  return obj;
-}
-
-async function fsPost(collection, docId, data) {
-  const url = `${FS_BASE}/${collection}?documentId=${encodeURIComponent(docId)}&key=${FS_KEY}`;
-  const resp = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: fsToFields(data) }) });
-  if (!resp.ok) {
-    const body = await resp.json().catch(() => ({}));
-    console.error('[OroQ] fsPost failed', resp.status, body?.error?.message || body);
-  }
-  return resp.ok;
-}
-
-async function fsGet(path) {
-  const resp = await fetch(`${FS_BASE}/${path}?key=${FS_KEY}`);
-  if (!resp.ok) return null;
-  return fsFromDoc(await resp.json());
-}
-
-async function fsPatch(path, data) {
-  const mask = Object.keys(data).map(k => `updateMask.fieldPaths=${k}`).join('&');
-  const url = `${FS_BASE}/${path}?${mask}&key=${FS_KEY}`;
-  const resp = await fetch(url, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: fsToFields(data) }) });
-  return resp.ok;
-}
-
-async function fsDelete(path) {
-  await fetch(`${FS_BASE}/${path}?key=${FS_KEY}`, { method: 'DELETE' });
-}
-
-async function fsList(collection) {
-  const resp = await fetch(`${FS_BASE}/${collection}?key=${FS_KEY}`);
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  return (data.documents || []).map(fsFromDoc).filter(Boolean);
-}
-
-async function fbSendRequest(domain) {
-  const familyId = await getFamilyId();
-  if (!familyId) return { error: 'no-passphrase' };
-  const requestId = fsRandomId();
-  const ok = await fsPost(`requests/${familyId}/pending`, requestId, {
-    domain,
-    status: 'pending',
-    requestedAt: String(Date.now()),
-    expiresAt: String(Date.now() + 10 * 60 * 1000)
-  });
-  return ok ? { requestId } : { error: 'firebase-error' };
-}
-
-async function fbCheckApproval(requestId) {
-  const familyId = await getFamilyId();
-  if (!familyId || !requestId) return null;
-  const doc = await fsGet(`requests/${familyId}/pending/${requestId}`);
-  if (!doc) return 'expired';
-  const expiresAt = parseInt(doc.expiresAt || '0', 10);
-  if (expiresAt && Date.now() > expiresAt) return 'expired';
-  return doc.status;
-}
-
-async function fbPollParentRequests() {
-  const { isParentDevice = false } = await chrome.storage.local.get({ isParentDevice: false });
-  const familyId = await getFamilyId();
-  if (!familyId) return;
-  if (isParentDevice) {
-    const docs = await fsList(`requests/${familyId}/pending`);
-    const now = Date.now();
-    const pending = docs.filter(d => d.status === 'pending' && parseInt(d.expiresAt || '0', 10) > now);
-    await chrome.storage.local.set({ pendingApprovals: pending });
-    if (pending.length > 0) {
-      ACTION_API.setBadgeText({ text: String(pending.length) });
-      ACTION_API.setBadgeBackgroundColor({ color: '#f59e0b' });
-    }
-  } else {
-    // Child device: poll for PINs sent by parent
-    const docs = await fsList(`pins/${familyId}`);
-    const now = Date.now();
-    const available = docs.filter(d => parseInt(d.expiresAt || '0', 10) > now).map(d => d.pin).filter(Boolean);
-    await chrome.storage.local.set({ sentPins: available });
-  }
-}
-
-async function fbApproveRequest(requestId) {
-  const familyId = await getFamilyId();
-  if (!familyId) return false;
-  const ok = await fsPatch(`requests/${familyId}/pending/${requestId}`, { status: 'approved' });
-  setTimeout(() => fsDelete(`requests/${familyId}/pending/${requestId}`), 30000);
-  const { pendingApprovals = [] } = await chrome.storage.local.get({ pendingApprovals: [] });
-  await chrome.storage.local.set({ pendingApprovals: pendingApprovals.filter(r => r._id !== requestId) });
-  return ok;
-}
-
-async function fbDenyRequest(requestId) {
-  const familyId = await getFamilyId();
-  if (!familyId) return false;
-  const ok = await fsPatch(`requests/${familyId}/pending/${requestId}`, { status: 'denied' });
-  setTimeout(() => fsDelete(`requests/${familyId}/pending/${requestId}`), 10000);
-  const { pendingApprovals = [] } = await chrome.storage.local.get({ pendingApprovals: [] });
-  await chrome.storage.local.set({ pendingApprovals: pendingApprovals.filter(r => r._id !== requestId) });
-  return ok;
-}
-
 async function recordAccessRequest(payload = {}){
   const { accessRequests = [] } = await new Promise((resolve)=>chrome.storage.local.get({ accessRequests: [] }, resolve));
   const list = Array.isArray(accessRequests) ? accessRequests.slice(0, ACCESS_REQUEST_LIMIT) : [];
@@ -1225,20 +1071,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     });
     return true;
   }
-  if (message && message.type === 'sg-send-pin-to-child') {
-    const pin = String(message.pin || '').trim().toUpperCase();
-    if (!pin) { sendResponse({ ok: false, error: 'No PIN provided.' }); return true; }
-    getFamilyId().then(familyId => {
-      if (!familyId) { sendResponse({ ok: false, error: 'Set a family passphrase first.' }); return; }
-      chrome.storage.local.get({ tempPins: [] }, (s) => {
-        const entry = (Array.isArray(s.tempPins) ? s.tempPins : []).find(p => p.pin === pin && !p.used && p.expiresAt > Date.now());
-        if (!entry) { sendResponse({ ok: false, error: 'PIN not found or already used.' }); return; }
-        fsPost(`pins/${familyId}`, pin, { pin, expiresAt: String(entry.expiresAt), createdAt: String(entry.createdAt) })
-          .then(ok => sendResponse(ok ? { ok: true } : { ok: false, error: 'Could not reach Firebase. Check internet connection.' }));
-      });
-    });
-    return true;
-  }
   if (message && message.type === 'sg-gen-temp-pin') {
     const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let pin = '';
@@ -1272,30 +1104,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     });
     return true;
   }
-  if (message && message.type === 'sg-get-sent-pins') {
-    chrome.storage.local.get({ sentPins: [] }, (s) => {
-      sendResponse({ pins: Array.isArray(s.sentPins) ? s.sentPins : [] });
-    });
-    return true;
-  }
   if (message && message.type === 'sg-verify-temp-pin') {
     const { pin, domain } = message;
-    chrome.storage.local.get({ tempPins: [], temporaryAllowlist: [], sentPins: [] }, (s) => {
+    chrome.storage.local.get({ tempPins: [], temporaryAllowlist: [] }, (s) => {
       const now = Date.now();
       const pins = Array.isArray(s.tempPins) ? s.tempPins : [];
-      const sentPins = Array.isArray(s.sentPins) ? s.sentPins : [];
-      // Check local tempPins (parent device) OR sentPins (child device received via Firebase)
       const localIdx = pins.findIndex(p => p.pin === pin && !p.used && p.expiresAt > now);
-      const isSentPin = sentPins.includes(pin);
-      if (localIdx === -1 && !isSentPin) { sendResponse({ ok: false, error: 'Invalid or expired PIN.' }); return; }
-      if (localIdx !== -1) { pins[localIdx].used = true; pins[localIdx].usedAt = now; pins[localIdx].usedFor = domain; }
-      const updatedSentPins = sentPins.filter(p => p !== pin);
+      if (localIdx === -1) { sendResponse({ ok: false, error: 'Invalid or expired PIN.' }); return; }
+      pins[localIdx].used = true; pins[localIdx].usedAt = now; pins[localIdx].usedFor = domain;
       const list = Array.isArray(s.temporaryAllowlist) ? s.temporaryAllowlist : [];
       const expiresAt = now + 24 * 60 * 60 * 1000;
       const updated = [...list.filter(e => e.host !== domain), { host: domain, expiresAt, createdAt: now, approver: 'pin' }];
-      // Delete from Firebase if it was a sent PIN
-      getFamilyId().then(familyId => { if (familyId && isSentPin) fsDelete(`pins/${familyId}/${pin}`); });
-      chrome.storage.local.set({ tempPins: pins, temporaryAllowlist: updated, sentPins: updatedSentPins }, () => {
+      chrome.storage.local.set({ tempPins: pins, temporaryAllowlist: updated }, () => {
         rebuildDynamicRules().then(() => sendResponse({ ok: true })).catch(() => sendResponse({ ok: true }));
       });
     });
@@ -1315,61 +1135,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     } else {
       sendResponse({ ok: true });
     }
-    return true;
-  }
-  if (message && message.type === 'sg-fb-send-request') {
-    fbSendRequest(message.domain).then(result => sendResponse(result));
-    return true;
-  }
-  if (message && message.type === 'sg-fb-check-approval') {
-    fbCheckApproval(message.requestId).then(status => sendResponse({ status }));
-    return true;
-  }
-  if (message && message.type === 'sg-fb-approve') {
-    fbApproveRequest(message.requestId).then(ok => sendResponse({ ok }));
-    return true;
-  }
-  if (message && message.type === 'sg-fb-deny') {
-    fbDenyRequest(message.requestId).then(ok => sendResponse({ ok }));
-    return true;
-  }
-  if (message && message.type === 'sg-fb-get-pending') {
-    chrome.storage.local.get({ pendingApprovals: [] }, r => sendResponse({ pending: r.pendingApprovals }));
-    return true;
-  }
-  if (message && message.type === 'sg-generate-invite') {
-    (async () => {
-      const familyId = await getFamilyId();
-      if (!familyId) { sendResponse({ ok: false, error: 'Set a family passphrase first.' }); return; }
-      const CHARSET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      const code = randomCodeFromCharset(8, CHARSET);
-      const ok = await fsPost('invites', code, {
-        familyPassphrase: (await chrome.storage.local.get({ familyPassphrase: '' })).familyPassphrase,
-        familyId,
-        createdAt: String(Date.now()),
-        expiresAt: String(Date.now() + 24 * 60 * 60 * 1000)
-      });
-      sendResponse(ok ? { ok: true, code } : { ok: false, error: 'Could not save invite. Check your connection.' });
-    })();
-    return true;
-  }
-  if (message && message.type === 'sg-redeem-invite') {
-    (async () => {
-      const code = (message.code || '').toUpperCase().trim();
-      if (!code) { sendResponse({ ok: false, error: 'No code provided.' }); return; }
-      const doc = await fsGet(`invites/${code}`);
-      if (!doc) { sendResponse({ ok: false, error: 'Code not found or expired.' }); return; }
-      const expiresAt = parseInt(doc.expiresAt || '0', 10);
-      if (expiresAt && Date.now() > expiresAt) { sendResponse({ ok: false, error: 'Code has expired.' }); return; }
-      await chrome.storage.local.set({
-        familyPassphrase: doc.familyPassphrase || '',
-        isParentDevice: false,
-        deviceRole: 'child'
-      });
-      await fsDelete(`invites/${code}`);
-      trackOnceEvent('child_paired').catch(()=>{});
-      sendResponse({ ok: true });
-    })();
     return true;
   }
   return false;

@@ -1429,22 +1429,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 
 .sg-view__actions .btn { width: 100%; justify-content: center; }
 
-/* Invite code form inside onboarding */
-.sg-view__code-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  max-width: 260px;
-}
-
-.sg-view__code-label {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-1);
-}
-
 .code-input {
   text-transform: uppercase;
   font-size: 20px !important;
@@ -1532,25 +1516,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   line-height: 1;
 }
 
-.pin-display__divider {
-  height: 1px;
-  background: var(--brand-ring);
-}
-
-.pin-display__send-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.pin-display__send-label {
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-2);
-}
-
 /* ═══════════════════════════════════════ PIN LIST ═══ */
 .pin-list {
   list-style: none;
@@ -1586,75 +1551,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   white-space: nowrap;
 }
 
-/* ═══════════════════════════════════════ APPROVAL ITEMS ═══ */
-.approval-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.approval-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  transition: border-color var(--dur);
-}
-
-.approval-item:hover { border-color: var(--brand-ring); }
-
-.approval-item__body {
-  flex: 1;
-  min-width: 0;
-}
-
-.approval-item__domain {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-1);
-  word-break: break-all;
-  margin: 0 0 2px;
-}
-
-.approval-item__meta {
-  font-size: 11px;
-  color: var(--text-3);
-  margin: 0;
-}
-
-.approval-item__actions {
-  display: flex;
-  gap: 5px;
-  flex-shrink: 0;
-  margin-top: 1px;
-}
-
-/* ═══════════════════════════════════════ INVITE CODE DISPLAY ═══ */
-.invite-code-display {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--brand-dim);
-  border: 1px solid var(--brand-ring);
-  border-radius: var(--r-md);
-}
-
-.invite-code-display__value {
-  flex: 1;
-  font-size: 1.5em;
-  letter-spacing: 0.22em;
-  font-family: "JetBrains Mono", "Fira Code", "Courier New", monospace;
-  font-weight: 800;
-  color: var(--brand);
-}
-
 /* ═══════════════════════════════════════ SECTION LABEL ═══ */
 .section-label {
   font-size: 10px;
@@ -1672,11 +1568,6 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   color: var(--text-3);
   font-size: 12px;
   line-height: 1.5;
-}
-
-/* ═══════════════════════════════════════ PENDING APPROVALS ═══ */
-#pendingApprovalsList:empty + #pendingApprovalsEmpty {
-  display: block;
 }
 
 /* ═══════════════════════════════════════ GENERAL REFINEMENTS ═══ */
