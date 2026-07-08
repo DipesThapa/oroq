@@ -1039,6 +1039,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 }
 
 /* ── OroQ Pro (commitment tools) ─────────────────────────────────────────── */
+.focus-card { margin-top: 12px; }
+.focus-card .actions { align-items: center; }
+.focus-card #focusDurationSelect { max-width: 140px; }
 .pro-card { margin-top: 12px; }
 .pro-card__head {
   display: flex;
@@ -1072,51 +1075,84 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
 .pro-features li { margin-bottom: 2px; }
 .pro-activate { margin-top: 8px; }
 .pro-activate .text-input { margin-bottom: 6px; }
-.pro-field { margin-top: 10px; }
-.pro-num { max-width: 120px; }
-.pro-time { max-width: 120px; }
+/* Each Pro control is its own tidy sub-block */
+.pro-field {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pro-field .field__label { margin-bottom: 0; }
+.pro-field .actions { margin: 0; align-items: center; }
+.pro-field .message { margin: 0; }
+.pro-num { max-width: 96px; }
+.pro-time { max-width: 108px; }
 
 .pro-controls {
-  margin-top: 12px;
-  padding-top: 12px;
+  position: relative;
+  margin-top: 14px;
+  padding-top: 14px;
   border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 16px;
   transition: opacity var(--dur) var(--ease);
 }
-.pro-controls--locked { opacity: .5; pointer-events: none; }
+/* Locked state: soften controls but keep the banner crisp on top */
+.pro-controls--locked > :not(.pro-lock-hint) { opacity: .45; pointer-events: none; filter: saturate(.6); }
 .pro-controls--locked .pro-lock-hint { display: flex; }
 .pro-controls:not(.pro-controls--locked) .pro-lock-hint { display: none; }
 .pro-lock-hint {
   align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  color: var(--text-3);
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-mid);
+  background: var(--brand-dim);
+  border: 1px solid var(--brand-ring);
+  border-radius: var(--r-md);
+}
+.pro-lock-hint svg { flex: 0 0 auto; }
+
+/* Grouped control block with a subtle card so items don't run together */
+.pro-block {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .commit-status {
   background: var(--amber-dim);
+  border: 1px solid rgba(217,119,6,.25);
   border-radius: var(--r-md);
-  padding: 10px;
+  padding: 10px 12px;
 }
-.commit-status .focus-countdown { margin: 0 0 6px; }
+.commit-status .focus-countdown { margin: 0 0 8px; font-weight: 600; }
 
 .pro-schedule {
-  margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.schedule-list { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.pro-schedule .settings-card__label { margin: 0; }
+.pro-schedule .pro-card__desc { margin: 0; }
+.schedule-list { display: flex; flex-direction: column; gap: 6px; }
 .schedule-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   font-size: 12px;
+  font-weight: 500;
   background: var(--surface-3);
   border-radius: var(--r-sm);
-  padding: 6px 10px;
+  padding: 8px 10px;
 }
 .schedule-item__remove {
   background: none;
@@ -1124,19 +1160,39 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   color: var(--red);
   cursor: pointer;
   font-size: 12px;
-  padding: 2px 4px;
+  padding: 2px 6px;
+  border-radius: var(--r-sm);
 }
-.schedule-days { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.schedule-item__remove:hover { background: var(--red-dim); }
+.schedule-editor { display: flex; flex-direction: column; gap: 10px; }
+.schedule-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 5px;
+}
+/* Day chips: hide native box, style the label as a selectable pill */
 .schedule-day {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
   font-size: 11px;
+  font-weight: 600;
   color: var(--text-2);
   background: var(--surface-3);
-  border-radius: var(--r-pill);
-  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 7px 0;
   cursor: pointer;
+  user-select: none;
+  transition: background var(--dur) var(--ease), color var(--dur) var(--ease), border-color var(--dur) var(--ease);
 }
-.schedule-times { align-items: center; }
+.schedule-day input { position: absolute; opacity: 0; width: 0; height: 0; }
+.schedule-day:hover { border-color: var(--brand-ring); }
+.schedule-day:has(input:checked) {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.schedule-times { align-items: center; gap: 8px; }
 .schedule-sep { font-size: 12px; color: var(--text-3); }
+.schedule-times .pro-time { flex: 1 1 auto; }

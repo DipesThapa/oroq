@@ -190,38 +190,42 @@
         </p>
 
         <!-- Committed Lock -->
-        <label class="toggle">
-          <input id="committedLockToggle" type="checkbox">
-          <span class="toggle__switch" aria-hidden="true"></span>
-          <span class="toggle__content">
-            <span class="toggle__label">Committed Lock</span>
-            <span class="toggle__hint">Pausing protection needs a cooldown wait, then your PIN.</span>
-          </span>
-        </label>
-        <div class="field pro-field" id="committedLockCooldownRow">
-          <label class="field__label" for="committedLockCooldown">Cooldown before protection can pause (minutes)</label>
-          <input id="committedLockCooldown" class="text-input pro-num" type="number" min="1" max="120" step="1" value="10">
-        </div>
-        <div id="committedLockStatus" class="commit-status" hidden>
-          <p id="committedLockCountdown" class="focus-countdown">Cooldown running…</p>
-          <div class="actions actions--wrap">
-            <button id="committedLockConfirm" class="btn btn--primary btn--sm" type="button" hidden>Enter PIN &amp; pause</button>
-            <button id="committedLockCancel" class="btn btn--link" type="button">Keep protection on</button>
+        <div class="pro-block">
+          <label class="toggle">
+            <input id="committedLockToggle" type="checkbox">
+            <span class="toggle__switch" aria-hidden="true"></span>
+            <span class="toggle__content">
+              <span class="toggle__label">Committed Lock</span>
+              <span class="toggle__hint">Pausing protection needs a cooldown wait, then your PIN.</span>
+            </span>
+          </label>
+          <div class="field pro-field" id="committedLockCooldownRow">
+            <label class="field__label" for="committedLockCooldown">Cooldown before pause (minutes)</label>
+            <input id="committedLockCooldown" class="text-input pro-num" type="number" min="1" max="120" step="1" value="10">
+          </div>
+          <div id="committedLockStatus" class="commit-status" hidden>
+            <p id="committedLockCountdown" class="focus-countdown">Cooldown running…</p>
+            <div class="actions actions--wrap">
+              <button id="committedLockConfirm" class="btn btn--primary btn--sm" type="button" hidden>Enter PIN &amp; pause</button>
+              <button id="committedLockCancel" class="btn btn--link" type="button">Keep protection on</button>
+            </div>
           </div>
         </div>
 
         <!-- Custom Focus duration -->
-        <div class="field pro-field">
-          <label class="field__label" for="proCustomDuration">Custom Focus duration (minutes)</label>
-          <div class="actions actions--wrap">
-            <input id="proCustomDuration" class="text-input pro-num" type="number" min="15" max="480" step="5" placeholder="e.g. 90">
-            <button id="proDurationApply" class="btn btn--ghost btn--sm" type="button">Set duration</button>
+        <div class="pro-block">
+          <div class="field pro-field">
+            <label class="field__label" for="proCustomDuration">Custom Focus duration (minutes)</label>
+            <div class="actions actions--wrap">
+              <input id="proCustomDuration" class="text-input pro-num" type="number" min="15" max="480" step="5" placeholder="e.g. 90">
+              <button id="proDurationApply" class="btn btn--ghost btn--sm" type="button">Set duration</button>
+            </div>
+            <small id="proDurationMsg" class="message">Any length from 15 to 480 minutes.</small>
           </div>
-          <small id="proDurationMsg" class="message">Pro unlocks any length from 15 to 480 minutes.</small>
         </div>
 
         <!-- Scheduled Focus -->
-        <div class="pro-schedule">
+        <div class="pro-block pro-schedule">
           <p class="settings-card__label">Scheduled Focus</p>
           <p class="pro-card__desc">Focus Mode switches on automatically during these windows.</p>
           <div id="scheduleList" class="schedule-list"></div>
