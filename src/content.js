@@ -37,7 +37,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     'intimate photos','intimate video','risque','provocative','suggestive','barely legal','legal age'
   ];
   // HOST_HINTS uses substring matching against the hostname — keep only terms that won't fire
-  // on legitimate sites (e.g. avoid 'tube'→youtube, 'ass'→classroom, 'cum'→document, 'live'→live.com)
+  // on legitimate sites (e.g. avoid 'tube'→youtube, 'ass'→grass, 'cum'→document, 'live'→live.com)
   const HOST_HINTS = [
     'porn','xxx','hentai','xnxx','onlyfans','bdsm','nsfw',
     'nudist','nudie','nudecam','nakedcam','sexcam','livesex','liveshow',
@@ -96,9 +96,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   const NUDGE_SOCIAL_THRESHOLD_MS = 45 * 60 * 1000; // 45 minutes
   const NUDGE_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes
   const NUDGE_DAILY_CAP = 3;
-  const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
-  const CLASSROOM_YT_GUARD_FLAG = '__sgClassroomYoutubeGuard';
-  let lastProfileContext = { profileTone: null, profileLabel: null, profileSuggestions: [] };
   const FOCUS_DEFAULT_ALLOWLIST = [
     'wikipedia.org',
     'khanacademy.org',
@@ -115,79 +112,39 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     'drive.google.com'
   ];
   const EDUCATIONAL_RESOURCES = [
-    'Khan Academy','BBC Bitesize','Crash Course','Coursera','edX','MIT OpenCourseWare','Stanford Online','Harvard Online',
-    'Yale Open Courses','OpenStax','CK-12','National Geographic Kids','NASA Kids','Smithsonian Learning Lab','Code.org','FreeCodeCamp',
+    'Khan Academy','Crash Course','Coursera','edX','MIT OpenCourseWare','Stanford Online','Harvard Online',
+    'Yale Open Courses','OpenStax','CK-12','Smithsonian Learning Lab','Code.org','FreeCodeCamp',
     'W3Schools','MDN Web Docs','Codecademy','DataCamp','Brilliant','Desmos','GeoGebra','PhET Simulations',
     'Duolingo','Memrise','Quizlet','AnkiWeb','Project Gutenberg','LibriVox','TED-Ed','Academic Earth',
-    'FutureLearn','Open University OpenLearn','Alison','Udacity','Khan Academy Kids','Exploratorium','HowStuffWorks','National Gallery of Art',
-    'Google Arts & Culture','Smithsonian Kids','PBS LearningMedia','PBS Kids','Scholastic Learn at Home','BrainPOP','IXL Learning','Mathigon',
+    'FutureLearn','Open University OpenLearn','Alison','Udacity','Exploratorium','HowStuffWorks','National Gallery of Art',
+    'Google Arts & Culture','PBS LearningMedia','Scholastic Learn at Home','BrainPOP','IXL Learning','Mathigon',
     'Purplemath','Math Is Fun','Wolfram Alpha','Wolfram MathWorld','SparkNotes','CliffsNotes','Purdue OWL','Grammarly Handbook',
     'Stack Overflow','Stack Exchange','GitHub Learning Lab','CS Unplugged','MIT Scratch','Tynker','Saylor Academy','GCF Global',
-    'BBC Learning English','British Council LearnEnglish','Oxford Owl','ReadWriteThink','CommonLit','Newsela','National Geographic Education','NOAA Education',
-    'Big History Project','Crash Course Kids','Veritasium','Smarter Every Day','Numberphile','MinutePhysics','Kurzgesagt','SciShow',
+    'BBC Learning English','British Council LearnEnglish','ReadWriteThink','CommonLit','Newsela','National Geographic Education','NOAA Education',
+    'Big History Project','Veritasium','Smarter Every Day','Numberphile','MinutePhysics','Kurzgesagt','SciShow',
     'Practical Engineering','MIT Blossoms','Stanford CS106A','Berkeley CS61A','NPTEL','Open Yale Courses','Harvard CS50','MIT 6.0001',
     'AWS Skill Builder','Google Cloud Skills Boost','Microsoft Learn','IBM SkillsBuild','Khan Academy SAT','ACT Academy','Khan Academy LSAT','Crash Course World History',
     'Crash Course Chemistry','Crash Course Biology','Crash Course Literature','OpenLearn Science','OpenLearn History','OpenLearn Math','OpenLearn Computing','OpenLearn Languages',
     'National Science Digital Library','Smithsonian Science Education','FutureLearn Cyber Security','FutureLearn Data Analytics','edX High School Courses','edX AP Courses','Coursera Math for Everyone','Coursera Writing in English'
   ];
   const PROFILE_TONE_COPY = {
-    kids: {
-      heading: 'Hold on - we are keeping kid-safe pages only.',
-      detailFallback: 'OroQ spotted something that looks grown-up or violent, so we paused the page.',
-      suggestionPrefix: 'Try',
-      suggestionFallback: 'Ask a trusted adult before opening a different site.',
-      defaultSuggestions: ['BBC Bitesize','Nat Geo Kids','Duolingo'],
-      microTitle: 'Mini safety lesson',
-      microIntro: 'Before you continue, remember:',
-      defaultProfileLabel: 'Kids (ages 7-12)'
-    },
-    teens: {
-      heading: 'Heads up - this page didn\'t look safe for teens.',
-      detailFallback: 'We saw wording or media that usually means adult or deceptive content.',
-      suggestionPrefix: 'Switch to',
-      suggestionFallback: 'Check with a safeguarding lead if this is needed for GCSE/KS4 work.',
-      defaultSuggestions: ['BBC Bitesize GCSE','Khan Academy','Quizlet'],
-      microTitle: 'AI literacy boost',
-      microIntro: 'Use these quick checks next time:',
-      defaultProfileLabel: 'Teens (ages 13-16)'
-    },
-    college: {
-      heading: 'Pause and double-check this research page.',
-      detailFallback: 'The page signalled adult themes or untrusted sources, so we blocked it for now.',
-      suggestionPrefix: 'Try credible sources like',
-      suggestionFallback: 'Talk to your DSL/tutor if this content is essential.',
-      defaultSuggestions: ['Google Scholar','FutureLearn','GOV.UK education'],
-      microTitle: 'Research-safe habits',
-      microIntro: 'Keep coursework clean with these tips:',
-      defaultProfileLabel: 'College profile'
-    },
-    work: {
-      heading: 'Blocked to keep work accounts safe and focused.',
-      detailFallback: 'The site matched a distraction or phishing pattern monitored for this profile.',
-      suggestionPrefix: 'Stay on trusted portals such as',
-      suggestionFallback: 'Log a request with IT/SecOps if this is a genuine business need.',
-      defaultSuggestions: ['Microsoft 365','Slack','Notion'],
-      microTitle: 'Cyber hygiene reminder',
-      microIntro: 'Share these habits with your team:',
-      defaultProfileLabel: 'Work profile'
-    },
     general: {
       heading: 'OroQ blocked this page.',
-      detailFallback: 'Our local rules detected risky content before the page loaded.',
+      detailFallback: 'On-device rules flagged risky content before the page loaded.',
       suggestionPrefix: 'Use trusted sites like',
-      suggestionFallback: 'Ask a safeguarding lead or parent before overriding.',
-      defaultSuggestions: ['BBC Bitesize','National Geographic','Khan Academy'],
-      microTitle: 'AI literacy tip',
-      microIntro: 'Quick ways to stay safe:',
-      defaultProfileLabel: 'this profile'
+      suggestionFallback: 'Take a breath and get back to what you set out to do.',
+      defaultSuggestions: [],
+      microTitle: 'Quick reminder',
+      microIntro: 'A couple of things to keep in mind:',
+      defaultProfileLabel: ''
     }
   };
   const MICRO_LESSONS = {
     general: {
       mature: [
         'If a page asks you to confirm you are 18, treat it as adult-only and close it.',
-        'Search the topic on a trusted education site instead of bypassing the block.',
-        'Ask a safeguarding lead to review the need before overriding policy.'
+        'Search the topic on a trusted source instead of bypassing the block.',
+        'Pause and ask whether this is really what you meant to open.'
       ],
       phishing: [
         'Check the full address bar for spelling errors before entering passwords.',
@@ -197,75 +154,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       wellbeing: [
         'Take a short break every 30 minutes to reset your focus.',
         'Urgent or emotional headlines are often clickbait - slow down and verify.',
-        'If something feels odd or too personal, ask a trusted adult before engaging.'
-      ]
-    },
-    kids: {
-      mature: [
-        'If a page looks scary or grown-up, close it and tell a trusted adult.',
-        'Stick to school links like BBC Bitesize or Nat Geo Kids for research.',
-        'Never share photos or your name with strangers online.'
-      ],
-      phishing: [
-        'Only type passwords into sites your teacher or parent showed you.',
-        'If a page offers prizes for personal info, it is safer to say no and leave.',
-        'Ask an adult before clicking links that look unusual or urgent.'
-      ],
-      wellbeing: [
-        'Take eye breaks every 20 minutes so screens stay fun and safe.',
-        'If something online feels uncomfortable, screenshot and show an adult.',
-        'Use homework timers or Focus Mode to finish tasks before play time.'
-      ]
-    },
-    teens: {
-      mature: [
-        'Cross-check shocking claims with a second trusted source before sharing.',
-        'Sensational thumbnails are often clickbait - look for better sources.',
-        'Keep revision on-task by bookmarking reliable study sites.'
-      ],
-      phishing: [
-        'Look beyond the logo and inspect the URL before signing in.',
-        'Urgent "verify now" popups are usually scams - open the service in a new tab instead.',
-        'Use 2FA and never share one-time codes with anyone, even friends.'
-      ],
-      wellbeing: [
-        'Set short break reminders so scrolling does not eat revision time.',
-        'Mute or block accounts that pressure you to share personal info.',
-        'AI images can fake events - compare them with trusted news first.'
-      ]
-    },
-    college: {
-      mature: [
-        'Check whether an article cites primary sources before using it in coursework.',
-        'If a topic feels sensitive, ask your DSL or tutor to approve material first.',
-        'Only disable aggressive filtering if visuals are critical to the assignment.'
-      ],
-      phishing: [
-        'Inspect the certificate padlock before entering institution credentials.',
-        'Never reuse your uni password on other sites or tools.',
-        'Hover over links in email to reveal the real destination before clicking.'
-      ],
-      wellbeing: [
-        'Use a 45 minute focus timer so study blocks stay intentional.',
-        'Summarise research in your own words instead of copy/pasting questionable sources.',
-        'Pausing when a page feels manipulative protects your judgement.'
-      ]
-    },
-    work: {
-      mature: [
-        'Keep work devices on approved research portals when reviewing sensitive topics.',
-        'Separate personal browsing into another profile so audits stay simple.',
-        'Document the business reason before overriding a block for compliance.'
-      ],
-      phishing: [
-        'Verify payment or reset emails out-of-band before clicking links.',
-        'Look for domain mismatches even if the branding looks polished.',
-        'Use the report phishing control so SecOps can warn others quickly.'
-      ],
-      wellbeing: [
-        'Use Focus or Do Not Disturb modes to protect deep work.',
-        'Blocking social feeds during work hours keeps your audit trail clean.',
-        'Escalate anything suspicious to IT/SecOps instead of investigating alone.'
+        'If something feels off, step away for a moment before engaging.'
       ]
     }
   };
@@ -372,106 +261,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
         meta: Array.isArray(signal?.meta) ? signal.meta.slice(0, 3) : null
       })) : []
     };
-  }
-
-  function normalizeClassroomMode(raw){
-    const mode = raw && typeof raw === 'object' ? raw : {};
-    return {
-      enabled: Boolean(mode.enabled),
-      playlists: Array.isArray(mode.playlists) ? mode.playlists.filter(Boolean) : [],
-      videos: Array.isArray(mode.videos) ? mode.videos.filter(Boolean) : []
-    };
-  }
-
-  function extractYoutubePlaylistId(urlString){
-    try {
-      const url = new URL(urlString);
-      const list = url.searchParams.get('list');
-      if (list) return list;
-      // support playlist URLs without query param (rare)
-      if (url.pathname && url.pathname.startsWith('/playlist')){
-        const params = new URLSearchParams(url.search);
-        if (params.get('list')) return params.get('list');
-      }
-      return null;
-    } catch(_e){
-      return null;
-    }
-  }
-
-  function isYoutubeHost(hostname){
-    return /(?:^|\.)youtube\.com$/.test(hostname) || /(?:^|\.)youtu\.be$/.test(hostname);
-  }
-
-  function startClassroomYoutubeGuard(mode, profileContext){
-    if (!mode || !mode.enabled) return;
-    if (window[CLASSROOM_YT_GUARD_FLAG]) return;
-    const allowedPlaylists = new Set((mode.playlists || []).filter(Boolean));
-    const allowedVideos = new Set((mode.videos || []).filter(Boolean));
-    let blocked = false;
-    const requireVideoMatch = allowedVideos.size > 0;
-    const isAllowedUrl = (href)=>{
-      try {
-        const url = new URL(href);
-        if (!isYoutubeHost(url.hostname.toLowerCase())) return true; // only guard YouTube
-        const pid = extractYoutubePlaylistId(href);
-        const vid = url.searchParams.get('v') || (url.hostname === 'youtu.be' ? url.pathname.slice(1) : null);
-        if (requireVideoMatch){
-          if (!vid || !allowedVideos.has(vid)) return false;
-          if (allowedPlaylists.size === 0) return true;
-          return pid ? allowedPlaylists.has(pid) : true;
-        }
-        if (!allowedPlaylists.size) return false;
-        if (!pid) return false;
-        return allowedPlaylists.has(pid);
-      } catch(_e){
-        return false;
-      }
-    };
-    const blockNav = ()=>{
-      if (blocked) return;
-      blocked = true;
-      lockInteractionShield();
-      showInterstitial('Classroom mode', {
-        pillText: 'Classroom lock',
-        profileTone: profileContext.profileTone || 'work',
-        profileLabel: profileContext.profileLabel || 'Classroom profile',
-        profileSuggestions: profileContext.profileSuggestions,
-        riskSummary: 'YouTube is limited to teacher-approved playlists in classroom mode.',
-        disableOverride: true
-      });
-    };
-    const enforce = ()=>{
-      if (blocked) return;
-      if (!isAllowedUrl(location.href)){
-        blockNav();
-      }
-    };
-    // hook history to catch SPA navigation
-    const origPush = history.pushState;
-    const origReplace = history.replaceState;
-    history.pushState = function(...args){
-      const ret = origPush.apply(history, args);
-      enforce();
-      return ret;
-    };
-    history.replaceState = function(...args){
-      const ret = origReplace.apply(history, args);
-      enforce();
-      return ret;
-    };
-    window.addEventListener('popstate', enforce, true);
-    window.addEventListener('hashchange', enforce, true);
-    const interval = setInterval(enforce, 1000);
-    window[CLASSROOM_YT_GUARD_FLAG] = ()=>{ // cleanup
-      window.removeEventListener('popstate', enforce, true);
-      window.removeEventListener('hashchange', enforce, true);
-      clearInterval(interval);
-      history.pushState = origPush;
-      history.replaceState = origReplace;
-      window[CLASSROOM_YT_GUARD_FLAG] = null;
-    };
-    enforce();
   }
 
   async function recordOverrideEvent(reasonText, options = {}){
@@ -1175,7 +964,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       return 'Images on the page looked like nudity, so we hid the page before it loaded.';
     }
     if (id === 'body-keywords' || id === 'meta-keywords'){
-      return 'The text on the page mentions adult topics that are unsafe for young people.';
+      return 'The text on the page mentions adult topics.';
     }
     if (id === 'body-age-gate' || id === 'meta-age-gate'){
       return 'This page asks visitors to confirm they are over 18, so we treat it as adult content.';
@@ -1222,13 +1011,8 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     return 'OroQ spotted patterns that usually mean the page is unsafe.';
   }
 
-  function normalizeTone(value){
-    if (!value) return null;
-    const tone = String(value).toLowerCase();
-    if (tone.startsWith('kid') || tone.startsWith('primary')) return 'kids';
-    if (tone.startsWith('teen')) return 'teens';
-    if (tone.includes('college') || tone.includes('sixth')) return 'college';
-    if (tone === 'work' || tone === 'adult') return 'work';
+  function normalizeTone(_value){
+    // Single neutral self-control tone; profile-based tones removed.
     return null;
   }
 
@@ -1430,7 +1214,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           id: 'body-context',
           icon: 'NOTE',
           label: 'Educational context noted',
-          detail: 'OroQ reduced the score because safeguarding/educational wording is present.',
+          detail: 'OroQ reduced the score because educational wording is present.',
           weight: -4
         });
       }
@@ -1462,7 +1246,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
           id: 'meta-context',
           icon: 'NOTE',
           label: 'Educational metadata noted',
-          detail: 'OroQ reduced the score because the metadata references education or safeguarding terms.',
+          detail: 'OroQ reduced the score because the metadata references education terms.',
           weight: -4
         });
       }
@@ -1525,8 +1309,8 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const signals = [{
       id: 'policy',
       icon: 'POL',
-      label: 'Policy blocklist match',
-      detail: 'This domain is on the centrally managed OroQ blocklist.',
+      label: 'Blocklist match',
+      detail: 'This site is on your blocklist.',
       weight: 12
     }];
     if (host){
@@ -1539,11 +1323,11 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       });
     }
     return {
-      pillText: 'Policy block enforced',
+      pillText: 'Blocked',
       riskScore: 24,
       riskThreshold: 12,
-      riskLevel: 'Policy blocked',
-      riskSummary: 'OroQ blocked this domain due to administrator policy.',
+      riskLevel: 'Blocked',
+      riskSummary: 'This site is on your blocklist.',
       riskPercent: 100,
       riskMax: 24,
       signals
@@ -3175,7 +2959,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const fallbackSignals = [
       { id: 'host', icon: 'URL', label: 'Site', detail: hostName || 'Unknown host', weight: 0 },
       { id: 'trigger', icon: 'SYS', label: 'Trigger', detail: String(reason || 'Policy enforcement'), weight: 0 },
-      { id: 'tip', icon: 'TIP', label: 'Next steps', detail: 'Review allowlist options with a safeguarding lead if this needs access.', weight: 0 }
+      { id: 'tip', icon: 'TIP', label: 'Next steps', detail: 'Add this site to your allowlist if you really need access.', weight: 0 }
     ];
     const displaySignals = (signals.length ? signals : fallbackSignals).slice(0, 5);
     const topSignal = pickHighestWeightSignal(displaySignals);
@@ -3371,7 +3155,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
 
       const pinLabel = doc.createElement('div');
       pinLabel.className = 'sg-pin__label';
-      pinLabel.textContent = 'Parent PIN required to continue.';
+      pinLabel.textContent = 'PIN required to continue.';
       pinBlock.appendChild(pinLabel);
 
       pinInput = doc.createElement('input');
@@ -3384,7 +3168,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       pinInput.spellcheck = false;
       pinInput.maxLength = 8;
       pinInput.placeholder = '••••';
-      pinInput.setAttribute('aria-label', 'Parent PIN');
+      pinInput.setAttribute('aria-label', 'PIN');
       pinBlock.appendChild(pinInput);
 
       const pinActions = doc.createElement('div');
@@ -3417,7 +3201,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       pinReasonInput.id = 'sg-pin-reason';
       pinReasonInput.className = 'sg-pin__reason-input';
       pinReasonInput.rows = 3;
-      pinReasonInput.placeholder = 'e.g. GCSE art research, safeguarding review';
+      pinReasonInput.placeholder = 'e.g. work research I genuinely need';
       pinReasonInput.maxLength = 240;
       pinReasonInput.setAttribute('aria-label', 'Reason for override');
       pinReasonWrapper.appendChild(pinReasonInput);
@@ -3510,93 +3294,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       sendKidReport(profileTone);
     });
     actions.appendChild(reportBtn);
-    const requestStatus = doc.createElement('div');
-    requestStatus.className = 'sg-request-status';
-    requestStatus.style.display = 'none';
-    actions.appendChild(requestStatus);
-
-    const requestBtn = doc.createElement('button');
-    requestBtn.type = 'button';
-    requestBtn.className = 'sg-button sg-button--secondary';
-    requestBtn.textContent = 'Request access';
-    requestBtn.addEventListener('click', ()=>{
-      requestBtn.disabled = true;
-      requestBtn.textContent = 'Sending\u2026';
-      requestStatus.style.display = 'block';
-      requestStatus.innerHTML = '';
-      chrome.runtime.sendMessage({ type: 'sg-access-request', host: getHost(), url: location.href }, (resp) => {
-        if (chrome.runtime.lastError || !resp || !resp.ok) {
-          requestStatus.textContent = 'Could not reach OroQ. Try reloading the page.';
-          requestBtn.disabled = false;
-          requestBtn.textContent = 'Request access';
-          return;
-        }
-        requestBtn.textContent = '\u2713 Request sent';
-        const code = resp.request && resp.request.code ? resp.request.code : '';
-        requestStatus.textContent = code
-          ? 'Request sent. Ask a parent to approve it in the OroQ popup (code ' + code + ').'
-          : 'Request sent. Ask a parent to approve it in the OroQ popup.';
-      });
-    });
-    actions.appendChild(requestBtn);
-
-    // ── Temp PIN entry ──
-    const pinEntry = doc.createElement('div');
-    pinEntry.style.cssText = 'margin-top:10px;';
-    const pinToggle = doc.createElement('button');
-    pinToggle.type = 'button';
-    pinToggle.className = 'sg-button sg-button--ghost sg-button--sm';
-    pinToggle.textContent = 'Have a PIN from your parent?';
-    pinEntry.appendChild(pinToggle);
-    const pinForm = doc.createElement('div');
-    pinForm.style.cssText = 'display:none;margin-top:8px;display:none;gap:6px;align-items:center;flex-wrap:wrap;';
-    const tpInput = doc.createElement('input');
-    tpInput.type = 'text';
-    tpInput.maxLength = 6;
-    tpInput.placeholder = 'Enter PIN';
-    tpInput.autocomplete = 'off';
-    tpInput.style.cssText = 'text-transform:uppercase;letter-spacing:0.15em;font-family:monospace;font-size:1.1em;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:inherit;width:120px;';
-    const tpSubmit = doc.createElement('button');
-    tpSubmit.type = 'button';
-    tpSubmit.className = 'sg-button sg-button--primary sg-button--sm';
-    tpSubmit.textContent = 'Unlock';
-    const tpMsg = doc.createElement('small');
-    tpMsg.style.cssText = 'display:block;margin-top:4px;font-size:12px;';
-    pinForm.appendChild(tpInput);
-    pinForm.appendChild(tpSubmit);
-    pinEntry.appendChild(pinForm);
-    pinEntry.appendChild(tpMsg);
-    actions.appendChild(pinEntry);
-
-    pinToggle.addEventListener('click', () => {
-      const visible = pinForm.style.display !== 'none';
-      pinForm.style.display = visible ? 'none' : 'flex';
-      pinToggle.textContent = visible ? 'Have a PIN from your parent?' : 'Cancel';
-      if (!visible) tpInput.focus();
-    });
-    tpSubmit.addEventListener('click', () => {
-      const code = tpInput.value.trim().toUpperCase();
-      if (code.length !== 6) { tpMsg.textContent = 'PIN must be 6 characters.'; return; }
-      tpSubmit.disabled = true;
-      tpSubmit.textContent = 'Checking…';
-      tpMsg.textContent = '';
-      chrome.runtime.sendMessage({ type: 'sg-verify-temp-pin', pin: code, domain: getHost() }, (resp) => {
-        if (chrome.runtime.lastError || !resp) { tpMsg.textContent = 'Could not reach extension.'; tpSubmit.disabled = false; tpSubmit.textContent = 'Unlock'; return; }
-        if (resp.ok) {
-          tpMsg.textContent = '✅ PIN accepted! Reloading…';
-          try { sessionStorage.setItem('sg-ov:' + getHost(), '1'); } catch(_e) {}
-          setTimeout(() => location.reload(), 800);
-        } else {
-          tpMsg.textContent = resp.error || 'Invalid PIN.';
-          tpSubmit.disabled = false;
-          tpSubmit.textContent = 'Unlock';
-          tpInput.value = '';
-          tpInput.focus();
-        }
-      });
-    });
-    tpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') tpSubmit.click(); });
-
 
     const computedSupportUrl = (() => {
       if (supportLink && supportLink.href) return supportLink.href;
@@ -3627,14 +3324,14 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     if (overrideDisabled){
       const lockNotice = doc.createElement('p');
       lockNotice.className = 'sg-reason sg-explain__context';
-      lockNotice.textContent = 'Overrides are locked by your current mode (e.g., Classroom/Focus). Ask a parent/teacher to review.';
+      lockNotice.textContent = 'Overrides are locked while Focus Mode is running. They unlock when the session ends.';
       panel.appendChild(lockNotice);
     }
 
     const guidance = doc.createElement('div');
     guidance.className = 'sg-guidance';
     const guidanceTitle = doc.createElement('h3');
-    guidanceTitle.textContent = friendlyBlock.microTitle || 'AI literacy tips';
+    guidanceTitle.textContent = friendlyBlock.microTitle || 'Quick reminder';
     guidance.appendChild(guidanceTitle);
     if (friendlyBlock.microIntro){
       const intro = doc.createElement('p');
@@ -3645,7 +3342,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
     const guidanceList = doc.createElement('ul');
     guidanceList.className = 'sg-guidance__list';
     const lessons = microLessons.length ? microLessons : [
-      'If this page is needed, ask a safeguarding lead to review it.',
+      'If you really need this page, add it to your allowlist in the OroQ popup.',
       'Stick to trusted sites listed in your allowlist.',
       'Never share passwords or personal info on unfamiliar forms.'
     ];
@@ -3671,7 +3368,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
   }
 
 	  async function scan(){
-    const [cfg, localOverrides, classroomPayload] = await Promise.all([
+    const [cfg, localOverrides, localState] = await Promise.all([
       new Promise((resolve)=>chrome.storage.sync.get({enabled:true, allowlist:[], aggressive:false, sensitivity:60, profileTone: null, profileLabel: null, profileSafeSuggestions: [], focusAllowedComms: []}, resolve)),
       new Promise((resolve)=>chrome.storage.local.get({
         requirePin: false,
@@ -3679,7 +3376,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
         overridePinSalt: null,
         overridePinIterations: 0
       }, resolve)),
-      new Promise((resolve)=>chrome.storage.local.get({ classroomMode: CLASSROOM_DEFAULT, temporaryAllowlist: [], focusMode: { active: false, endsAt: 0, pinProtected: false } }, resolve))
+      new Promise((resolve)=>chrome.storage.local.get({ temporaryAllowlist: [], focusMode: { active: false, endsAt: 0, pinProtected: false } }, resolve))
     ]);
     if(!cfg.enabled) return;
     const pinConfig = {
@@ -3692,11 +3389,9 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
 	    const profileLabel = typeof cfg.profileLabel === 'string' && cfg.profileLabel.trim() ? cfg.profileLabel.trim() : null;
 	    const profileSuggestions = sanitizeSuggestionList(cfg.profileSafeSuggestions);
 	    const profileContext = { profileTone, profileLabel, profileSuggestions };
-	    lastProfileContext = profileContext;
-	    const classroomMode = normalizeClassroomMode(classroomPayload.classroomMode);
-    const focusMode = classroomPayload && classroomPayload.focusMode ? classroomPayload.focusMode : { active: false, endsAt: 0, pinProtected: false };
+    const focusMode = localState && localState.focusMode ? localState.focusMode : { active: false, endsAt: 0, pinProtected: false };
     const focusActive = Boolean(focusMode.active) && Number(focusMode.endsAt) > Date.now();
-    overrideLocked = Boolean(classroomMode.enabled || (focusActive && focusMode.pinProtected));
+    overrideLocked = Boolean(focusActive && focusMode.pinProtected);
     const host = getHost();
 
     // Cross-browser SafeSearch enforcement (DNR exists on Chromium, but this keeps Firefox/Safari consistent)
@@ -3720,9 +3415,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       }
     } catch(_e){}
 
-    if (classroomMode.enabled && host && isYoutubeHost(host)){
-      startClassroomYoutubeGuard(classroomMode, profileContext);
-    }
     setupNudges(host);
     try {
       if (host && sessionStorage.getItem('sg-ov:' + host) === '1'){
@@ -3731,7 +3423,7 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       }
     } catch(_e) {}
     if((cfg.allowlist||[]).includes(host)) return; // allowlisted
-    if (isTempAllowlisted(host, classroomPayload.temporaryAllowlist)) return; // temporarily allowlisted
+    if (isTempAllowlisted(host, localState.temporaryAllowlist)) return; // temporarily allowlisted
 
     const BL = await loadBlocklist();
     if(BL.domains && BL.domains.includes(host)) {
@@ -3881,34 +3573,6 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
       }catch(_e){} }, 2500);
     }
 	  }
-
-	  function stopClassroomYoutubeGuard(){
-	    try{
-	      const cleanup = window[CLASSROOM_YT_GUARD_FLAG];
-	      if (typeof cleanup === 'function') cleanup();
-	    }catch(_e){}
-	  }
-
-	  function updateClassroomYoutubeGuard(nextMode){
-	    const mode = normalizeClassroomMode(nextMode);
-	    const host = getHost();
-	    if (mode.enabled && host && isYoutubeHost(host)){
-	      startClassroomYoutubeGuard(mode, lastProfileContext || {});
-	    } else {
-	      stopClassroomYoutubeGuard();
-	    }
-	  }
-
-	  try{
-	    if (chrome && chrome.storage && chrome.storage.onChanged && typeof chrome.storage.onChanged.addListener === 'function'){
-	      chrome.storage.onChanged.addListener((changes, area)=>{
-	        if (area !== 'local' || !changes) return;
-	        if (Object.prototype.hasOwnProperty.call(changes, 'classroomMode')){
-	          updateClassroomYoutubeGuard(changes.classroomMode.newValue);
-	        }
-	      });
-	    }
-	  } catch(_e){}
 
 	  scan();
 	})();
