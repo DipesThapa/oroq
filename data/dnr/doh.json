@@ -1,0 +1,1 @@
+[{"id":220001,"priority":1,"action":{"type":"block"},"condition":{"requestDomains":["chrome.cloudflare-dns.com","cloudflare-dns.com","dns.adguard-dns.com","dns.adguard.com","dns.google","dns.google.com","dns.nextdns.io","dns.quad9.net","dns11.quad9.net","doh.cleanbrowsing.org","doh.opendns.com","mozilla.cloudflare-dns.com"],"resourceTypes":["main_frame","sub_frame"]}}]

@@ -29,11 +29,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "site/index.html",
-        "site/privacy.html",
         "site/support.html",
-        "site/*.html",
-        "model/nsfw/*",
         "assets/icons/*"
       ],
       "matches": [
@@ -47,6 +43,26 @@
         "id": "static_rules",
         "enabled": true,
         "path": "data/dnr_static_rules.json"
+      },
+      {
+        "id": "bl_adult",
+        "enabled": true,
+        "path": "data/dnr/adult.json"
+      },
+      {
+        "id": "bl_drugs",
+        "enabled": true,
+        "path": "data/dnr/drugs.json"
+      },
+      {
+        "id": "bl_gambling",
+        "enabled": true,
+        "path": "data/dnr/gambling.json"
+      },
+      {
+        "id": "bl_doh",
+        "enabled": true,
+        "path": "data/dnr/doh.json"
       }
     ]
   },
