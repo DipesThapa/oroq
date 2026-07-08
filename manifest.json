@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "OroQ",
   "version": "1.0.0",
-  "description": "Block harmful sites, enforce SafeSearch & protect kids online. Parent dashboard with PIN controls, focus mode & family pairing.",
+  "description": "Block distracting or adult sites, force SafeSearch, and lock it with a PIN. Private, on-device, with a one-click Focus Mode.",
   "homepage_url": "https://cyberheroez.co.uk/",
   "minimum_chrome_version": "100",
   "permissions": [

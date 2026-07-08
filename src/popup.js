@@ -194,6 +194,37 @@ const wizardSetPinBtn = document.getElementById('wizardSetPin');
 const wizardFocusDurationEl = document.getElementById('wizardFocusDuration');
 const wizardStatusEl = document.getElementById('wizardStatus');
 
+// OroQ Pro (commitment tools) elements
+const proStatusBadgeEl = document.getElementById('proStatusBadge');
+const proStatusTextEl = document.getElementById('proStatusText');
+const proUpgradeRowEl = document.getElementById('proUpgradeRow');
+const proUpgradeBtn = document.getElementById('proUpgradeBtn');
+const proLicenseInput = document.getElementById('proLicenseInput');
+const proActivateBtn = document.getElementById('proActivateBtn');
+const proDeactivateBtn = document.getElementById('proDeactivateBtn');
+const proLicenseMsg = document.getElementById('proLicenseMsg');
+const proControlsEl = document.getElementById('proControls');
+const committedLockToggle = document.getElementById('committedLockToggle');
+const committedLockCooldownEl = document.getElementById('committedLockCooldown');
+const committedLockStatusEl = document.getElementById('committedLockStatus');
+const committedLockCountdownEl = document.getElementById('committedLockCountdown');
+const committedLockConfirmBtn = document.getElementById('committedLockConfirm');
+const committedLockCancelBtn = document.getElementById('committedLockCancel');
+const proCustomDurationEl = document.getElementById('proCustomDuration');
+const proDurationApplyBtn = document.getElementById('proDurationApply');
+const proDurationMsgEl = document.getElementById('proDurationMsg');
+const scheduleListEl = document.getElementById('scheduleList');
+const scheduleDaysEl = document.getElementById('scheduleDays');
+const scheduleStartEl = document.getElementById('scheduleStart');
+const scheduleEndEl = document.getElementById('scheduleEnd');
+const scheduleAddBtn = document.getElementById('scheduleAdd');
+const scheduleMsgEl = document.getElementById('scheduleMsg');
+
+// TODO(owner): replace with your real checkout link (Gumroad / LemonSqueezy / etc.).
+const CHECKOUT_URL = 'https://oroq.gumroad.com/l/pro';
+const PRO_FOCUS_MIN = 15;
+const PRO_FOCUS_MAX = 480;
+
 const TOUR_KEY = 'onboardingComplete';
 const TOUR_STEPS = [
   {
@@ -288,6 +319,13 @@ let focusDurationChoice = 45;
 let focusPinPreference = false;
 let focusTicker = null;
 let focusBusy = false;
+// OroQ Pro state (mirrors chrome.storage.local)
+let proTier = false;
+let proEmail = '';
+let committedLock = { enabled: false, cooldownMinutes: 10 };
+let committedLockCooldown = null; // { active, startedAt, endsAt } persisted across popup close / SW restart
+let focusSchedules = [];
+let commitTicker = null;
 const CLASSROOM_DEFAULT = { enabled: false, playlists: [], videos: [] };
 let classroomState = { ...CLASSROOM_DEFAULT };
 let themePreference = cachedThemePreference;
@@ -656,7 +694,8 @@ function renderFocusState(){
 function applyFocusState(state){
   const now = Date.now();
   const active = Boolean(state && state.active && state.endsAt && state.endsAt > now);
-  const duration = clampFocusDuration(state && state.durationMinutes ? state.durationMinutes : focusDurationChoice);
+  const duration = resolveDurationChoice(state && state.durationMinutes ? state.durationMinutes : focusDurationChoice);
+  if (proTier) ensureDurationOption(duration);
   const endsAt = state && state.endsAt ? Number(state.endsAt) : 0;
   focusState = {
     active,
@@ -773,6 +812,270 @@ async function stopFocusFromUi(){
   applyFocusState(resp.state);
   if (focusToggleEl) focusToggleEl.checked = false;
   setFocusMessage('Focus Mode ended. Normal protection resumes.', 'muted');
+}
+
+// ── OroQ Pro: license, committed lock, custom durations, scheduled focus ────
+function resolveDurationChoice(minutes){
+  const v = Number(minutes);
+  if (proTier){
+    if (!Number.isFinite(v)) return 45;
+    return Math.max(PRO_FOCUS_MIN, Math.min(PRO_FOCUS_MAX, Math.round(v)));
+  }
+  return clampFocusDuration(v);
+}
+
+function ensureDurationOption(minutes){
+  if (!focusDurationSelect) return;
+  const val = String(minutes);
+  const has = Array.from(focusDurationSelect.options).some((o)=>o.value === val);
+  if (!has){
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = `${minutes} minutes`;
+    focusDurationSelect.appendChild(opt);
+  }
+}
+
+function setProLicenseMessage(text, tone = 'muted'){
+  if (!proLicenseMsg) return;
+  proLicenseMsg.textContent = text;
+  proLicenseMsg.classList.remove('message--success', 'message--error');
+  if (tone === 'success') proLicenseMsg.classList.add('message--success');
+  else if (tone === 'error') proLicenseMsg.classList.add('message--error');
+}
+
+function renderProStatus(){
+  if (proStatusBadgeEl){
+    proStatusBadgeEl.textContent = proTier ? 'Pro active' : 'Locked';
+    proStatusBadgeEl.classList.toggle('pro-badge--active', proTier);
+    proStatusBadgeEl.classList.toggle('pro-badge--locked', !proTier);
+  }
+  if (proStatusTextEl){
+    proStatusTextEl.textContent = proTier
+      ? (proEmail ? `Pro active — licensed to ${proEmail}.` : 'Pro active — commitment tools unlocked.')
+      : 'Commitment tools that make it harder to cheat on yourself.';
+  }
+  if (proControlsEl) proControlsEl.classList.toggle('pro-controls--locked', !proTier);
+  if (proUpgradeRowEl) proUpgradeRowEl.hidden = proTier;
+  if (proDeactivateBtn) proDeactivateBtn.hidden = !proTier;
+  if (proLicenseInput) proLicenseInput.disabled = proTier;
+  if (proActivateBtn) proActivateBtn.disabled = proTier;
+  renderCommittedLock();
+  renderSchedules();
+  if (proCustomDurationEl && !proCustomDurationEl.value){
+    proCustomDurationEl.value = String(focusDurationChoice);
+  }
+}
+
+async function activateLicenseFromUi(){
+  const key = proLicenseInput ? proLicenseInput.value.trim() : '';
+  if (!key){
+    setProLicenseMessage('Paste your license key first.', 'error');
+    return;
+  }
+  setProLicenseMessage('Verifying…', 'muted');
+  const resp = await sendMessagePromise({ type: 'sg-verify-license', key });
+  if (!resp || !resp.ok){
+    const reason = resp && resp.error ? resp.error : 'invalid';
+    setProLicenseMessage(`Invalid license key (${reason}). Check it and try again.`, 'error');
+    return;
+  }
+  proTier = true;
+  proEmail = resp.proEmail || '';
+  if (proLicenseInput) proLicenseInput.value = '';
+  setProLicenseMessage('Pro activated. Enjoy the commitment tools.', 'success');
+  renderProStatus();
+  renderFocusState();
+}
+
+async function deactivateLicense(){
+  proTier = false;
+  proEmail = '';
+  await chrome.storage.local.set({ proTier: false, proLicense: '', proEmail: '' });
+  setProLicenseMessage('License removed. Pro features are locked.', 'muted');
+  renderProStatus();
+  renderFocusState();
+}
+
+// ── Committed Lock ──
+function renderCommittedLock(){
+  if (committedLockToggle){
+    committedLockToggle.checked = Boolean(committedLock.enabled);
+  }
+  if (committedLockCooldownEl){
+    committedLockCooldownEl.value = String(committedLock.cooldownMinutes || 10);
+  }
+  const now = Date.now();
+  const cooling = committedLockCooldown
+    && committedLockCooldown.active
+    && Number(committedLockCooldown.endsAt) > 0;
+  if (!cooling){
+    if (committedLockStatusEl) committedLockStatusEl.hidden = true;
+    stopCommitTicker();
+    return;
+  }
+  if (committedLockStatusEl) committedLockStatusEl.hidden = false;
+  const elapsed = now >= Number(committedLockCooldown.endsAt);
+  if (committedLockConfirmBtn) committedLockConfirmBtn.hidden = !elapsed;
+  if (committedLockCountdownEl){
+    committedLockCountdownEl.textContent = elapsed
+      ? 'Cooldown complete — enter your PIN to pause protection.'
+      : `Cooldown: ${formatFocusCountdown(Number(committedLockCooldown.endsAt) - now)} before you can pause.`;
+  }
+  startCommitTicker();
+}
+
+function startCommitTicker(){
+  if (commitTicker) return;
+  commitTicker = setInterval(()=>{
+    const now = Date.now();
+    if (!committedLockCooldown || !committedLockCooldown.active || Number(committedLockCooldown.endsAt) <= 0){
+      stopCommitTicker();
+      return;
+    }
+    renderCommittedLock();
+    if (now >= Number(committedLockCooldown.endsAt)) stopCommitTicker();
+  }, 1000);
+}
+
+function stopCommitTicker(){
+  if (commitTicker){
+    clearInterval(commitTicker);
+    commitTicker = null;
+  }
+}
+
+async function beginCommitCooldown(){
+  const minutes = committedLock.cooldownMinutes || 10;
+  const now = Date.now();
+  committedLockCooldown = { active: true, startedAt: now, endsAt: now + minutes * 60000 };
+  await chrome.storage.local.set({ committedLockCooldown });
+  setPinMessage(`Committed Lock: wait ${minutes} min, then enter your PIN to pause.`, 'muted');
+  renderCommittedLock();
+}
+
+async function cancelCommitCooldown(){
+  committedLockCooldown = null;
+  await chrome.storage.local.set({ committedLockCooldown: null });
+  setPinMessage('Protection stays on. Nice work sticking to it.', 'success');
+  renderCommittedLock();
+}
+
+async function completeCommitDisable(){
+  const now = Date.now();
+  if (!committedLockCooldown || now < Number(committedLockCooldown.endsAt)){
+    renderCommittedLock();
+    return;
+  }
+  if (!storedPin){
+    setPinMessage('Set a PIN first to complete the pause.', 'error');
+    return;
+  }
+  const { ok, cancelled } = await requestPinConfirmation('Enter your PIN to pause OroQ protection');
+  if (!ok){
+    if (!cancelled) setPinMessage('Incorrect PIN.', 'error');
+    return;
+  }
+  // Issue the one-time unlock token, then disable. Background consumes the token.
+  await chrome.storage.local.set({ committedLockUnlockToken: Date.now() });
+  committedLockCooldown = null;
+  await chrome.storage.local.set({ committedLockCooldown: null });
+  await chrome.storage.sync.set({ enabled: false });
+  if (enabledEl) enabledEl.checked = false;
+  setStatus(false);
+  setPinMessage('Protection paused.', 'muted');
+  renderCommittedLock();
+}
+
+// ── Scheduled Focus ──
+const SCHEDULE_DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function describeSchedule(s){
+  const days = Array.isArray(s.days) ? s.days.slice().sort((a, b)=>a - b) : [];
+  const dayStr = days.map((d)=>SCHEDULE_DAY_LABELS[d] || '').filter(Boolean).join(', ');
+  return `${dayStr} · ${s.startHHMM}–${s.endHHMM}`;
+}
+
+function renderSchedules(){
+  if (!scheduleListEl) return;
+  scheduleListEl.innerHTML = '';
+  if (!focusSchedules.length){
+    const empty = document.createElement('p');
+    empty.className = 'pro-card__desc';
+    empty.textContent = 'No windows yet.';
+    scheduleListEl.appendChild(empty);
+    return;
+  }
+  focusSchedules.forEach((s)=>{
+    const row = document.createElement('div');
+    row.className = 'schedule-item';
+    const label = document.createElement('span');
+    label.textContent = describeSchedule(s);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'schedule-item__remove';
+    remove.textContent = 'Remove';
+    remove.addEventListener('click', ()=>removeSchedule(s.id));
+    row.appendChild(label);
+    row.appendChild(remove);
+    scheduleListEl.appendChild(row);
+  });
+}
+
+function validHHMM(value){
+  return /^(\d{1,2}):(\d{2})$/.test(String(value || '')) && (()=>{
+    const [h, m] = value.split(':').map(Number);
+    return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+  })();
+}
+
+async function addScheduleFromUi(){
+  if (!proTier) return;
+  const days = scheduleDaysEl
+    ? Array.from(scheduleDaysEl.querySelectorAll('input[type="checkbox"]:checked')).map((cb)=>Number(cb.dataset.day))
+    : [];
+  const startHHMM = scheduleStartEl ? scheduleStartEl.value : '';
+  const endHHMM = scheduleEndEl ? scheduleEndEl.value : '';
+  if (!days.length){
+    if (scheduleMsgEl) setScheduleMessage('Pick at least one day.', 'error');
+    return;
+  }
+  if (!validHHMM(startHHMM) || !validHHMM(endHHMM)){
+    setScheduleMessage('Enter a valid start and end time.', 'error');
+    return;
+  }
+  const [sh, sm] = startHHMM.split(':').map(Number);
+  const [eh, em] = endHHMM.split(':').map(Number);
+  if ((eh * 60 + em) <= (sh * 60 + sm)){
+    setScheduleMessage('End time must be after start time.', 'error');
+    return;
+  }
+  const entry = {
+    id: `sch_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+    days: Array.from(new Set(days)).sort((a, b)=>a - b),
+    startHHMM,
+    endHHMM
+  };
+  focusSchedules = [...focusSchedules, entry].slice(0, 20);
+  await chrome.storage.local.set({ focusSchedules });
+  setScheduleMessage('Window added. Focus Mode will run automatically.', 'success');
+  if (scheduleDaysEl) scheduleDaysEl.querySelectorAll('input[type="checkbox"]').forEach((cb)=>{ cb.checked = false; });
+  renderSchedules();
+}
+
+async function removeSchedule(id){
+  focusSchedules = focusSchedules.filter((s)=>s.id !== id);
+  await chrome.storage.local.set({ focusSchedules });
+  setScheduleMessage('Window removed.', 'muted');
+  renderSchedules();
+}
+
+function setScheduleMessage(text, tone = 'muted'){
+  if (!scheduleMsgEl) return;
+  scheduleMsgEl.textContent = text;
+  scheduleMsgEl.classList.remove('message--success', 'message--error');
+  if (tone === 'success') scheduleMsgEl.classList.add('message--success');
+  else if (tone === 'error') scheduleMsgEl.classList.add('message--error');
 }
 
 function updateAlertAvailability(){
@@ -2342,6 +2645,11 @@ chrome.storage.local.get({
   tamperAlertEnabled: false,
   focusPinPreference: false,
   focusDurationMinutes: 45,
+  proTier: false,
+  proEmail: '',
+  committedLock: { enabled: false, cooldownMinutes: 10 },
+  committedLockCooldown: null,
+  focusSchedules: [],
   classroomMode: CLASSROOM_DEFAULT,
   conversationEvents: [],
   kidReportEvents: [],
@@ -2395,7 +2703,17 @@ chrome.storage.local.get({
   if (approverPromptEnabledEl) approverPromptEnabledEl.checked = approverPromptEnabled;
   setApproverMessage(approverPromptEnabled ? 'Approver prompt enabled. Staff must enter their name when overriding.' : 'Enable to record who approves each override.', approverPromptEnabled ? 'success' : 'muted');
   focusPinPreference = Boolean(cfg.focusPinPreference);
-  focusDurationChoice = clampFocusDuration(cfg.focusDurationMinutes || focusDurationChoice);
+  proTier = Boolean(cfg.proTier);
+  proEmail = typeof cfg.proEmail === 'string' ? cfg.proEmail : '';
+  committedLock = {
+    enabled: Boolean(cfg.committedLock && cfg.committedLock.enabled),
+    cooldownMinutes: Math.max(1, Math.min(120, Number(cfg.committedLock && cfg.committedLock.cooldownMinutes) || 10))
+  };
+  committedLockCooldown = cfg.committedLockCooldown && cfg.committedLockCooldown.active ? cfg.committedLockCooldown : null;
+  focusSchedules = Array.isArray(cfg.focusSchedules) ? cfg.focusSchedules : [];
+  focusDurationChoice = resolveDurationChoice(cfg.focusDurationMinutes || focusDurationChoice);
+  if (proTier) ensureDurationOption(focusDurationChoice);
+  renderProStatus();
   renderFocusState();
   refreshFocusState();
   classroomState = { ...CLASSROOM_DEFAULT, ...(cfg.classroomMode || {}) };
@@ -2425,6 +2743,21 @@ chrome.storage.local.get({
 
 enabledEl.addEventListener('change', async ()=>{
   const wantsEnabled = enabledEl.checked;
+  // Pro Committed Lock: disabling requires a visible cooldown, then PIN.
+  if (!wantsEnabled && proTier && committedLock.enabled){
+    enabledEl.checked = true; // protection stays on until cooldown + PIN complete
+    setStatus(true);
+    if (!storedPin){
+      setPinMessage('Set a PIN to use Committed Lock.', 'error');
+      return;
+    }
+    if (committedLockCooldown && committedLockCooldown.active){
+      renderCommittedLock();
+      return;
+    }
+    await beginCommitCooldown();
+    return;
+  }
   if (!wantsEnabled && requirePinEl && requirePinEl.checked){
     if (!storedPin){
       setPinMessage('Set a PIN to guard protection toggles.', 'error');
@@ -2464,7 +2797,7 @@ sensitivityEl.addEventListener('input', ()=>{
 
 if (focusDurationSelect){
   focusDurationSelect.addEventListener('change', ()=>{
-    const minutes = clampFocusDuration(focusDurationSelect.value);
+    const minutes = resolveDurationChoice(focusDurationSelect.value);
     focusDurationChoice = minutes;
     chrome.storage.local.set({ focusDurationMinutes: minutes });
     renderFocusState();
@@ -3488,8 +3821,24 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     refreshFocusState();
   }
   if (area === 'local' && changes.focusDurationMinutes){
-    focusDurationChoice = clampFocusDuration(changes.focusDurationMinutes.newValue || focusDurationChoice);
+    focusDurationChoice = resolveDurationChoice(changes.focusDurationMinutes.newValue || focusDurationChoice);
+    if (proTier) ensureDurationOption(focusDurationChoice);
     renderFocusState();
+  }
+  if (area === 'local' && changes.proTier){
+    proTier = Boolean(changes.proTier.newValue);
+    renderProStatus();
+    renderFocusState();
+  }
+  if (area === 'local' && changes.committedLockCooldown){
+    committedLockCooldown = changes.committedLockCooldown.newValue && changes.committedLockCooldown.newValue.active
+      ? changes.committedLockCooldown.newValue
+      : null;
+    renderCommittedLock();
+  }
+  if (area === 'local' && changes.focusSchedules){
+    focusSchedules = Array.isArray(changes.focusSchedules.newValue) ? changes.focusSchedules.newValue : [];
+    renderSchedules();
   }
   if (area === 'local' && changes.focusPinPreference){
     focusPinPreference = Boolean(changes.focusPinPreference.newValue);
@@ -3900,6 +4249,66 @@ if (digestDownloadBtn){
       setDigestMessage('Failed to build digest.', 'error');
     }
   });
+}
+
+// ── OroQ Pro event wiring ──
+if (proUpgradeBtn){
+  proUpgradeBtn.addEventListener('click', ()=>{
+    try { chrome.tabs.create({ url: CHECKOUT_URL }); } catch(_e){}
+  });
+}
+if (proActivateBtn){
+  proActivateBtn.addEventListener('click', ()=>{ activateLicenseFromUi(); });
+}
+if (proLicenseInput){
+  proLicenseInput.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter'){ e.preventDefault(); activateLicenseFromUi(); }
+  });
+}
+if (proDeactivateBtn){
+  proDeactivateBtn.addEventListener('click', ()=>{ deactivateLicense(); });
+}
+if (committedLockToggle){
+  committedLockToggle.addEventListener('change', async ()=>{
+    if (!proTier){ committedLockToggle.checked = false; return; }
+    committedLock.enabled = committedLockToggle.checked;
+    if (!committedLock.enabled && committedLockCooldown){
+      committedLockCooldown = null;
+      await chrome.storage.local.set({ committedLockCooldown: null });
+    }
+    await chrome.storage.local.set({ committedLock });
+    renderCommittedLock();
+  });
+}
+if (committedLockCooldownEl){
+  committedLockCooldownEl.addEventListener('change', async ()=>{
+    const minutes = Math.max(1, Math.min(120, Number(committedLockCooldownEl.value) || 10));
+    committedLock.cooldownMinutes = minutes;
+    committedLockCooldownEl.value = String(minutes);
+    await chrome.storage.local.set({ committedLock });
+  });
+}
+if (committedLockConfirmBtn){
+  committedLockConfirmBtn.addEventListener('click', ()=>{ completeCommitDisable(); });
+}
+if (committedLockCancelBtn){
+  committedLockCancelBtn.addEventListener('click', ()=>{ cancelCommitCooldown(); });
+}
+if (proDurationApplyBtn){
+  proDurationApplyBtn.addEventListener('click', ()=>{
+    if (!proTier){ return; }
+    const minutes = resolveDurationChoice(proCustomDurationEl ? proCustomDurationEl.value : focusDurationChoice);
+    focusDurationChoice = minutes;
+    ensureDurationOption(minutes);
+    chrome.storage.local.set({ focusDurationMinutes: minutes });
+    if (proDurationMsgEl){
+      proDurationMsgEl.textContent = `Focus sessions will run for ${minutes} minutes.`;
+    }
+    renderFocusState();
+  });
+}
+if (scheduleAddBtn){
+  scheduleAddBtn.addEventListener('click', ()=>{ addScheduleFromUi(); });
 }
 
 loadProfiles();

@@ -44,9 +44,36 @@ const FOCUS_DEFAULT_STATE = {
   startedAt: 0,
   endsAt: 0,
   durationMinutes: 0,
-  pinProtected: false
+  pinProtected: false,
+  source: '' // '' = manual/free; 'schedule' = auto-started by a Pro Scheduled Focus window
 };
 const FOCUS_ALLOWED_DURATIONS = [30, 45, 60];
+// Pro (license-gated) durations: arbitrary minutes in this inclusive range.
+const PRO_FOCUS_MIN = 15;
+const PRO_FOCUS_MAX = 480;
+const SCHEDULE_ALARM = 'sg-focus-schedule';
+const COMMIT_UNLOCK_TOKEN_TTL_MS = 8000; // popup must set enabled=false within this window of consuming the token
+
+// ── OroQ Pro: offline ECDSA P-256 license verification ──────────────────────
+// A license key = base64url(payloadJson) + "." + base64url(signature), where
+// payload = {"email":"...","tier":"pro","iat":<unixSeconds>} and the signature
+// is ECDSA/SHA-256 over the exact payload JSON bytes. We verify it against the
+// public key below using Web Crypto — fully offline, no network, no server.
+//
+// INTEGRITY NOTE (do not oversell this): client-side verification is bypassable
+// by anyone who edits the unpacked extension. That is acceptable for a
+// self-control tool — the buyer *wants* it to keep working — but it is NOT
+// tamper-proof DRM and must never be described as such.
+//
+// TODO(owner): replace this with YOUR public JWK from `node scripts/license.mjs
+// keygen`. The value below is a working demo key whose matching private key is
+// NOT shipped; regenerate your own so only you can mint licenses.
+const LICENSE_PUBLIC_KEY_JWK = {
+  kty: 'EC',
+  crv: 'P-256',
+  x: 'eGNcmLvYgRUb_QkajiIn9nDgVNAHR_IHS_5wGR8jjoA',
+  y: 'P_-wES4cXCiqnNq4Z8LvNTIdlqtbW0Fs9CK_av0AJT8'
+};
 const FOCUS_DEFAULT_ALLOWLIST = [
   'wikipedia.org',
   'khanacademy.org',
@@ -211,6 +238,75 @@ function clampFocusDuration(value){
   return FOCUS_ALLOWED_DURATIONS[0];
 }
 
+function clampFocusDurationPro(value){
+  const minutes = Math.round(Number(value));
+  if (!Number.isFinite(minutes)) return FOCUS_ALLOWED_DURATIONS[1];
+  return Math.max(PRO_FOCUS_MIN, Math.min(PRO_FOCUS_MAX, minutes));
+}
+
+// ── Pro license verification helpers (offline) ──────────────────────────────
+function base64urlToBytes(str){
+  const s = String(str || '').replace(/-/g, '+').replace(/_/g, '/');
+  const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
+  const bin = atob(s + pad);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+// Verify a pasted license key fully offline. Returns { ok, email, error }.
+async function verifyLicenseKey(key){
+  try{
+    const raw = String(key || '').trim();
+    const dot = raw.indexOf('.');
+    if (dot <= 0 || dot === raw.length - 1) return { ok: false, error: 'malformed-key' };
+    const payloadB64 = raw.slice(0, dot);
+    const sigB64 = raw.slice(dot + 1);
+    const payloadBytes = base64urlToBytes(payloadB64);
+    const signature = base64urlToBytes(sigB64);
+    let payload;
+    try{
+      payload = JSON.parse(new TextDecoder().decode(payloadBytes));
+    }catch(_e){ return { ok: false, error: 'bad-payload' }; }
+    if (!payload || payload.tier !== 'pro' || typeof payload.email !== 'string'){
+      return { ok: false, error: 'not-pro' };
+    }
+    const pub = await crypto.subtle.importKey(
+      'jwk', LICENSE_PUBLIC_KEY_JWK, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']
+    );
+    const valid = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' }, pub, signature, payloadBytes
+    );
+    if (!valid) return { ok: false, error: 'invalid-signature' };
+    return { ok: true, email: payload.email.trim() };
+  }catch(_e){
+    return { ok: false, error: 'verify-failed' };
+  }
+}
+
+async function getProStatus(){
+  const { proTier = false, proEmail = '' } = await chrome.storage.local.get({ proTier: false, proEmail: '' });
+  return { proTier: Boolean(proTier), proEmail: typeof proEmail === 'string' ? proEmail : '' };
+}
+
+// Re-verify the stored license every service-worker start (offline). If the key
+// no longer validates (e.g. public key rotated), Pro is revoked locally.
+async function verifyStoredLicense(){
+  try{
+    const { proLicense = '' } = await chrome.storage.local.get({ proLicense: '' });
+    if (!proLicense){
+      await chrome.storage.local.set({ proTier: false });
+      return;
+    }
+    const result = await verifyLicenseKey(proLicense);
+    if (result.ok){
+      await chrome.storage.local.set({ proTier: true, proEmail: result.email });
+    } else {
+      await chrome.storage.local.set({ proTier: false });
+    }
+  }catch(_e){}
+}
+
 async function getFocusState(){
   const stored = await new Promise((resolve)=>chrome.storage.local.get({ focusMode: FOCUS_DEFAULT_STATE }, resolve));
   const raw = stored.focusMode || {};
@@ -225,14 +321,18 @@ async function getFocusState(){
 }
 
 async function startFocusSession(durationMinutes, options = {}){
-  const duration = clampFocusDuration(durationMinutes);
+  // Pro unlocks arbitrary durations (15–480). Free stays clamped to 30/45/60.
+  const duration = options.allowCustom
+    ? clampFocusDurationPro(durationMinutes)
+    : clampFocusDuration(durationMinutes);
   const now = Date.now();
   const focusMode = {
     active: true,
     startedAt: now,
     endsAt: now + duration * 60000,
     durationMinutes: duration,
-    pinProtected: Boolean(options.pinProtected)
+    pinProtected: Boolean(options.pinProtected),
+    source: typeof options.source === 'string' ? options.source : ''
   };
   await chrome.storage.local.set({ focusMode });
   scheduleFocusAlarm(true);
@@ -293,6 +393,95 @@ async function handleFocusTick(){
   }
 }
 
+// ── Pro: Scheduled Focus (recurring auto Focus Mode windows) ────────────────
+function parseHHMM(value){
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(value || '').trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function sanitizeFocusSchedules(raw){
+  const list = Array.isArray(raw) ? raw : [];
+  const out = [];
+  list.forEach((entry)=>{
+    if (!entry || typeof entry !== 'object') return;
+    const days = Array.isArray(entry.days)
+      ? Array.from(new Set(entry.days.map((d)=>Number(d)).filter((d)=>Number.isInteger(d) && d >= 0 && d <= 6)))
+      : [];
+    const start = parseHHMM(entry.startHHMM);
+    const end = parseHHMM(entry.endHHMM);
+    if (!days.length || start == null || end == null || end <= start) return;
+    out.push({
+      id: entry.id || `sch_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      days,
+      startHHMM: entry.startHHMM,
+      endHHMM: entry.endHHMM
+    });
+  });
+  return out.slice(0, 20);
+}
+
+function scheduleFocusScheduleAlarm(active){
+  if (active){
+    try { chrome.alarms.create(SCHEDULE_ALARM, { periodInMinutes: 1 }); } catch(_e){}
+    return;
+  }
+  chrome.alarms.clear(SCHEDULE_ALARM);
+}
+
+// Create/clear the schedule alarm based on Pro status + whether any windows exist.
+async function reconcileFocusSchedules(){
+  try{
+    const { proTier = false, focusSchedules = [] } = await chrome.storage.local.get({ proTier: false, focusSchedules: [] });
+    const schedules = sanitizeFocusSchedules(focusSchedules);
+    scheduleFocusScheduleAlarm(Boolean(proTier) && schedules.length > 0);
+  }catch(_e){}
+}
+
+// Runs every minute while schedules exist: auto-enter at a window start,
+// auto-exit at its end. Only touches sessions it started itself (source==='schedule').
+async function handleScheduleTick(){
+  try{
+    const { proTier = false, focusSchedules = [], focusDurationMinutes = 45 } = await chrome.storage.local.get({
+      proTier: false,
+      focusSchedules: [],
+      focusDurationMinutes: 45
+    });
+    const schedules = sanitizeFocusSchedules(focusSchedules);
+    if (!proTier || !schedules.length){
+      scheduleFocusScheduleAlarm(false);
+      return;
+    }
+    const now = new Date();
+    const day = now.getDay();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    let activeWindow = null;
+    for (const s of schedules){
+      if (!s.days.includes(day)) continue;
+      const start = parseHHMM(s.startHHMM);
+      const end = parseHHMM(s.endHHMM);
+      if (start == null || end == null) continue;
+      if (cur >= start && cur < end){ activeWindow = { end }; break; }
+    }
+    const focus = await getFocusState();
+    if (activeWindow && !focus.active){
+      const minutesLeft = Math.max(PRO_FOCUS_MIN, activeWindow.end - cur);
+      await startFocusSession(clampFocusDurationPro(Math.min(minutesLeft, focusDurationMinutes || minutesLeft)), {
+        allowCustom: true,
+        source: 'schedule',
+        pinProtected: false
+      });
+    } else if (!activeWindow && focus.active && focus.source === 'schedule'){
+      await stopFocusSession();
+    }
+  }catch(err){
+    console.error('[OroQ] Focus schedule tick error', err);
+  }
+}
+
 
 chrome.alarms.onAlarm.addListener((alarm)=>{
   if (alarm && alarm.name === HEARTBEAT_ALARM){
@@ -302,6 +491,9 @@ chrome.alarms.onAlarm.addListener((alarm)=>{
   }
   if (alarm && alarm.name === FOCUS_ALARM){
     handleFocusTick().catch(()=>{});
+  }
+  if (alarm && alarm.name === SCHEDULE_ALARM){
+    handleScheduleTick().catch(()=>{});
   }
   if (alarm && alarm.name === WEEKLY_TIP_ALARM){
     rotateWeeklyTip().catch((err)=>{
@@ -325,6 +517,7 @@ chrome.runtime.onInstalled.addListener((details)=>{
   recoverFocusSession();
   scheduleWeeklyTipAlarm();
   rotateWeeklyTip().catch((_e)=>{});
+  verifyStoredLicense().then(()=>reconcileFocusSchedules()).catch(()=>{});
 });
 
 function formatFocusBadge(remainingMs){
@@ -366,6 +559,9 @@ chrome.storage.onChanged.addListener((changes, area)=>{
         trackOnceEvent('protection_enabled').catch(()=>{});
         touchWeeklyActive('protection').catch(()=>{});
       }
+      // Pro Committed Lock backstop: if protection was turned OFF without a valid
+      // popup-issued unlock token, force it back ON (the free path never reverts).
+      enforceCommittedLock(changes.enabled).catch(()=>{});
     }
     if (Object.prototype.hasOwnProperty.call(changes, TOUR_KEY)){
       if (changes[TOUR_KEY] && changes[TOUR_KEY].newValue === true && changes[TOUR_KEY].oldValue !== true){
@@ -394,6 +590,10 @@ chrome.storage.onChanged.addListener((changes, area)=>{
     if (Object.prototype.hasOwnProperty.call(changes, 'focusMode')){
       rebuildDynamicRules();
       recoverFocusSession();
+    }
+    if (Object.prototype.hasOwnProperty.call(changes, 'focusSchedules')
+      || Object.prototype.hasOwnProperty.call(changes, 'proTier')){
+      reconcileFocusSchedules();
     }
   }
 });
@@ -436,6 +636,8 @@ rebuildDynamicRules().catch((err)=>{
   console.error('[OroQ] Initial DNR rebuild failed', err);
 });
 rotateWeeklyTip().catch((_e)=>{});
+// Re-verify the Pro license offline on every SW start, then (re)arm schedules.
+verifyStoredLicense().then(()=>reconcileFocusSchedules()).catch(()=>{});
 // Enable DNS filtering on startup if protection is on
 chrome.storage.sync.get({ enabled: true }, ({ enabled }) => { if (enabled !== false) enableDnsFiltering(); });
 handleHeartbeat({ startup: true }).catch((err)=>{
@@ -448,6 +650,7 @@ chrome.runtime.onStartup.addListener(()=>{
     console.error('[OroQ] Heartbeat startup check failed', err);
   });
   recoverFocusSession().catch(()=>{});
+  verifyStoredLicense().then(()=>reconcileFocusSchedules()).catch(()=>{});
 });
 
 // ---- DNR dynamic rules (blocklist + allowlist) ----
@@ -1013,8 +1216,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     return true;
   }
   if (message && message.type === 'sg-focus-start'){
-    const duration = clampFocusDuration(message.durationMinutes || message.duration);
-    startFocusSession(duration, { pinProtected: Boolean(message.pinProtected) }).then((state)=>{
+    const requested = message.durationMinutes || message.duration;
+    getProStatus().then(({ proTier })=>{
+      const duration = proTier ? clampFocusDurationPro(requested) : clampFocusDuration(requested);
+      return startFocusSession(duration, { pinProtected: Boolean(message.pinProtected), allowCustom: proTier });
+    }).then((state)=>{
       const now = Date.now();
       sendResponse({
         ok: true,
@@ -1035,6 +1241,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse)=>{
     }).catch((err)=>{
       console.error('[OroQ] Focus stop failed', err);
       sendResponse({ ok: false, error: 'failed-focus-stop' });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-verify-license'){
+    verifyLicenseKey(message.key).then((result)=>{
+      if (!result.ok){
+        sendResponse({ ok: false, error: result.error || 'invalid' });
+        return;
+      }
+      const key = String(message.key || '').trim();
+      chrome.storage.local.set({ proTier: true, proLicense: key, proEmail: result.email }, ()=>{
+        reconcileFocusSchedules().catch(()=>{});
+        trackEvent('pro_activated').catch(()=>{});
+        sendResponse({ ok: true, proTier: true, proEmail: result.email });
+      });
+    }).catch(()=>{
+      sendResponse({ ok: false, error: 'verify-failed' });
+    });
+    return true;
+  }
+  if (message && message.type === 'sg-get-pro-status'){
+    getProStatus().then((status)=>{
+      sendResponse({ ok: true, ...status });
+    }).catch(()=>{
+      sendResponse({ ok: false, proTier: false, proEmail: '' });
     });
     return true;
   }
@@ -1178,6 +1409,34 @@ async function handleHeartbeat(options = {}){
     }, now);
   } catch(err){
     console.error('[OroQ] Tamper alert failed', err);
+  }
+}
+
+// Enforce the Pro "Committed Lock": protection may only be disabled when the
+// popup has completed the cooldown + PIN and written a fresh unlock token.
+// Any other attempt to set enabled=false (incl. direct storage edits) is reverted.
+async function enforceCommittedLock(change){
+  try{
+    if (!change || change.newValue !== false) return false;
+    const { proTier = false, committedLock = {}, committedLockUnlockToken = 0 } = await chrome.storage.local.get({
+      proTier: false,
+      committedLock: {},
+      committedLockUnlockToken: 0
+    });
+    const lockOn = Boolean(proTier) && committedLock && committedLock.enabled;
+    if (!lockOn) return false;
+    const token = Number(committedLockUnlockToken) || 0;
+    const now = Date.now();
+    if (token && (now - token) <= COMMIT_UNLOCK_TOKEN_TTL_MS){
+      // Legitimate disable: consume the one-time token and clear the cooldown.
+      await chrome.storage.local.set({ committedLockUnlockToken: 0, committedLockCooldown: null });
+      return false;
+    }
+    // No valid token -> revert. Protection stays on.
+    await chrome.storage.sync.set({ enabled: true });
+    return true;
+  }catch(_e){
+    return false;
   }
 }
 

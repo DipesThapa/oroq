@@ -678,6 +678,96 @@
       <small id="kidReportMessage" class="message">No history is kept — just the report event.</small>
     </div>
 
+    <!-- OroQ Pro (commitment tools) -->
+    <div class="settings-card pro-card" id="proSection">
+      <div class="pro-card__head">
+        <p class="settings-card__label">OroQ Pro</p>
+        <span id="proStatusBadge" class="pro-badge pro-badge--locked">Locked</span>
+      </div>
+      <p class="pro-card__desc" id="proStatusText">Commitment tools that make it harder to cheat on yourself.</p>
+      <ul class="pro-features">
+        <li>Committed Lock — cooldown wait + PIN before protection can pause</li>
+        <li>Scheduled Focus — recurring Focus Mode windows, on autopilot</li>
+        <li>Custom Focus durations — any length from 15 to 480 minutes</li>
+      </ul>
+      <div class="actions actions--wrap" id="proUpgradeRow">
+        <button id="proUpgradeBtn" class="btn btn--primary btn--sm" type="button">Upgrade to Pro</button>
+      </div>
+      <div class="pro-activate">
+        <label class="field__label" for="proLicenseInput">Enter license key</label>
+        <input id="proLicenseInput" class="text-input" type="text" autocomplete="off" placeholder="Paste your license key">
+        <div class="actions actions--wrap">
+          <button id="proActivateBtn" class="btn btn--ghost btn--sm" type="button">Activate</button>
+          <button id="proDeactivateBtn" class="btn btn--link actions__end" type="button" hidden>Remove license</button>
+        </div>
+        <small id="proLicenseMsg" class="message">Your key is verified on-device. Nothing is ever sent anywhere.</small>
+      </div>
+
+      <!-- Pro controls: greyed/locked until a valid license activates Pro -->
+      <div id="proControls" class="pro-controls pro-controls--locked">
+        <p class="pro-lock-hint" id="proLockHint">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="12" height="12" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd"/></svg>
+          Activate Pro to use these controls.
+        </p>
+
+        <!-- Committed Lock -->
+        <label class="toggle">
+          <input id="committedLockToggle" type="checkbox">
+          <span class="toggle__switch" aria-hidden="true"></span>
+          <span class="toggle__content">
+            <span class="toggle__label">Committed Lock</span>
+            <span class="toggle__hint">Pausing protection needs a cooldown wait, then your PIN.</span>
+          </span>
+        </label>
+        <div class="field pro-field" id="committedLockCooldownRow">
+          <label class="field__label" for="committedLockCooldown">Cooldown before protection can pause (minutes)</label>
+          <input id="committedLockCooldown" class="text-input pro-num" type="number" min="1" max="120" step="1" value="10">
+        </div>
+        <div id="committedLockStatus" class="commit-status" hidden>
+          <p id="committedLockCountdown" class="focus-countdown">Cooldown running…</p>
+          <div class="actions actions--wrap">
+            <button id="committedLockConfirm" class="btn btn--primary btn--sm" type="button" hidden>Enter PIN &amp; pause</button>
+            <button id="committedLockCancel" class="btn btn--link" type="button">Keep protection on</button>
+          </div>
+        </div>
+
+        <!-- Custom Focus duration -->
+        <div class="field pro-field">
+          <label class="field__label" for="proCustomDuration">Custom Focus duration (minutes)</label>
+          <div class="actions actions--wrap">
+            <input id="proCustomDuration" class="text-input pro-num" type="number" min="15" max="480" step="5" placeholder="e.g. 90">
+            <button id="proDurationApply" class="btn btn--ghost btn--sm" type="button">Set duration</button>
+          </div>
+          <small id="proDurationMsg" class="message">Pro unlocks any length from 15 to 480 minutes.</small>
+        </div>
+
+        <!-- Scheduled Focus -->
+        <div class="pro-schedule">
+          <p class="settings-card__label">Scheduled Focus</p>
+          <p class="pro-card__desc">Focus Mode switches on automatically during these windows.</p>
+          <div id="scheduleList" class="schedule-list"></div>
+          <div class="schedule-editor">
+            <div class="schedule-days" id="scheduleDays" role="group" aria-label="Days of week">
+              <label class="schedule-day"><input type="checkbox" data-day="1">Mon</label>
+              <label class="schedule-day"><input type="checkbox" data-day="2">Tue</label>
+              <label class="schedule-day"><input type="checkbox" data-day="3">Wed</label>
+              <label class="schedule-day"><input type="checkbox" data-day="4">Thu</label>
+              <label class="schedule-day"><input type="checkbox" data-day="5">Fri</label>
+              <label class="schedule-day"><input type="checkbox" data-day="6">Sat</label>
+              <label class="schedule-day"><input type="checkbox" data-day="0">Sun</label>
+            </div>
+            <div class="actions actions--wrap schedule-times">
+              <input id="scheduleStart" class="text-input pro-time" type="time" value="09:00" aria-label="Start time">
+              <span class="schedule-sep">to</span>
+              <input id="scheduleEnd" class="text-input pro-time" type="time" value="17:00" aria-label="End time">
+              <button id="scheduleAdd" class="btn btn--ghost btn--sm" type="button">Add window</button>
+            </div>
+            <small id="scheduleMsg" class="message">Pick days and a time range, then add the window.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </section>
 
   <!-- Override approvers (shown in parent mode) -->

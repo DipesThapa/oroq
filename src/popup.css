@@ -1608,3 +1608,106 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); }
   color: var(--text-2);
   line-height: 1.5;
 }
+
+/* ── OroQ Pro (commitment tools) ─────────────────────────────────────────── */
+.pro-card { margin-top: 12px; }
+.pro-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pro-card__desc {
+  margin: 4px 0 8px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.pro-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+}
+.pro-badge--locked { color: var(--text-3); background: var(--surface-3); }
+.pro-badge--active { color: var(--brand); background: var(--brand-dim); }
+.pro-features {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+.pro-features li { margin-bottom: 2px; }
+.pro-activate { margin-top: 8px; }
+.pro-activate .text-input { margin-bottom: 6px; }
+.pro-field { margin-top: 10px; }
+.pro-num { max-width: 120px; }
+.pro-time { max-width: 120px; }
+
+.pro-controls {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: opacity var(--dur) var(--ease);
+}
+.pro-controls--locked { opacity: .5; pointer-events: none; }
+.pro-controls--locked .pro-lock-hint { display: flex; }
+.pro-controls:not(.pro-controls--locked) .pro-lock-hint { display: none; }
+.pro-lock-hint {
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.commit-status {
+  background: var(--amber-dim);
+  border-radius: var(--r-md);
+  padding: 10px;
+}
+.commit-status .focus-countdown { margin: 0 0 6px; }
+
+.pro-schedule {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+.schedule-list { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.schedule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  background: var(--surface-3);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+}
+.schedule-item__remove {
+  background: none;
+  border: none;
+  color: var(--red);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.schedule-days { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.schedule-day {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-2);
+  background: var(--surface-3);
+  border-radius: var(--r-pill);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.schedule-times { align-items: center; }
+.schedule-sep { font-size: 12px; color: var(--text-3); }
