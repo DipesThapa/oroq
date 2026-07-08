@@ -6,5 +6,8 @@ declare module "cloudflare:test" {
     KV: KVNamespace;
     JWT_SECRET: string;
     TEST_MIGRATIONS: D1Migration[];
+    LICENSE_PRIVATE_KEY_JWK?: string;
+    LEMONSQUEEZY_WEBHOOK_SECRET?: string;
+    GUMROAD_SELLER_ID?: string;
   }
 }

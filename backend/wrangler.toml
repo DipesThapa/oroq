@@ -14,7 +14,14 @@ id = "b101d3dc0103425cb8ca29b7ed102d1a"
 
 # JWT_SECRET, RESEND_API_KEY and RESEND_FROM are set with `wrangler secret put`,
 # never committed here.
+#
+# OroQ Pro license fulfilment secrets — set with `wrangler secret put`, never here:
+#   wrangler secret put LICENSE_PRIVATE_KEY_JWK   # ECDSA P-256 private JWK (JSON string)
+#   wrangler secret put LEMONSQUEEZY_WEBHOOK_SECRET
+# GUMROAD_SELLER_ID is public-ish (it appears in Gumroad pings), so it lives in
+# [vars] below. Leave it unset if you sell through LemonSqueezy instead.
 
 [vars]
 GOOGLE_CLIENT_ID = "698167511556-k2nh1p4rp3n0jqnc29iddgjoc03p1pis.apps.googleusercontent.com"
 FCM_PROJECT_ID = "oroq-8a7eb"
+# GUMROAD_SELLER_ID = "your-gumroad-seller-id"

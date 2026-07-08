@@ -12,6 +12,12 @@ export interface Env {
   FCM_PROJECT_ID?: string;
   /** "true" only in local dev — gates echoing the OTP to logs. Never set in prod. */
   DEV?: string;
+  /** ECDSA P-256 private signing key as a JSON JWK string (secret). Unset disables /license. */
+  LICENSE_PRIVATE_KEY_JWK?: string;
+  /** Shared secret for verifying LemonSqueezy purchase webhooks (secret). */
+  LEMONSQUEEZY_WEBHOOK_SECRET?: string;
+  /** Gumroad seller id, used to authenticate Gumroad pings (public-ish, a var). */
+  GUMROAD_SELLER_ID?: string;
 }
 
 /** Throws if a required binding or secret is missing — the Worker must not run half-configured. */
