@@ -72,7 +72,7 @@ const scheduleAddBtn = document.getElementById('scheduleAdd');
 const scheduleMsgEl = document.getElementById('scheduleMsg');
 
 // TODO(owner): replace with your real checkout link (Gumroad / LemonSqueezy / etc.).
-const CHECKOUT_URL = 'https://oroq.gumroad.com/l/pro';
+const CHECKOUT_URL = 'https://dipesmith.gumroad.com/l/pro';
 const PRO_FOCUS_MIN = 15;
 const PRO_FOCUS_MAX = 480;
 
