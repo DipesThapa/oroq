@@ -37,9 +37,11 @@ npm run zip:webstore
 
 ```bash
 cd backend
-npx wrangler d1 migrations apply oroq-family
+npx wrangler d1 migrations apply oroq-family --remote
 ```
 Creates the `licenses` table (idempotent record of every issued key).
+NOTE: `--remote` is required — without it wrangler targets the LOCAL dev DB,
+not production, so the live table would never be created.
 
 ## 3. Set the Worker secrets + deploy 🖥️👤
 
