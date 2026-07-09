@@ -57,13 +57,20 @@ async function claim(req: Request, env: Env): Promise<Response> {
 
   const headers = { "content-type": "text/html; charset=utf-8" };
   if (key) return new Response(renderClaimPage(key), { headers });
-  // Not found yet: retry a few times (webhook may still be in flight), then stop.
-  if (attempt < 5) {
+
+  // Buyer arrived with an email but no key found for it yet.
+  if (email && !saleId) return new Response(renderEmailForm(url.pathname, "no-match"), { headers });
+
+  // Arrived from a redirect that passed sale_id but the webhook is still in
+  // flight — retry a few times, then fall back to the email form.
+  if (saleId && attempt < 5) {
     const next = new URL(url);
     next.searchParams.set("t", String(attempt + 1));
     return new Response(renderPendingPage(next.toString()), { headers });
   }
-  return new Response(renderPendingPage(null), { headers });
+
+  // No identifying info (or gave up on sale_id): ask for the purchase email.
+  return new Response(renderEmailForm(url.pathname, null), { headers });
 }
 
 function esc(s: string): string {
@@ -97,6 +104,23 @@ function renderClaimPage(key: string): string {
 <button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('k').textContent).then(()=>{this.textContent='Copied ✓'})">Copy key</button>
 <div class="ok" id="ok">✓ Activated automatically by your OroQ extension.</div>
 <ol class="steps"><li>Click the OroQ icon in Chrome.</li><li>Open <b>OroQ Pro → Enter license key</b>.</li><li>Paste the key and press <b>Activate</b>.</li></ol>
+${PAGE_FOOT}`;
+}
+
+function renderEmailForm(path: string, state: "no-match" | null): string {
+  const note =
+    state === "no-match"
+      ? `<p style="color:#ffd7d7">We couldn't find a license for that email yet. If you just purchased, wait a few seconds and try again — or check the address matches your Gumroad receipt.</p>`
+      : "";
+  return `${PAGE_HEAD}
+<h1>Get your OroQ Pro key</h1>
+<p>Enter the email you used at checkout and we'll show your license key. If the OroQ extension is installed, Pro activates automatically.</p>
+${note}
+<form method="GET" action="${esc(path)}">
+<input name="email" type="email" required placeholder="you@example.com" autocomplete="email"
+ style="width:100%;padding:14px;border-radius:12px;border:none;font-size:15px;margin:8px 0 14px">
+<button class="copy" type="submit">Show my key</button>
+</form>
 ${PAGE_FOOT}`;
 }
 
