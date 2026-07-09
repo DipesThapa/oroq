@@ -74,7 +74,14 @@ async function webhook(req: Request, env: Env, privateJwk: JsonWebKey): Promise<
     // Gumroad: form-urlencoded ping; authenticity is the seller_id match.
     const form = new URLSearchParams(rawBody);
     const sellerId = form.get("seller_id");
-    if (!sellerId || !env.GUMROAD_SELLER_ID || !constantTimeEqual(sellerId, env.GUMROAD_SELLER_ID)) {
+    // Bootstrap: if GUMROAD_SELLER_ID isn't set yet, log the incoming id so the
+    // owner can read it from `wrangler tail`, then set the secret and redeploy.
+    // No key is issued until the secret is set (still returns 401) — safe.
+    if (!env.GUMROAD_SELLER_ID) {
+      console.log(`[oroq] Gumroad ping received. seller_id=${sellerId ?? "(none)"} — set this as the GUMROAD_SELLER_ID secret.`);
+      return json({ error: "seller_id_not_configured", seller_id_seen: sellerId }, 401);
+    }
+    if (!sellerId || !constantTimeEqual(sellerId, env.GUMROAD_SELLER_ID)) {
       return json({ error: "unauthorized" }, 401);
     }
     email = normalizeEmail(form.get("email"));
