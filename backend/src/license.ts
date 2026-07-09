@@ -19,7 +19,93 @@ export async function handleLicense(req: Request, env: Env, path: string): Promi
 
   if (path === "/license/webhook" && req.method === "POST") return webhook(req, env, privateJwk);
   if (path === "/license/resend" && req.method === "POST") return resend(req, env);
+  if (path === "/license/claim" && req.method === "GET") return claim(req, env);
   return json({ error: "not_found" }, 404);
+}
+
+/**
+ * Post-purchase claim page. Gumroad redirects the buyer here after payment with
+ * ?sale_id=… (and usually &email=…). We look up the key the webhook just minted
+ * and render it — no email needed. If the webhook hasn't landed yet (redirect can
+ * race it), we show a self-refreshing "finishing up" page for a few attempts.
+ *
+ * The page also carries the key in a hidden, extension-readable node
+ * (#oroq-license-key[data-oroq-key]) so the installed OroQ extension can
+ * auto-activate Pro without the user copy-pasting.
+ */
+async function claim(req: Request, env: Env): Promise<Response> {
+  const url = new URL(req.url);
+  const saleId = stringOrNull(url.searchParams.get("sale_id"));
+  const email = normalizeEmail(url.searchParams.get("email"));
+  const attempt = Math.max(0, parseInt(url.searchParams.get("t") || "0", 10) || 0);
+
+  let key: string | null = null;
+  if (saleId) {
+    const row = await env.DB.prepare("SELECT license_key FROM licenses WHERE order_id = ?")
+      .bind(saleId)
+      .first<{ license_key: string }>();
+    key = row?.license_key ?? null;
+  }
+  if (!key && email) {
+    const row = await env.DB.prepare(
+      "SELECT license_key FROM licenses WHERE email = ? ORDER BY created_at DESC LIMIT 1",
+    )
+      .bind(email)
+      .first<{ license_key: string }>();
+    key = row?.license_key ?? null;
+  }
+
+  const headers = { "content-type": "text/html; charset=utf-8" };
+  if (key) return new Response(renderClaimPage(key), { headers });
+  // Not found yet: retry a few times (webhook may still be in flight), then stop.
+  if (attempt < 5) {
+    const next = new URL(url);
+    next.searchParams.set("t", String(attempt + 1));
+    return new Response(renderPendingPage(next.toString()), { headers });
+  }
+  return new Response(renderPendingPage(null), { headers });
+}
+
+function esc(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string,
+  );
+}
+
+const PAGE_HEAD = `<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>OroQ Pro</title>
+<style>*{box-sizing:border-box;margin:0;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:linear-gradient(135deg,#2b3f8f,#3a5bd0 45%,#2e8b7f);padding:24px;color:#fff}
+.card{width:100%;max-width:520px;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.2);
+border-radius:20px;padding:32px;backdrop-filter:blur(8px)}
+h1{font-size:26px;margin-bottom:6px}p{opacity:.92;line-height:1.5;margin-bottom:14px}
+.key{display:block;width:100%;background:#0b1020;color:#cfe0ff;border-radius:12px;padding:14px;
+font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all;user-select:all;margin:12px 0}
+button{font-size:15px;font-weight:700;padding:12px 18px;border-radius:12px;border:none;cursor:pointer}
+.copy{background:#fff;color:#101426}.ok{display:none;margin-top:14px;font-weight:700;color:#c7f9d8}
+.steps{font-size:14px;opacity:.9;margin-top:16px}.steps li{margin:4px 0}</style></head><body><div class="card">`;
+const PAGE_FOOT = `</div></body></html>`;
+
+function renderClaimPage(key: string): string {
+  const k = esc(key);
+  return `${PAGE_HEAD}
+<h1>🎉 OroQ Pro is yours</h1>
+<p>If you have the OroQ extension installed, Pro unlocks automatically — you'll see a confirmation below in a second. Otherwise, copy your key and paste it into the extension.</p>
+<div id="oroq-license-key" data-oroq-key="${k}" hidden></div>
+<code class="key" id="k">${k}</code>
+<button class="copy" onclick="navigator.clipboard.writeText(document.getElementById('k').textContent).then(()=>{this.textContent='Copied ✓'})">Copy key</button>
+<div class="ok" id="ok">✓ Activated automatically by your OroQ extension.</div>
+<ol class="steps"><li>Click the OroQ icon in Chrome.</li><li>Open <b>OroQ Pro → Enter license key</b>.</li><li>Paste the key and press <b>Activate</b>.</li></ol>
+${PAGE_FOOT}`;
+}
+
+function renderPendingPage(refreshUrl: string | null): string {
+  const meta = refreshUrl ? `<meta http-equiv="refresh" content="2;url=${esc(refreshUrl)}">` : "";
+  const body = refreshUrl
+    ? `<h1>Finishing your purchase…</h1><p>Preparing your OroQ Pro license. This page refreshes automatically.</p>`
+    : `<h1>Almost there</h1><p>Your license is taking a moment longer than usual. Refresh this page in a minute — if it still doesn't appear, reply to your Gumroad receipt and we'll sort it out.</p>`;
+  return `${PAGE_HEAD.replace("<title>", meta + "<title>")}${body}${PAGE_FOOT}`;
 }
 
 /** Parses the private signing JWK from the secret; null if unset or malformed. */

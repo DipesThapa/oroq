@@ -7,6 +7,27 @@ if (typeof globalThis.chrome === 'undefined' && typeof globalThis.browser !== 'u
    * and optional TF.js model hooks (left disabled unless bundled to avoid CSP fetch issues).
    * Keep thresholds conservative to reduce false positives and avoid leaking page data off the device.
    */
+
+  // OroQ Pro auto-activation: when the buyer lands on the post-purchase claim
+  // page, it carries the license key in a hidden node. Read it and activate Pro
+  // so the user never has to copy-paste. The key is cryptographically verified
+  // in the background against the embedded public key, so reading it from the
+  // page DOM is safe (a forged key simply fails verification).
+  (function tryClaimAutoActivate(){
+    try {
+      if (location.pathname !== '/license/claim') return;
+      const node = document.getElementById('oroq-license-key');
+      const key = node && node.getAttribute('data-oroq-key');
+      if (!key) return;
+      chrome.runtime.sendMessage({ type: 'sg-verify-license', key }, (resp)=>{
+        if (chrome.runtime.lastError) return;
+        if (resp && resp.ok){
+          const ok = document.getElementById('ok');
+          if (ok) ok.style.display = 'block';
+        }
+      });
+    } catch(_e){}
+  })();
   // Advanced textual heuristic (non-exhaustive, on-device). Balanced for privacy and speed.
   const KW_STRONG = [
     // Major platforms
