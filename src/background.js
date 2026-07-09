@@ -70,8 +70,8 @@ const COMMIT_UNLOCK_TOKEN_TTL_MS = 8000; // popup must set enabled=false within 
 const LICENSE_PUBLIC_KEY_JWK = {
   kty: 'EC',
   crv: 'P-256',
-  x: '06hustEQ8xzwihtObmDbc439vXRyBOYap2HDqoN9EkQ',
-  y: 'Ie-ein-3Y_gYAW0-J-OEberzYUD0frtHaaUT5dSCH2o'
+  x: 'H-_Htzgd0LrtXDkVpDzQWI6ofcJApDFrlkGHDCMgER4',
+  y: 'WEO8fE2erjGfztjSEWJt3Mmh5eMnvOzWUbCV3nd3ID0'
 };
 const FOCUS_DEFAULT_ALLOWLIST = [
   'wikipedia.org',
