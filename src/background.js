@@ -65,14 +65,13 @@ const COMMIT_UNLOCK_TOKEN_TTL_MS = 8000; // popup must set enabled=false within 
 // self-control tool — the buyer *wants* it to keep working — but it is NOT
 // tamper-proof DRM and must never be described as such.
 //
-// TODO(owner): replace this with YOUR public JWK from `node scripts/license.mjs
-// keygen`. The value below is a working demo key whose matching private key is
-// NOT shipped; regenerate your own so only you can mint licenses.
+// Production public key (2026-07-09). The matching private key lives ONLY in
+// the Worker secret LICENSE_PRIVATE_KEY_JWK — never in this repo.
 const LICENSE_PUBLIC_KEY_JWK = {
   kty: 'EC',
   crv: 'P-256',
-  x: 'eGNcmLvYgRUb_QkajiIn9nDgVNAHR_IHS_5wGR8jjoA',
-  y: 'P_-wES4cXCiqnNq4Z8LvNTIdlqtbW0Fs9CK_av0AJT8'
+  x: '06hustEQ8xzwihtObmDbc439vXRyBOYap2HDqoN9EkQ',
+  y: 'Ie-ein-3Y_gYAW0-J-OEberzYUD0frtHaaUT5dSCH2o'
 };
 const FOCUS_DEFAULT_ALLOWLIST = [
   'wikipedia.org',
